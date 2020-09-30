@@ -1,0 +1,2 @@
+timestamp=[2020-09-29 11:00:29], mode=WORKBENCH_START, duration=0:00:04.442, duration_ms=4442, data={}
+timestamp=[2020-09-29 11:00:35], mode=WORKBENCH_UI_INIT, duration=0:00:06.141, duration_ms=6141, data={editors_count=0, platform_editors_count=0, projects_count=1, platform_projects_count=1, active_platform_editor=false, projects=TE0803-03-4AE11-A}

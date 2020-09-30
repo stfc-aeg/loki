@@ -1,0 +1,1109 @@
+menuconfig SUBSYSTEM_HARDWARE_AUTO
+	bool "Subsystem AUTO Hardware Settings"
+	default y
+	help
+	  This menu is to configure system hardware.
+	  If SUBSYSTEM_AUTOCONFIG_DTS is selected, the configuration will be applied to DTS generation;
+	  if SUBSYSTEM_AUTOCONFIG_U__BOOT is selected, the configuration will be applied to u-boot config generation;
+	  if SUBSYSTEM_COMPONENT_BOOTLOADER_AUTO_FSBL is selected, the configuration will be applied to bootloader BSP generation.
+	  if SUBSYSTEM_AUTOCONFIG_KERNEL is selected, the configuration will be applied to kernel config generation.
+
+if SUBSYSTEM_HARDWARE_AUTO
+
+
+config SUBSYSTEM_PROCESSOR0_IP_NAME
+string
+default psu_cortexa53_0
+
+choice
+	prompt "System Processor"
+	help
+	 Select a processor as the system processor
+config SUBSYSTEM_PROCESSOR_psu_cortexa53_0_SELECT
+	bool "psu_cortexa53_0"
+
+endchoice
+
+config SUBSYSTEM_ARCH_AARCH64
+	bool
+	default y
+	depends on SUBSYSTEM_PROCESSOR_psu_cortexa53_0_SELECT
+
+if SUBSYSTEM_PROCESSOR_psu_cortexa53_0_SELECT
+menu "Memory Settings"
+choice
+	prompt "Primary Memory"
+	help
+	  Select a memory as primary memory and PetaLinux will auto config
+	  it to used for Linux and u-boot.
+	  If you select 'simple', you can specify a continuous memory range
+	  for both u-boot and Linux.
+	  If you select 'manual', PetaLinux will not do any autoconfig on memory,
+	  you will need to specify u-boot text base address in u-boot config file.
+config SUBSYSTEM_MEMORY_PSU_DDR_0_BANKLESS_SELECT
+	bool "psu_ddr_0"
+
+config SUBSYSTEM_MEMORY_SIMPLE_SELECT
+	bool "simple"
+
+config SUBSYSTEM_MEMORY_MANUAL_SELECT
+	bool "manual"
+
+endchoice
+
+
+config SUBSYSTEM_MEMORY_PSU_DDR_0_BANKLESS_BASEADDR
+	hex "System memory base address"
+	default 0x0
+	range 0x0 0x7e000000
+	depends on SUBSYSTEM_MEMORY_PSU_DDR_0_BANKLESS_SELECT
+	help
+	  Start address of the system memory.
+	  It has to be within the selected primary memory physical address range.
+
+
+config SUBSYSTEM_MEMORY_SIMPLE_BASEADDR
+	hex "System memory base address"
+	default 0x0
+	depends on SUBSYSTEM_MEMORY_SIMPLE_SELECT
+	help
+	  base address of the system memory
+
+
+config SUBSYSTEM_MEMORY_PSU_DDR_0_BANKLESS_SIZE
+	hex "System memory size"
+	default 0x80000000
+	range 0x2000000 0x80000000
+	depends on SUBSYSTEM_MEMORY_PSU_DDR_0_BANKLESS_SELECT
+	help
+	  Size of the system memory. Minimum is 32MB, maximum is the size of
+	  the selected primary memory physical address range.
+
+
+config SUBSYSTEM_MEMORY_SIMPLE_SIZE
+	hex "System memory size"
+	default 0x0
+	depends on SUBSYSTEM_MEMORY_SIMPLE_SELECT
+	help
+	  size of the system memory.
+
+
+config SUBSYSTEM_MEMORY_PSU_DDR_0_BANKLESS_KERNEL_BASEADDR
+	hex "kernel base address"
+	default 0x0
+	range 0x0 0x7e000000
+	depends on SUBSYSTEM_MEMORY_PSU_DDR_0_BANKLESS_SELECT
+	depends on SUBSYSTEM_ARCH_ARM || SUBSYSTEM_ARCH_AARCH64
+	help
+	  kernel base address.
+
+
+config SUBSYSTEM_MEMORY_SIMPLE_KERNEL_BASEADDR
+	hex "kernel base address"
+	default 0x0
+	depends on SUBSYSTEM_MEMORY_SIMPLE_SELECT
+	depends on SUBSYSTEM_ARCH_ARM || SUBSYSTEM_ARCH_AARCH64
+	help
+	  kernel base address.
+
+
+config SUBSYSTEM_MEMORY_PSU_DDR_0_BANKLESS_U__BOOT_TEXTBASE_OFFSET
+	hex "u-boot text base address offset to memory base address"
+	default 0x100000
+	range 0x100000 0x7e100000
+	depends on SUBSYSTEM_MEMORY_PSU_DDR_0_BANKLESS_SELECT
+	depends on !SUBSYSTEM_COMPONENT_U__BOOT_NAME_NONE
+	help
+	  u-boot offset to the memory base address. Minimum suggested is 1MB.
+
+
+config SUBSYSTEM_MEMORY_SIMPLE_U__BOOT_TEXTBASE_OFFSET
+	hex "u-boot text base address offset to memory high address"
+	default 0x100000
+	depends on SUBSYSTEM_MEMORY_SIMPLE_SELECT
+	depends on !SUBSYSTEM_COMPONENT_U__BOOT_NAME_NONE
+	range 0x100000 0xfe100000
+	help
+	  u-boot text base address offset to memory high address.
+	  Minumum is 1MB.
+
+
+config SUBSYSTEM_MEMORY_IP_NAME
+	string
+	default PSU_DDR_0
+	depends on SUBSYSTEM_MEMORY_PSU_DDR_0_BANKLESS_SELECT
+
+
+endmenu
+
+menu "Serial Settings"
+choice
+	prompt "Primary stdin/stdout"
+	help
+	  Select a serial as the system's stdin,stdout.
+	  If you select 'manual', you will need to setup DTS and u-boot config
+	  file to specify the stdin/stdout.
+config SUBSYSTEM_SERIAL_PSU_UART_0_SELECT
+	bool "psu_uart_0"
+config SUBSYSTEM_SERIAL_MANUAL_SELECT
+	bool "manual"
+
+endchoice
+
+choice
+	prompt "System stdin/stdout baudrate"
+	default SUBSYSTEM_SERIAL_PSU_UART_0_BAUDRATE_115200
+	depends on SUBSYSTEM_SERIAL_PSU_UART_0_SELECT
+config SUBSYSTEM_SERIAL_PSU_UART_0_BAUDRATE_600
+	bool "600"
+config SUBSYSTEM_SERIAL_PSU_UART_0_BAUDRATE_9600
+	bool "9600"
+config SUBSYSTEM_SERIAL_PSU_UART_0_BAUDRATE_28800
+	bool "28800"
+config SUBSYSTEM_SERIAL_PSU_UART_0_BAUDRATE_115200
+	bool "115200"
+config SUBSYSTEM_SERIAL_PSU_UART_0_BAUDRATE_230400
+	bool "230400"
+config SUBSYSTEM_SERIAL_PSU_UART_0_BAUDRATE_460800
+	bool "460800"
+config SUBSYSTEM_SERIAL_PSU_UART_0_BAUDRATE_921600
+	bool "921600"
+endchoice
+
+
+config SUBSYSTEM_SERIAL_IP_NAME
+string
+default psu_uart_0
+depends on SUBSYSTEM_SERIAL_PSU_UART_0_SELECT
+
+config SUBSYSTEM_SERIAL_ATF_IP_NAME
+string
+default cadence
+depends on SUBSYSTEM_SERIAL_PSU_UART_0_SELECT
+
+config SUBSYSTEM_SERIAL_ATF_IP_NAME
+string
+default dcc
+depends on SUBSYSTEM_SERIAL_MANUAL_SELECT
+
+endmenu
+
+menu "Ethernet Settings"
+choice
+	prompt "Primary Ethernet"
+	help
+	  Select a Ethernet used as primary Ethernet.
+	  The primary ethernet will be used for u-boot networking if u-boot is
+	  selected and will be used as eth0 in Linux.
+	  If your preferred primary ethernet is not on the list, please select
+	  'manual'.
+config SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_SELECT
+	bool "psu_ethernet_3"
+config SUBSYSTEM_ETHERNET_MANUAL_SELECT
+	bool "manual"
+
+endchoice
+
+
+config SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_MAC_AUTO
+	bool "Randomise MAC address"
+	default n
+	depends on SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_SELECT
+	help
+	  randomise MAC address for the primary ethernet.
+
+config SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_MAC_PATTERN
+	string "Template for randomised MAC address"
+	default "00:0a:35:00:??:??"
+	depends on SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_SELECT && SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_MAC_AUTO
+	help
+	  Pattern for generating random MAC addresses - question mark
+	  characters will be replaced by random hex digits
+
+config SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_MAC
+	string "Ethernet MAC address"
+	default "00:0a:35:00:22:01"
+	depends on SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_SELECT && !SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_MAC_AUTO
+	help
+	  the MAC address
+
+
+config SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_USE_DHCP
+	bool "Obtain IP address automatically"
+	default y
+	depends on SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_SELECT
+	help
+	  Set this option if you would like your SUBSYSTEM to use DHCP for
+	  obtaining an IP address.
+
+config SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_IP_ADDRESS
+	string "Static IP address"
+	default "192.168.0.10"
+	depends on SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_SELECT && !SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_USE_DHCP
+	help
+	  The IP address of your main network interface when static network
+	  address assignment is used.
+
+config SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_IP_NETMASK
+	string "Static IP netmask"
+	default "255.255.255.0"
+	depends on SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_SELECT && !SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_USE_DHCP
+	help
+	  Default netmask when static network address assignment is used.
+
+config SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_IP_GATEWAY
+	string "Static IP gateway"
+	default "192.168.0.1"
+	depends on SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_SELECT && !SUBSYSTEM_ETHERNET_PSU_ETHERNET_3_USE_DHCP
+	help
+	  Default gateway when static network address assignment is used.
+
+endmenu
+
+menu "Flash Settings"
+choice
+	prompt "Primary Flash"
+	help
+	  Select a Flash instance used as Primary Flash.
+	  PetaLinux auto config will apply the flash partition table settings
+	  to the primary flash.
+	  If you preferred flash is not on the list or you don't want PetaLinux
+	  to manage your flash partition, please select manual.
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_SELECT
+	bool "psu_qspi_0"
+config SUBSYSTEM_FLASH_MANUAL_SELECT
+	bool "manual"
+
+endchoice
+
+
+
+config SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	bool "Advanced Flash Auto Configuration"
+	default n
+	depends on !SUBSYSTEM_FLASH_MANUAL_SELECT
+	help
+	  Select this option to enabled 
+
+
+comment "partition 0"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_SELECT
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART0_NAME
+	string "name"
+	default "boot"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_SELECT
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART0_SIZE
+	hex "size"
+	default 0x40000
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART0_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART0_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART0_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 1"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART0_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART1_NAME
+	string "name"
+	default "bootenv"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART0_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART1_SIZE
+	hex "size"
+	default 0x20000
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART1_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART1_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART1_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 2"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART1_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART2_NAME
+	string "name"
+	default "kernel"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART1_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART2_SIZE
+	hex "size"
+	default 0x600000
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART2_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART2_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART2_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 3"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART2_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART3_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART2_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART3_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART3_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART3_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART3_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 4"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART3_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART4_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART3_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART4_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART4_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART4_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART4_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 5"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART4_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART5_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART4_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART5_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART5_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART5_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART5_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 6"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART5_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART6_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART5_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART6_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART6_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART6_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART6_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 7"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART6_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART7_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART6_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART7_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART7_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART7_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART7_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 8"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART7_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART8_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART7_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART8_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART8_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART8_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART8_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 9"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART8_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART9_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART8_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART9_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART9_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART9_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART9_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 10"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART9_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART10_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART9_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART10_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART10_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART10_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART10_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 11"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART10_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART11_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART10_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART11_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART11_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART11_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART11_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 12"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART11_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART12_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART11_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART12_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART12_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART12_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART12_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 13"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART12_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART13_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART12_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART13_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART13_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART13_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART13_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 14"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART13_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART14_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART13_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART14_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART14_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART14_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART14_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 15"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART14_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART15_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART14_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART15_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART15_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART15_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART15_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 16"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART15_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART16_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART15_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART16_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART16_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART16_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART16_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 17"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART16_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART17_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART16_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART17_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART17_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART17_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART17_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 18"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART17_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART18_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART17_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART18_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART18_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART18_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART18_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+comment "partition 19"
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART18_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART19_NAME
+	string "name"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART18_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART19_SIZE
+	hex "size"
+	default 0x0
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART19_NAME != ""
+
+config SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART19_FLAGS
+	string "flash partition flags"
+	default ""
+	depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART19_NAME != "" && SUBSYSTEM_FLASH__ADVANCED_AUTOCONFIG
+	help
+	  Pass the flash partition flags to DTS. Use comma separatioon for
+	  multiple flags, e.g. abc,def,...,xyz
+	  Currently, the supported string is RO ("read-only" string) flag
+	  which marks the partition read-only
+
+
+
+
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_SELECT
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART0_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART1_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART2_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART3_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART4_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART5_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART6_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART7_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART8_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART9_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART10_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART11_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART12_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART13_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART14_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART15_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART16_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART17_NAME != ""
+
+config SUBSYSTEM_FLASH_IP_NAME
+string
+default psu_qspi_0
+depends on SUBSYSTEM_FLASH_PSU_QSPI_0_BANKLESS_PART18_NAME != ""
+
+
+endmenu
+
+menu "SD/SDIO Settings"
+choice
+	prompt "Primary SD/SDIO"
+	help
+	  Select a SD instanced used as primary SD/SDIO.
+	  The primary SD/SDIO will be used for u-boot to load or update images.
+	  If your preferred primary ethernet is not on the list, please select
+	  'manual'.
+config SUBSYSTEM_PRIMARY_SD_PSU_SD_1_SELECT
+	bool "psu_sd_1"
+config SUBSYSTEM_PRIMARY_SD_PSU_SD_0_SELECT
+	bool "psu_sd_0"
+config SUBSYSTEM_PRIMARY_SD_MANUAL_SELECT
+	bool "manual"
+
+endchoice
+
+endmenu
+
+config SUBSYSTEM_SD_PSU_SD_1_SELECT
+	bool
+	default y
+config SUBSYSTEM_SD_PSU_SD_0_SELECT
+	bool
+	default y
+
+
+menu "RTC Settings"
+choice
+	prompt "Primary RTC"
+	help
+	  Select a RTC instance used as primary timer for Linux kernel.
+	  If your preferred RTC is not on the list, please select 'manual'.
+	  If 'manual' is selected, you will be responsible to enable property
+	  kernel driver for your RTC.
+	config SUBSYSTEM_RTC_PSU_RTC_SELECT
+	bool "psu_rtc"
+config SUBSYSTEM_RTC_MANUAL_SELECT
+	bool "manual"
+
+endchoice
+
+endmenu
+
+config SUBSYSTEM_SATA_PSU_SATA_SELECT
+	bool
+	default y
+
+
+config SUBSYSTEM_I2C_PSU_I2C_0_SELECT
+	bool
+	default y
+
+
+config SUBSYSTEM_USB_PSU_USB_0_SELECT
+	bool
+	default y
+
+
+config SUBSYSTEM_DP_PSU_DP_SELECT
+	bool
+	default y
+
+
+menuconfig SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG
+	bool "Advanced bootable images storage Settings"
+	default n
+	depends on !SUBSYSTEM_SD_MANUAL_SELECT || !SUBSYSTEM_FLASH_MANUAL_SELECT || !SUBSYSTEM_ETHERNET_MANUAL_SELECT
+	help
+	  This menu is to configure which media holds PetaLinux images.
+	  It supports FLASH or SD only.
+if SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG
+
+	menu "boot image settings"
+
+	choice
+		prompt "image storage media"
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOT_MEDIA_FLASH_SELECT
+			bool "primary flash"
+			depends on !SUBSYSTEM_FLASH_MANUAL_SELECT
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOT_MEDIA_SD_SELECT
+			bool "primary sd"
+			depends on !SUBSYSTEM_SD_MANUAL_SELECT
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOT_MEDIA_MANUAL_SELECT
+			bool "manual"
+			help
+			  If "manual" is selected, petalinux autconfiged u-boot will
+			  not auto generate command to get/update the image. You will be
+			  responsible to define u-boot commands to access the image.
+	endchoice
+
+	config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOT_PART_NAME
+		string "flash partition name"
+		default "boot"
+		depends on SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOT_MEDIA_FLASH_SELECT
+
+	config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOT_IMAGE_NAME
+		string "image name"
+		default "BOOT.BIN"
+		depends on !SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOT_MEDIA_MANUAL_SELECT
+
+	endmenu
+
+	menu "u-boot env partition settings"
+
+	choice
+		prompt "image storage media"
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOTENV_MEDIA_FLASH_SELECT
+			bool "primary flash"
+			depends on !SUBSYSTEM_FLASH_MANUAL_SELECT
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOTENV_MEDIA_SD_SELECT
+			bool "primary sd"
+			depends on !SUBSYSTEM_SD_MANUAL_SELECT
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOTENV_MEDIA_MANUAL_SELECT
+			bool "manual"
+			help
+			  If "manual" is selected, petalinux autconfiged u-boot will
+			  not auto generate command to get/update the image. You will be
+			  responsible to define u-boot commands to access the image.
+	endchoice
+
+	config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOTENV_PART_NAME
+		string "flash partition name"
+		default "bootenv"
+		depends on SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_BOOTENV_MEDIA_FLASH_SELECT
+
+	endmenu
+
+	menu "kernel image settings"
+
+	choice
+		prompt "image storage media"
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_KERNEL_MEDIA_FLASH_SELECT
+			bool "primary flash"
+			depends on !SUBSYSTEM_FLASH_MANUAL_SELECT
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_KERNEL_MEDIA_SD_SELECT
+			bool "primary sd"
+			depends on !SUBSYSTEM_SD_MANUAL_SELECT
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_KERNEL_MEDIA_ETHERNET_SELECT
+			bool "ethernet"
+			depends on !SUBSYSTEM_ETHERNET_MANUAL_SELECT
+			help
+			  If "ethernet" is selected, PetaLinux autoconfiged u-boot will
+			  get the kernel image from tftp server when it boots kernel if
+			  primary ethernet has been selected.
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_KERNEL_MEDIA_MANUAL_SELECT
+			bool "manual"
+			help
+			  If "manual" is selected, petalinux autconfiged u-boot will
+			  not auto generate command to get/update the image. You will be
+			  responsible to define u-boot commands to access the image.
+	endchoice
+
+	config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_KERNEL_PART_NAME
+		string "flash partition name"
+		default "kernel"
+		depends on SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_KERNEL_MEDIA_FLASH_SELECT
+
+	config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_KERNEL_IMAGE_NAME
+		string "image name"
+		default "image.ub"
+		depends on !SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_KERNEL_MEDIA_MANUAL_SELECT
+
+	endmenu
+
+	menu "jffs2 rootfs image settings"
+
+	choice
+		prompt "image storage media"
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_JFFS2_MEDIA_FLASH_SELECT
+			bool "primary flash"
+			depends on !SUBSYSTEM_FLASH_MANUAL_SELECT
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_JFFS2_MEDIA_MANUAL_SELECT
+			bool "manual"
+			help
+			  If "manual" is selected, petalinux autconfiged u-boot will
+			  not auto generate command to get/update the image. You will be
+			  responsible to define u-boot commands to access the image.
+	endchoice
+
+	config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_JFFS2_PART_NAME
+		string "flash partition name"
+		default "jffs2"
+		depends on SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_JFFS2_MEDIA_FLASH_SELECT
+
+	config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_JFFS2_IMAGE_NAME
+		string "image name"
+		default "rootfs.jffs2"
+		depends on !SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_JFFS2_MEDIA_MANUAL_SELECT
+
+	endmenu
+
+	menu "dtb image settings"
+
+	choice
+		prompt "image storage media"
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_DTB_MEDIA_BOOTIMAGE_SELECT
+			bool "from boot image"
+			help
+			  Do not use extern DTB. DTB is inside the boot image.
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_DTB_MEDIA_FLASH_SELECT
+			bool "primary flash"
+			depends on !SUBSYSTEM_FLASH_MANUAL_SELECT
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_DTB_MEDIA_SD_SELECT
+			bool "primary sd"
+			depends on !SUBSYSTEM_SD_MANUAL_SELECT
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_DTB_MEDIA_ETHERNET_SELECT
+			bool "ethernet"
+			depends on !SUBSYSTEM_ETHERNET_MANUAL_SELECT
+			help
+			  If "ethernet" is selected, PetaLinux autoconfiged u-boot will
+			  get the dtb image from tftp server when it boots kernel if
+			  primary ethernet has been selected.
+
+		config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_DTB_MEDIA_MANUAL_SELECT
+			bool "manual"
+			help
+			  If "manual" is selected, petalinux autconfiged u-boot will
+			  not auto generate command to get/update the image. You will be
+			  responsible to define u-boot commands to access the image.
+	endchoice
+
+	config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_DTB_PART_NAME
+		string "flash partition name"
+		default "dtb"
+		depends on SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_DTB_MEDIA_FLASH_SELECT
+
+	config SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_DTB_IMAGE_NAME
+		string "image name"
+		default "system.dtb"
+		depends on !SUBSYSTEM_IMAGES_ADVANCED_AUTOCONFIG_DTB_MEDIA_MANUAL_SELECT
+
+	endmenu
+
+endif
+
+endif
+endif

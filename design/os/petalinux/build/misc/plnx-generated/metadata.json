@@ -1,0 +1,69 @@
+{
+
+"virtual/fsbl":{
+	"JSON_FLAGS":"CONFIG_SUBSYSTEM_COMPONENT_BOOTLOADER_AUTO_FSBL",
+	"globalvar":{
+		"do_configure[noexec]":["=","!CONFIG_SUBSYSTEM_AUTOCONFIG_FSBL", "1"],
+		"YAML_SERIAL_CONSOLE_STDIN_forcevariable":["=","!CONFIG_SUBSYSTEM_SERIAL_MANUAL_SELECT", "CONFIG_SUBSYSTEM_SERIAL_IP_NAME"],
+		"YAML_SERIAL_CONSOLE_STDOUT_forcevariable":["=","!CONFIG_SUBSYSTEM_SERIAL_MANUAL_SELECT", "CONFIG_SUBSYSTEM_SERIAL_IP_NAME"]
+	}
+	},
+
+"virtual/bootloader":{
+	"globalvar":{
+		"SRC_URI":["+=","1","file://config.cfg file://platform-auto.h"],
+		"FILESEXTRAPATHS_prepend":"${THISDIR}/configs:"
+	},
+	"DefineMethod":{
+		"do_configure_append ()":{
+			"CONFIG_SUBSYSTEM_UBOOT_CONFIG_PETALINUX":
+				["install ${WORKDIR}/platform-auto.h ${S}/include/configs/",
+				"install ${WORKDIR}/platform-top.h ${S}/include/configs/"]
+		}
+	}
+	},
+
+"virtual/kernel":{
+	"globalvar":{
+		"SRC_URI":["+=","1","file://plnx_kernel.cfg"],
+		"RDEPENDS_${KERNEL_PACKAGE_NAME}-base":"",
+		"KERNEL_CONFIG_COMMAND":["=","CONFIG_SUBSYSTEM_COMPONENT_LINUX__KERNEL_NAME_EXT__LOCAL__SRC",""],
+		"do_configure[depends]":["+=","1","kern-tools-native:do_populate_sysroot"],
+		"FILESEXTRAPATHS_prepend":"${THISDIR}/configs:"
+	},
+	"DefineMethod":{
+		"do_configure_append ()":{"CONFIG_SUBSYSTEM_COMPONENT_LINUX__KERNEL_NAME_EXT__LOCAL__SRC":
+			 ["merge_config.sh -m ${B}/.config ${@\" \".join(find_sccs(d))}",
+			"oe_runmake -C ${S} O=${B} oldconfig"]},
+		"do_deploy_append ()":{"ALL":
+			["install -m 0644 ${D}/boot/System.map-${KERNEL_VERSION} ${DEPLOYDIR}/System.map.linux"]}
+	}
+	},
+
+"virtual/dtb":{
+	"globalvar":{
+		"export":"PETALINUX",
+		"do_configure[noexec]":["=","!CONFIG_SUBSYSTEM_AUTOCONFIG_DEVICE__TREE", "1"],
+		"XSCTH_WS":"${TOPDIR}/../components/plnx_workspace/device-tree",
+		"YAML_CONSOLE_DEVICE_CONFIG_forcevariable":["=","!CONFIG_SUBSYSTEM_SERIAL_MANUAL_SELECT", "CONFIG_SUBSYSTEM_SERIAL_IP_NAME"],
+		"YAML_MAIN_MEMORY_CONFIG_forcevariable":["=","!CONFIG_SUBSYSTEM_MEMORY_MANUAL_SELECT", "CONFIG_SUBSYSTEM_MEMORY_IP_NAME"],
+		"YAML_ENABLE_DT_OVERLAY":["=","CONFIG_SUBSYSTEM_DTB_OVERLAY", "1"],
+		"YAML_REMOVE_PL_DT":["=","CONFIG_SUBSYSTEM_REMOVE_PL_DTB", "1"],
+		"sysconf":"${TOPDIR}/../project-spec/configs",
+		"FILESEXTRAPATHS_append":":${sysconf}",
+		"SRC_URI_append":"file://config",
+		"DT_PADDING_SIZE":"CONFIG_SUBSYSTEM_DTB_PADDING_SIZE",
+		"DEVICETREE_FLAGS":["+=","1","CONFIG_SUBSYSTEM_DEVICETREE_FLAGS"],
+		"KERNEL_DTS_INCLUDE":"CONFIG_SUBSYSTEM_DEVICE_TREE_INCLUDE_DIR"
+	},
+	"DefineMethod":{
+		"do_configure_append ()":{"ALL":
+			["script=\"${PETALINUX}/etc/hsm/scripts/petalinux_hsm_bridge.tcl\"",
+			"data=${PETALINUX}/etc/hsm/data/",
+			"eval xsct -sdx -nodisp ${script} -c ${WORKDIR}/config \\",
+			"-hdf ${DT_FILES_PATH}/hardware_description.${HDF_EXT} -repo ${S}\\",
+			"-data ${data} -sw ${DT_FILES_PATH} -o ${DT_FILES_PATH} -a \"soc_mapping\""]}
+	}
+	}
+
+}

@@ -1,0 +1,26 @@
+{
+
+"virtual/arm-trusted-firmware":{
+	"globalvar":{
+		"sysconf":"${TOPDIR}/../project-spec/configs",
+		"FILESEXTRAPATHS_append":":${sysconf}",
+		"SRC_URI_append":"file://config",
+		"ATF_CONSOLE_zynqmp":"CONFIG_SUBSYSTEM_SERIAL_ATF_IP_NAME",
+		"extra_settings":"CONFIG_SUBSYSTEM_ATF_COMPILE_EXTRA_SETTINGS",
+		"ATF_MEM_BASE":["=","CONFIG_SUBSYSTEM_ATF_MEMORY_SETTINGS","CONFIG_SUBSYSTEM_ATF_MEM_BASE"],
+		"ATF_MEM_SIZE":["=","CONFIG_SUBSYSTEM_ATF_MEMORY_SETTINGS","CONFIG_SUBSYSTEM_ATF_MEM_SIZE"],
+		"atf_bl33_load":"CONFIG_SUBSYSTEM_PRELOADED_BL33_BASE",
+		"EXTRA_OEMAKE_append":" ${extra_settings} PRELOADED_BL33_BASE=${atf_bl33_load}",
+		"DEBUG":["=","CONFIG_SUBSYSTEM_ATF_DEBUG","1"]
+	}
+	},
+
+"virtual/pmu-firmware":{
+	"globalvar":{
+		"do_configure[noexec]":["=","!CONFIG_SUBSYSTEM_AUTOCONFIG_PMUFW", "1"],
+		"YAML_SERIAL_CONSOLE_STDIN_forcevariable":["=","!CONFIG_SUBSYSTEM_SERIAL_MANUAL_SELECT","CONFIG_SUBSYSTEM_SERIAL_IP_NAME"],
+		"YAML_SERIAL_CONSOLE_STDOUT_forcevariable":["=","!CONFIG_SUBSYSTEM_SERIAL_MANUAL_SELECT","CONFIG_SUBSYSTEM_SERIAL_IP_NAME"]
+	}
+	}
+
+}

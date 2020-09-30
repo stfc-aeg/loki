@@ -1,0 +1,11 @@
+Tue Sep 29 11:00:34 2020: Server was asked to start on port: '37846'
+Tue Sep 29 11:00:34 2020: Server is using token UUID: '3b699fc5-acda-4997-9b85-5f2280ac8e33'
+Tue Sep 29 11:00:34 2020: Attempting to start server on port '37846'
+Tue Sep 29 11:00:34 2020: XRC main fifo: created main fifo '/tmp/xrcmain3b699fc5-acda-4997-9b85-5f2280ac8e33', fd read = 11
+Tue Sep 29 11:00:34 2020: Running Rule Check Server
+Tue Sep 29 11:00:34 2020: Version 1.5.1
+Tue Sep 29 11:00:34 2020: Rule Check Server: Accepted socket connection from client
+Tue Sep 29 11:00:35 2020: EXCHANGE_TOKEN received, server token: 3b699fc5-acda-4997-9b85-5f2280ac8e33, passed token: 3b699fc5-acda-4997-9b85-5f2280ac8e33
+Tue Sep 29 14:14:19 2020: STOP_SERVER received, server token: 3b699fc5-acda-4997-9b85-5f2280ac8e33, passed token: 3b699fc5-acda-4997-9b85-5f2280ac8e33
+Tue Sep 29 14:14:19 2020: Socket received request to stop server.
+Tue Sep 29 14:14:19 2020: SERVER: destructor for server bound to port 37846

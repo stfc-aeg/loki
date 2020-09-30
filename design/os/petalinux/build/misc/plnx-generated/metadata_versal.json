@@ -1,0 +1,17 @@
+{
+
+"virtual/arm-trusted-firmware":{
+	"globalvar":{
+		"sysconf":"${TOPDIR}/../project-spec/configs",
+		"FILESEXTRAPATHS_append":":${sysconf}",
+		"SRC_URI_append":"file://config",
+		"extra_settings":"CONFIG_SUBSYSTEM_ATF_COMPILE_EXTRA_SETTINGS",
+		"ATF_MEM_BASE":["=","CONFIG_SUBSYSTEM_ATF_MEMORY_SETTINGS","CONFIG_SUBSYSTEM_ATF_MEM_BASE"],
+		"ATF_MEM_SIZE":["=","CONFIG_SUBSYSTEM_ATF_MEMORY_SETTINGS","CONFIG_SUBSYSTEM_ATF_MEM_SIZE"],
+		"atf_bl33_load":"CONFIG_SUBSYSTEM_PRELOADED_BL33_BASE",
+		"EXTRA_OEMAKE_append":" ${extra_settings} PRELOADED_BL33_BASE=${atf_bl33_load}",
+		"DEBUG":["=","CONFIG_SUBSYSTEM_ATF_DEBUG","1"]
+	}
+	}
+
+}

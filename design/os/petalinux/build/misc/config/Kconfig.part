@@ -1,0 +1,708 @@
+menu "Auto Config Settings"
+if SYSTEM_ZYNQMP || SUBSYSTEM_ARCH_ARM
+
+config SUBSYSTEM_AUTOCONFIG_FSBL
+	bool "fsbl autoconfig"
+	default y
+	help
+	  Select this option to allow PetaLinux to configure fsbl based on
+	  system config.Disabling this option will skip configuring fsbl.
+endif
+
+if SYSTEM_ZYNQMP
+config SUBSYSTEM_AUTOCONFIG_PMUFW
+	bool "pmufw autoconfig"
+	depends on SUBSYSTEM_COMPONENT_PMU_FIRMWARE
+	default y
+	help
+	  Select this option to allow PetaLinux to configure pmufw based on
+	  system config.Disabling this option will skip configuring pmufw.
+endif
+
+if SUBSYSTEM_ARCH_MICROBLAZE
+config SUBSYSTEM_AUTOCONFIG_FSBOOT
+	bool "fsboot autoconfig"
+	default y
+	help
+	  Select this option to allow PetaLinux to configure fsboot based on
+	  system config.Disabling this option will skip configuring fsboot.
+endif
+
+
+config SUBSYSTEM_AUTOCONFIG_DEVICE__TREE
+	bool "Device tree autoconfig"
+	default y
+	select SUBSYSTEM_HARDWARE_AUTO
+	help
+	  Select this option to enable auto generation of device-tree configuration
+	  files into components/plnx_workspace/device-tree/device-tree.
+
+config SUBSYSTEM_DEVICE_TREE_MANUAL_INCLUDE
+	bool "Specify a manual device tree include directory"
+	default n
+	help
+	  Select this option to allow you to specify a custom include directory
+	  to use when compiling the device tree.
+
+config SUBSYSTEM_DEVICE_TREE_INCLUDE_DIR
+	string "Manual device tree include directory"
+	default ""
+	depends on SUBSYSTEM_DEVICE_TREE_MANUAL_INCLUDE
+	help
+	  This is the include directory used by DTC during device tree compliation.
+
+
+config SUBSYSTEM_DEVICE_TREE_INCLUDE_DIR
+	string "Automatic device tree include directory (NO EDIT)"
+	default ""
+	depends on !SUBSYSTEM_DEVICE_TREE_MANUAL_INCLUDE
+	help
+	  This is the include directory used by DTC during device tree compliation.
+	  This is automatically generated
+          By default it points to "${STAGING_KERNEL_DIR}/include" which is
+          "${TMPDIR}/work-shared/${MACHINE}/kernel-source/include"
+
+config SUBSYSTEM_AUTOCONFIG_KERNEL
+	bool "kernel autoconfig"
+	default y
+	help
+	  Select this option to allow PetaLinux to modify Kernel config based on
+	  system config.
+
+config SUBSYSTEM_AUTOCONFIG_U__BOOT
+	bool "u-boot autoconfig"
+	default y
+	select SUBSYSTEM_HARDWARE_AUTO
+	help
+	  Select this option to enable auto u-boot configuration.
+
+endmenu
+
+source /u/ucm28261/develop/projects/cfi-daq/cfi-daq/trenz-test-2/StarterKit/os/petalinux/build/misc/config/Kconfig.syshw
+
+if !SUBSYSTEM_HARDWARE_AUTO
+choice
+	prompt "System Architecture"
+	default SUBSYSTEM_ARCH_ARM
+
+config SUBSYSTEM_ARCH_AARCH64
+	bool "aarch64"
+	help
+	  Choose this option to specify AARCH64 as the SUBSYSTEM architecture
+
+config SUBSYSTEM_ARCH_ARM
+	bool "arm"
+	help
+	  Choose this option to specify ARM as the SUBSYSTEM architecture
+
+config SUBSYSTEM_ARCH_MICROBLAZE
+	bool "microblaze"
+	help
+	  Choose this option to specify MicroBlaze as the SUBSYSTEM architecture
+endchoice
+endif
+
+
+config SUBSYSTEM_ENDIAN_LITTLE
+	bool
+	default y
+
+menu "DTG Settings"
+config SUBSYSTEM_MACHINE_NAME
+        string "MACHINE_NAME"
+        default "template"
+        help
+         This is machine name or board name. Ex: zcu102, zc702
+         This is used to create board related nodes.
+         Change this only when you also change the corresponding hardware design.
+         Change of hardware design or Machine_name between same architecture is allowed
+if SUBSYSTEM_AUTOCONFIG_DEVICE__TREE
+menu "Kernel Bootargs"
+config SUBSYSTEM_BOOTARGS_AUTO
+	bool "generate boot args automatically"
+	default y
+	depends on !SUBSYSTEM_SERIAL_MANUAL_SELECT || SYSTEM_VERSAL
+
+config SUBSYSTEM_USER_CMDLINE
+	string "user set kernel bootargs"
+	default ""
+	depends on !SUBSYSTEM_BOOTARGS_AUTO
+	help
+	  Specify any commandline arguments you wish to pass to the kernel
+	  at boot.
+
+config SUBSYSTEM_BOOTARGS_EARLYPRINTK
+	bool "enable kernel earlyprintk"
+	default y
+	depends on SUBSYSTEM_BOOTARGS_AUTO
+	help
+	  Select this option to enable kernel earlyprintk.
+
+config SUBSYSTEM_BOOTARGS_GENERATED
+	string "Auto generated bootargs (NO EDIT!)"
+	default ""
+	depends on SUBSYSTEM_BOOTARGS_AUTO
+	help
+	  system auto generated bootargs.
+	  WARNING: Do not edit, your changes will be lost.
+	  Disable SUBSYSTEM_BOOTARGS_AUTO to edit bootargs through SUBSYSTEM_USER_CMDLINE option
+
+endmenu
+endif
+config SUBSYSTEM_DEVICETREE_FLAGS
+	string "Devicetree flags"
+	default ""
+	help
+	  Mention device-tree flags.
+	  These will be passed to dtc while compiling device-trees.
+	  Ex: -@ -H epapr
+
+if SYSTEM_ZYNQMP || SUBSYSTEM_ARCH_ARM
+config SUBSYSTEM_DTB_OVERLAY
+       bool "Devicetree overlay"
+       default n
+       help
+         Select this option to separate pl from base dtb
+         and build the pl.dtsi to generate pl.dtbo.
+
+config SUBSYSTEM_REMOVE_PL_DTB
+       bool "Remove PL from devicetree"
+       default n
+       help
+	Remove PL nodes if user doesn't depend on the PL IPs and
+	if any PL IP in DTG generates an error then user can
+	simply enable this flag and DTG won't generate any PL nodes.
+
+endif
+endmenu
+
+if SUBSYSTEM_ARCH_AARCH64 && !SUBSYSTEM_COMPONENT_ARM__TRUSTED__FIRMWARE_NAME_NONE
+menu "ARM Trusted Firmware Compilation Configuration"
+config SUBSYSTEM_ATF_MEMORY_SETTINGS
+	bool "ATF memory settings"
+	default n
+	help
+	 Select this option, if membase and memsize settings of ATF are to be modified.These are defined already in atf source.
+	  Use this option inorder to over-ride these values.For further info: ref arm-trusted-firmware/docs/plat/*.md's
+if SUBSYSTEM_ATF_MEMORY_SETTINGS
+config SUBSYSTEM_ATF_MEM_BASE
+	hex "ATF MEM BASE"
+	default 0xFFFEA000
+	help
+	  On default the ATF is placed in OCM memory. Alternatively, the ATF can be
+	  placed in DRAM by updating ATF_MEM_BASE and ATF_MEM_SIZE.
+config SUBSYSTEM_ATF_MEM_SIZE
+	hex "ATF MEM SIZE"
+	default 0x16000
+	help
+	  Mention the ATF size.
+endif
+config SUBSYSTEM_ATF_COMPILE_EXTRA_SETTINGS
+	string "extra ATF compilation settings"
+	default ""
+	help
+	  Extra ATF compilation Settings. You can put multiple settings there,
+	  seperated with semicolon.
+	  (NEW!) : ZYNQMP_WDT_RESTART=1 for Special handling to cleanly restart the APU during AWDT recovery
+	  Other E.g. MAKEARCH+=RESET_TO_BL31=1 SPD=tspd; ATF_BUILD_TARGET=bl31 bl32
+config SUBSYSTEM_PRELOADED_BL33_BASE
+	hex "PRELOADED BL33 BASE"
+	default 0x8000000
+	help
+	 BL33 address can be mentioned.Only takes care of passing PRELOADED_BL33_BASE
+	 during atf compilation.For Example incase of BL33 being U-boot CONFIG_SYS_TEXT_BASE
+	 has to be adjusted using "petalinux-config -c --u-boot"
+config SUBSYSTEM_ATF_DEBUG
+	bool "atf debug"
+	default n
+	help
+	 Select this option for selecting atf debug mode
+endmenu
+endif
+
+if SYSTEM_ZYNQMP && SUBSYSTEM_AUTOCONFIG_PMUFW && SUBSYSTEM_AUTOCONFIG_KERNEL
+config SUBSYSTEM_PMUFW_POWER_KERNEL_CONFIGURATIONS
+	bool "Power Management kernel configuration"
+	default n
+	help
+	Select this to enable/disable power management related kernel configs through plnx-kernel.cfg.
+	These configs are later applied over kernel defconfig(xilinx_zynqmp_defconfig).
+	If this is not selected the kernel configs will not be enabled/disabled by Petalinux explicitly.
+	The default configuration from linux defconfig is retained in your petalinux project.
+
+choice
+	prompt "Enable/Disable"
+	depends on SUBSYSTEM_PMUFW_POWER_KERNEL_CONFIGURATIONS
+	default SUBSYSTEM_PMUFW_POWER_KERNEL_CONFIGURATION_ENABLE
+	config SUBSYSTEM_PMUFW_POWER_KERNEL_CONFIGURATION_ENABLE
+		bool "enable"
+		help
+		Select this option to explicitly enable power management related kernel configs through plnx_kernel.cfg.
+		The list of configs enabled are:
+		SUSPEND
+		PM_WAKELOCKS
+		PM
+		CPU_IDLE
+		ARM_CPUIDLE
+		CPU_FREQ
+		CPU_FREQ_DEFAULT_GOV_USERSPACE
+		CPU_FREQ_GOV_USERSPACE
+		COMMON_CLK_ZYNQMP
+		SOC_XILINX_ZYNQMP
+		ZYNQMP_PM_DOMAINS
+		PM_SLEEP
+	config SUBSYSTEM_PMUFW_POWER_KERNEL_CONFIGURATION_DISABLE
+		bool "disable"
+		help
+		Select this option to explicitly disable power related management kernel configs.
+		Some of these configs are already enabled through kernel defconfig (Xilinx_zynqmp_defconfig) present in kernel src.
+		The list of configs disabled are:
+		SUSPEND
+		PM_WAKELOCKS
+		PM
+		CPU_IDLE
+		ARM_CPUIDLE
+		CPU_FREQ
+		CPU_FREQ_DEFAULT_GOV_USERSPACE
+		CPU_FREQ_GOV_USERSPACE
+		COMMON_CLK_ZYNQMP
+		SOC_XILINX_ZYNQMP
+		ZYNQMP_PM_DOMAINS
+		PM_SLEEP
+endchoice
+endif
+
+if SYSTEM_ZYNQMP || SUBSYSTEM_ARCH_ARM
+menu "FPGA Manager"
+config SUBSYSTEM_FPGA_MANAGER
+        bool "Fpga Manager"
+        help
+	 Select this option to provides an interface to the Linux for configuring the programmable logic(PL).
+	 It will create /lib/firmware directory in rootfs and copy bitstream and dtb/dtbo files of base hdf/xsa in it.
+
+if SUBSYSTEM_FPGA_MANAGER
+config FPGA_HW_PATH
+        string "Specify hw directory path"
+        default ""
+	help
+	 Specify directory path containing extra HDF/DSA files which is used to generate
+	 bitstream and dtb/dtbo files. These are copied into /lib/firmware directory.
+	 Ex: ${PROOT}/project-spec/extra-hw-description/
+	 Note: $PROOT is internal variable, any other variable will
+                not be functional. Absolute path is preferred.
+
+endif
+endmenu
+endif
+
+if !SUBSYSTEM_COMPONENT_U__BOOT_NAME_NONE
+menu "u-boot Configuration"
+choice
+	prompt "U-boot config"
+	default SUBSYSTEM_UBOOT_CONFIG_PETALINUX
+
+config SUBSYSTEM_UBOOT_CONFIG_PETALINUX
+	bool "PetaLinux u-boot config"
+	help
+	  Choose this option to use PetaLinux u-boot configuration. See CONFIG_SUBSYSTEM_UBOOT_CONFIG_TARGET for defconfig used from U-boot src, Over this petalinux auto generated fragments -- platform-auto.h, platform-top.h, config.cfg are applied.
+config SUBSYSTEM_UBOOT_CONFIG_OTHER
+	bool "other"
+	help
+	Choose this option to disable overriding of petalinux autogenerated fragments -- platform-auto.h and platform-top.h
+endchoice
+
+config SUBSYSTEM_UBOOT_CONFIG_TARGET
+	string "u-boot config target"
+	help
+	  Specify a u-boot config target when building u-boot, it will run 
+	  run u-boot XXX config target: make XXX_config to configure u-boot
+	  first.
+
+if SUBSYSTEM_AUTOCONFIG_U__BOOT && SUBSYSTEM_UBOOT_CONFIG_PETALINUX
+	config SUBSYSTEM_NETBOOT_OFFSET
+	hex "netboot offset"
+	default 0x1000000
+	help
+	 Set this to define the memory offset to load the image of netboot command in u-boot.
+
+	config SUBSYSTEM_U__BOOT_TFTPSERVER_IP
+	string "TFTP Server IP address"
+	default "AUTO"
+	help
+	 The IP address of your TFTP file server in the main network interface.
+
+	 Specify the special value "AUTO" to use the IP address of your
+	 development host.
+
+endif
+endmenu
+endif
+
+menu "Image Packaging Configuration"
+choice
+	prompt "Root filesystem type"
+	default SUBSYSTEM_ROOTFS_INITRAMFS
+
+config SUBSYSTEM_ROOTFS_INITRAMFS
+	bool "INITRAMFS"
+	help
+	  Choose this option to configure your PetaLinux build to use
+	  the kernel INITRAMFS mechanism for the root filesystem.
+
+	  The root filesystem will be writeable, but not persistent,
+	  meaning that any changes are lost upon reboot.
+
+config SUBSYSTEM_ROOTFS_INITRD
+	bool "INITRD"
+	help
+	  Choose this opion to configure your PetaLinux build to use
+	  kernel INITRD mechinsm for the root filesystem.
+
+config SUBSYSTEM_ROOTFS_JFFS2
+	bool "JFFS2"
+	help
+	  Choose this option to configure your PetaLinux build for the
+	  root filesystem to be mounted on a JFFS2 flash partition.
+
+	  You must also ensure that your Flash Partition Table (see below)
+	  contains a partition named "jffs2" and is of a suitable size.
+
+config SUBSYSTEM_ROOTFS_NFS
+	bool "NFS"
+	help
+	  Choose this setting to configure your PetaLinux build for NFS Root.
+
+	  Your workstation must be properly configured for NFS, and the
+	  NFS root directory (see below) must be exported properly.
+
+config SUBSYSTEM_ROOTFS_EXT
+	bool "EXT (SD/eMMC/QSPI/SATA/USB)"
+	help
+	  Choose this setting to configure your PetaLinux build for EXT Root.
+
+          device examples:
+          eMMC or SD root=/dev/mmcblkYpX
+          SATA or USB root=/dev/sdX
+          QSPI root=/dev/mtdx
+
+config SUBSYSTEM_ROOTFS_OTHER
+	bool "other"
+	help
+	  Choose this setting to configure your PetaLinux build for other root.
+
+	  You will need to manually generate the Root FS image.
+
+endchoice
+
+choice
+	prompt "jffs2 erase block size(KByte)"
+	default SUBSYSTEM_JFFS2_ERASE_SIZE_8
+	depends on SUBSYSTEM_ROOTFS_JFFS2
+config SUBSYSTEM_JFFS2_ERASE_SIZE_8
+	bool "jffs2 erase block size: 8KiB"
+config SUBSYSTEM_JFFS2_ERASE_SIZE_16
+	bool "jffs2 erase block size: 16KiB"
+config SUBSYSTEM_JFFS2_ERASE_SIZE_32
+	bool "jffs2 erase block size: 32KiB"
+config SUBSYSTEM_JFFS2_ERASE_SIZE_64
+	bool "jffs2 erase block size: 64KiB"
+config SUBSYSTEM_JFFS2_ERASE_SIZE_128
+	bool "jffs2 erase block size: 128KiB"
+config SUBSYSTEM_JFFS2_ERASE_SIZE_256
+	bool "jffs2 erase block size: 256KiB"
+config SUBSYSTEM_JFFS2_ERASE_SIZE_512
+	 bool "jffs2 erase block size: 512KiB"
+endchoice
+
+config SUBSYSTEM_NFSROOT_DIR
+	string "Location of NFS root directory"
+	depends on SUBSYSTEM_ROOTFS_NFS
+	default "/tftpboot/nfsroot"
+
+config SUBSYSTEM_NFSSERVER_IP
+	string "NFS Server IP address"
+	default "AUTO"
+	depends on SUBSYSTEM_ROOTFS_NFS
+	help
+	 The IP address of your NFS server in the main network interface.
+
+config SUBSYSTEM_SDROOT_DEV
+	string "Device node of SD device"
+	depends on SUBSYSTEM_ROOTFS_EXT
+	default "/dev/mmcblk0p2"
+
+config SUBSYSTEM_INITRD_RAMDISK_LOADADDR
+	hex "RAMDISK loadaddr"
+	default "0x0"
+	depends on SUBSYSTEM_ROOTFS_INITRD
+	help
+	  RAMDISK Load address if INITRD is selected as rootfs type
+
+config SUBSYSTEM_RAMDISK_IMAGE
+	string "Location of ramdisk image"
+	depends on SUBSYSTEM_ROOTFS_INITRD
+	default "${PROOT}/images/${SUBSYSTEM}/rootfs.cpio.gz"
+
+config SUBSYSTEM_UIMAGE_NAME
+	string "name for bootable kernel image"
+	default "image.ub"
+	help
+	  Specify the name of uboot bootable kernel image
+
+config SUBSYSTEM_RFS_FORMATS
+	string "Root filesystem formats"
+	default "cpio cpio.gz cpio.gz.u-boot tar.gz jffs2"
+	help
+	  Specifies the formats the build system uses during the build
+	  when creating the root filesystem.
+	  Supported image formats:
+	  tar.gz cpio cpio.gz.u-boot cpio.gz ext4 ext3 ext3.bz2 tar.bz2 cpio.bz2 ext4.gz jffs2
+
+config SUBSYSTEM_DTB_PADDING_SIZE
+	hex "DTB padding size"
+	default 0x1000
+	help
+	  Set this value for DTB padding size
+
+config SUBSYSTEM_COPY_TO_TFTPBOOT
+	bool "Copy final images to tftpboot"
+	help
+	  Set this if you would like the final build image to be automatically
+	  copied to your TFTP server directory.
+
+config SUBSYSTEM_TFTPBOOT_DIR
+	string "tftpboot directory"
+	depends on SUBSYSTEM_COPY_TO_TFTPBOOT
+	default "/tftpboot"
+	help
+	  The directory that your TFTP server serves its files from.
+
+if SYSTEM_VERSAL
+config SUBSYSTEM_PDI_FILENAME
+	string "PDI File name"
+	default ""
+	help
+	  Specify the PDI file name If design file has a multiple .pdi files.
+
+endif
+endmenu
+
+menu "Firmware Version Configuration"
+config SUBSYSTEM_HOSTNAME
+	string "Host name"
+	default "petalinux"
+	help
+	 The host name of your SUBSYSTEM, set at startup.
+
+config SUBSYSTEM_PRODUCT
+	string "Product name"
+	default ""
+	help
+	  This is an string inserted into /etc/product during the build.
+
+config SUBSYSTEM_FW_VERSION
+	string "Firmware Version"
+	default "1.00"
+	help
+	  This is an arbitrary string value that is inserted into
+	  /etc/version during the build.
+endmenu
+
+menu "Yocto Settings"
+
+config YOCTO_MACHINE_NAME
+       string "YOCTO_MACHINE_NAME"
+       default "plnx-versal" if SYSTEM_VERSAL
+       default "plnx-zynqmp" if SYSTEM_ZYNQMP
+       default "plnx-zynq7" if SUBSYSTEM_ARCH_ARM
+       default "plnx-microblazeel" if SUBSYSTEM_ARCH_MICROBLAZE
+       help
+         you can specify MACHINE_NAME using this variable.
+
+menu "TMPDIR Location"
+
+config TMP_DIR_LOCATION
+	string "TMPDIR Location"
+	default "${PROOT}/build/tmp"
+	help
+	  Relative path can be used with reference to ${proot}
+	  Note: $PROOT is internal variable, any other variable will
+	        not be functional.
+endmenu
+
+choice
+	prompt "Build tool"
+	default BUILDTOOL_BITBAKE
+
+config BUILDTOOL_BITBAKE
+	bool "bitbake"
+	help
+	This will set bitbake as build environment command.
+
+config BUILDTOOL_DEVTOOL
+	bool "devtool"
+	help
+	This will set devtool as build environment command.
+
+endchoice
+
+menu	"Parallel thread execution"
+
+config YOCTO_BB_NUMBER_THREADS
+	string "sets number of bb threads (BB_NUMBER_THREADS)"
+	help
+	By default bitbake calculates the number of cores in pc
+
+config YOCTO_PARALLEL_MAKE
+	string "sets number of parallel make -j (PARALLEL_MAKE)"
+	help
+	By default bitbake calculates the number of cores in pc
+
+endmenu
+
+menu "Add pre-mirror url "
+
+config PRE_MIRROR_URL
+        string "pre-mirror url path"
+        help
+	pre-mirrors is used by bitbake to fetch sources from specified location first.
+	If sources are not available in pre-mirrors, bitbake then fetches from SRC_URI in the recipes.
+
+        path can be ftp, http, https or local directory.examples are
+        "file::///path/to/your/downloads/"
+        "http://example.com/your/downloadsmirrors/"
+        "ftp://example.com/your/downloadsmirrors/"
+endmenu
+
+
+menu "Local sstate feeds settings"
+config YOCTO_DEFAULT_LOCAL_SSTATE_FEEDS
+	comment "Default sstate feeds ${PETALINUX}/components/yocto always added"
+
+config YOCTO_LOCAL_SSTATE_FEEDS_URL
+	string "local sstate feeds url"
+	default ""
+
+endmenu
+
+config YOCTO_ENABLE_DEBUG_TWEAKS
+	bool "Enable Debug Tweaks"
+	default n
+	help
+	debug tweaks will be enabled in image features.
+	it will enable auto login.
+
+config YOCTO_NETWORK_SSTATE_FEEDS
+	bool "Enable Network sstate feeds"
+	default y
+	help
+	 The sstate feeds which are hosted on webserver has to be provided.
+	 The sstate cache will be pulled from these servers and rootfs was generated.
+
+menu "Network sstate feeds URL"
+	depends on YOCTO_NETWORK_SSTATE_FEEDS
+config YOCTO_NETWORK_SSTATE_FEEDS_URL
+	string "network sstate feeds url"
+	default ""
+
+endmenu
+
+config YOCTO_BB_NO_NETWORK
+	bool "Enable BB NO NETWORK"
+	default n
+	help
+	 Enabling this option restricts bitbake to go to internet for fetching.
+
+menu "User Layers"
+
+config USER_LAYER_0
+	string "user layer 0"
+	help
+	  You can specify relative path or absolute path of layer.
+	  To add layer at <project-root>/project-spec/meta-security
+	  Enter: ${proot}/project-spec/meta-security
+	  Note: proot is internal to scripts.
+
+config USER_LAYER_1
+	string "user layer 1"
+	depends on USER_LAYER_0 != ""
+	help
+	  You can specify relative path or absolute path of layer.
+	  To add layer at <project-root>/project-spec/meta-security
+	  Enter: ${proot}/project-spec/meta-security
+	  Note: proot is internal to scripts.
+
+config USER_LAYER_2
+	string "user layer 2"
+	depends on USER_LAYER_1 != ""
+	help
+	  You can specify relative path or absolute path of layer.
+	  To add layer at <project-root>/project-spec/meta-security
+	  Enter: ${proot}/project-spec/meta-security
+	  Note: proot is internal to scripts.
+
+config USER_LAYER_3
+	string "user layer 3"
+	depends on USER_LAYER_2 != ""
+	help
+	  You can specify relative path or absolute path of layer.
+	  To add layer at <project-root>/project-spec/meta-security
+	  Enter: ${proot}/project-spec/meta-security
+	  Note: proot is internal to scripts.
+
+config USER_LAYER_4
+	string "user layer 4"
+	depends on USER_LAYER_3 != ""
+	help
+	  You can specify relative path or absolute path of layer.
+	  To add layer at <project-root>/project-spec/meta-security
+	  Enter: ${proot}/project-spec/meta-security
+	  Note: proot is internal to scripts.
+
+config USER_LAYER_5
+	string "user layer 5"
+	depends on USER_LAYER_4 != ""
+	help
+	  You can specify relative path or absolute path of layer.
+	  To add layer at <project-root>/project-spec/meta-security
+	  Enter: ${proot}/project-spec/meta-security
+	  Note: proot is internal to scripts.
+
+config USER_LAYER_6
+	string "user layer 6"
+	depends on USER_LAYER_5 != ""
+	help
+	  You can specify relative path or absolute path of layer.
+	  To add layer at <project-root>/project-spec/meta-security
+	  Enter: ${proot}/project-spec/meta-security
+	  Note: proot is internal to scripts.
+
+config USER_LAYER_7
+	string "user layer 7"
+	depends on USER_LAYER_6 != ""
+	help
+	  You can specify relative path or absolute path of layer.
+	  To add layer at <project-root>/project-spec/meta-security
+	  Enter: ${proot}/project-spec/meta-security
+	  Note: proot is internal to scripts.
+
+config USER_LAYER_8
+	string "user layer 8"
+	depends on USER_LAYER_7 != ""
+	help
+	  You can specify relative path or absolute path of layer.
+	  To add layer at <project-root>/project-spec/meta-security
+	  Enter: ${proot}/project-spec/meta-security
+	  Note: proot is internal to scripts.
+
+config USER_LAYER_9
+	string "user layer 9"
+	depends on USER_LAYER_8 != ""
+	help
+	  You can specify relative path or absolute path of layer.
+	  To add layer at <project-root>/project-spec/meta-security
+	  Enter: ${proot}/project-spec/meta-security
+	  Note: proot is internal to scripts.
+
+endmenu
+endmenu

@@ -1,0 +1,25 @@
+10:56:15 INFO  : Registering command handlers for Vitis TCF services
+10:56:17 INFO  : Successfully done query RDI_DATADIR 
+10:56:17 INFO  : Adding '/aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/sw_lib' as a new local repository.
+11:00:12 INFO  : plnx-install-location is set to ''
+11:00:31 INFO  : Launching XSCT server: xsct -n  -interactive /aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/workspace/sdk/temp_xsdb_launch_script.tcl
+11:00:36 INFO  : XSCT server has started successfully.
+11:00:38 INFO  : Successfully done setting XSCT server connection channel  
+11:00:38 INFO  : plnx-install-location is set to ''
+11:00:38 INFO  : Successfully done query RDI_DATADIR 
+11:00:38 INFO  : Successfully done setting workspace for the tool. 
+11:00:38 INFO  : Restoring local repository preferences: 
+		 /aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/sw_lib
+11:00:38 INFO  : Processing command line option -lp /aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/sw_lib.
+11:00:38 INFO  : Registering command handlers for Vitis TCF services
+11:01:21 INFO  : Successfully done sdx_reload_mss "/aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/workspace/sdk/TE0803-03-4AE11-A/zynqmp_fsbl/zynqmp_fsbl_bsp/system.mss"
+11:01:22 INFO  : Successfully done sdx_reload_mss "/aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/workspace/sdk/TE0803-03-4AE11-A/zynqmp_pmufw/zynqmp_pmufw_bsp/system.mss"
+11:01:24 INFO  : Successfully done sdx_reload_mss "/aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/workspace/sdk/TE0803-03-4AE11-A/psu_cortexa53_0/standalone_domain/bsp/system.mss"
+11:01:42 INFO  : Successfully done sdx_reload_mss "/aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/workspace/sdk/TE0803-03-4AE11-A/zynqmp_fsbl/zynqmp_fsbl_bsp/system.mss"
+11:01:42 INFO  : No changes in MSS file content so sources will not be generated.
+11:03:51 INFO  : Successfully done sdx_reload_mss "/aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/workspace/sdk/TE0803-03-4AE11-A/zynqmp_fsbl/zynqmp_fsbl_bsp/system.mss"
+11:03:51 INFO  : No changes in MSS file content so sources will not be generated.
+11:04:23 INFO  : Successfully done sdx_reload_mss "/aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/workspace/sdk/TE0803-03-4AE11-A/zynqmp_pmufw/zynqmp_pmufw_bsp/system.mss"
+11:04:23 INFO  : No changes in MSS file content so sources will not be generated.
+11:20:22 INFO  : Successfully done sdx_reload_mss "/aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/workspace/sdk/TE0803-03-4AE11-A/zynqmp_fsbl/zynqmp_fsbl_bsp/system.mss"
+11:20:22 INFO  : No changes in MSS file content so sources will not be generated.

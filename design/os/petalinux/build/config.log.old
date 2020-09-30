@@ -1,5 +1,0 @@
-[INFO] generating Kconfig for project
-INFO: [Hsi 55-2053] elapsed time for repository (/aeg_sw/tools/CentOS7-x86_64/xilinx/2019.2/petalinux/tools/xsct/data/embeddedsw) loading 0 seconds
-hsi::open_hw_design: Time (s): cpu = 00:00:07 ; elapsed = 00:00:08 . Memory (MB): peak = 911.992 ; gain = 143.531 ; free physical = 6572 ; free virtual = 62811
-ERROR: Failed to generate /u/ucm28261/develop/projects/cfi-daq/cfi-daq/trenz-test-2/StarterKit/os/petalinux/build/misc/config/Kconfig.syshw
-ERROR: Failed to Kconfig project

@@ -1,4 +1,0 @@
-SANITY_VERSION 1
-TMPDIR /u/ucm28261/develop/projects/cfi-daq/cfi-daq/trenz-test-2/StarterKit/os/petalinux/build/tmp
-SSTATE_DIR /aeg_sw/work/users/ucm28261/develop/projects/cfi-daq/trenz-test-2/StarterKit/os/petalinux/build/sstate-cache
-NATIVELSBSTRING centos-7

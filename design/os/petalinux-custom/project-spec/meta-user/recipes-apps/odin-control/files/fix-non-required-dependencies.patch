@@ -1,0 +1,16 @@
+diff --git a/setup.py b/setup.py
+index 0d442e6..ef50e48 100644
+--- a/setup.py
++++ b/setup.py
+@@ -3,10 +3,7 @@ from setuptools import setup, find_packages
+ import versioneer
+ 
+ install_requires = [
+-    'tornado>=4.3',
+-    'pyzmq>=17.0',
+-    'future',
+-    'psutil>=5.0',
++    'tornado>=4.3' 
+ ]
+ 
+ if sys.version_info[0] == 2:

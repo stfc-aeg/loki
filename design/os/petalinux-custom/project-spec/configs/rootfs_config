@@ -4224,11 +4224,8 @@ CONFIG_imagefeature-debug-tweaks=y
 #
 # user packages 
 #
-# CONFIG_nativesdk-odin-control is not set
 CONFIG_odin-control=y
-# CONFIG_python3-smbus is not set
-# CONFIG_python3-spidev is not set
-# CONFIG_python3-tornado is not set
+CONFIG_odin-devices=y
 
 #
 # PetaLinux RootFS Settings

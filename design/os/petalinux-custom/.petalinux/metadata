@@ -3,4 +3,4 @@ VALIDATE_HW_CHKSUM=1
 HARDWARE_PATH=/u/ucm28261/develop/projects/cfi-daq/cfi-daq/trenz-test-2/StarterKit/os/petalinux-custom/StarterKit_4cg_2gb.xsa
 HARDWARE_CHECKSUM=44897d46ec8f9fd303b7290e587fe331
 YOCTO_SDK=b034efc026f5f7d24a4732927cb62e43
-RFSCONFIG_CHKSUM=9c3f795181b05a624be1a09f8099ceaa
+RFSCONFIG_CHKSUM=d087025f218be21bf5d40d0ec402cab2

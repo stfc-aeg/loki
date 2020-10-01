@@ -5,3 +5,4 @@
 #CONFIG_peekpoke
 
 CONFIG_odin-control
+CONFIG_odin-devices

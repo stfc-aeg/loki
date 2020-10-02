@@ -6,3 +6,4 @@
 
 CONFIG_odin-control
 CONFIG_odin-devices
+CONFIG_odin-sequencer

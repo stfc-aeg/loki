@@ -4226,6 +4226,7 @@ CONFIG_imagefeature-debug-tweaks=y
 #
 CONFIG_odin-control=y
 CONFIG_odin-devices=y
+CONFIG_odin-sequencer=y
 
 #
 # PetaLinux RootFS Settings

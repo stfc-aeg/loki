@@ -6,7 +6,7 @@ RDEPENDS_${PN} += "python3-setuptools"
 RDEPENDS_${PN} += "python3-fcntl"
 
 SRC_URI = "git://github.com/odin-detector/odin-control.git \
-		file://fix-non-required-dependencies.patch"
+		file://odin-control-fix-non-required-dependencies.patch"
 SRCREV = "1.0.0"
 
 # This has to be in the format expected in Yocto's license list...

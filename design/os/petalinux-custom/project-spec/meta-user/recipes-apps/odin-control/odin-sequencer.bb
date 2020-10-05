@@ -5,7 +5,7 @@ RDEPENDS_${PN} += "python3-setuptools"
 RDEPENDS_${PN} += "odin-control"
 RDEPENDS_${PN} += "python3-pytest (>=3)"
 RDEPENDS_${PN} += "python3-pytest-runner"
-#RDEPENDS_${PN} += "inotify"
+RDEPENDS_${PN} += "inotify"
 #RDEPENDS_${PN} += "python3-pyinotify"
 #RDEDPENDS_${PN} += "inotify-tools"
 

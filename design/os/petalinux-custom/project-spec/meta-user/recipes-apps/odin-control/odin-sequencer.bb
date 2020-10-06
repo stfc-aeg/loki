@@ -5,7 +5,7 @@ RDEPENDS_${PN} += "odin-control"
 # python-test should only be required for odin-sequencer development, not usage.
 #RDEPENDS_${PN} += "python3-pytest (>=3)"
 #RDEPENDS_${PN} += "python3-pytest-runner"
-RDEPENDS_${PN} += "inotify"
+RDEPENDS_${PN} += "python3-inotify"
 
 SRC_URI = "git://github.com/stfc-aeg/odin-sequencer.git \
 		file://odin-sequencer-remove-inotify-setuptools.patch"

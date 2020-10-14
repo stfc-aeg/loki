@@ -36,7 +36,7 @@
 #define CONFIG_MII
 #define CONFIG_NET_MULTI
 #define CONFIG_NETCONSOLE	1
-#define CONFIG_SERVERIP	130.246.18.113
+#define CONFIG_SERVERIP
 #define CONFIG_IPADDR
 
 /* spi_flash - psu_qspi_0 */

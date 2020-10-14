@@ -11,7 +11,7 @@
 
 #define CONFIG_SYS_BAUDRATE_TABLE  { 4800, 9600, 19200, 38400, 57600, 115200 }
 
-
+#error let's try that again...
 
 /* processor - psu_cortexa53_0 */
 #define CONFIG_CPU_ARMV8
@@ -36,7 +36,6 @@
 #define CONFIG_MII
 #define CONFIG_NET_MULTI
 #define CONFIG_NETCONSOLE	1
-#define CONFIG_SERVERIP	130.246.18.113
 #define CONFIG_IPADDR
 
 /* spi_flash - psu_qspi_0 */

@@ -217,9 +217,11 @@ CONFIG_SUBSYSTEM_PRELOADED_BL33_BASE=0x8000000
 #
 # u-boot Configuration
 #
-# CONFIG_SUBSYSTEM_UBOOT_CONFIG_PETALINUX is not set
-CONFIG_SUBSYSTEM_UBOOT_CONFIG_OTHER=y
+CONFIG_SUBSYSTEM_UBOOT_CONFIG_PETALINUX=y
+# CONFIG_SUBSYSTEM_UBOOT_CONFIG_OTHER is not set
 CONFIG_SUBSYSTEM_UBOOT_CONFIG_TARGET="xilinx_zynqmp_virt_defconfig"
+CONFIG_SUBSYSTEM_NETBOOT_OFFSET=0x1000000
+CONFIG_SUBSYSTEM_U__BOOT_TFTPSERVER_IP="AUTO"
 
 #
 # Image Packaging Configuration
@@ -253,14 +255,14 @@ CONFIG_YOCTO_MACHINE_NAME="zynqmp-generic"
 #
 # TMPDIR Location
 #
-CONFIG_TMP_DIR_LOCATION="/tmp/trenz-test-2/build/tmp"
+CONFIG_TMP_DIR_LOCATION="/tmp/trenz-test-3/build/tmp"
 
 #
 # WORKSPACE Location
 #
 CONFIG_WORKSPACE_LOCATION="${PROOT}/components/yocto/workspace"
-CONFIG_BUILDTOOL_BITBAKE=y
-# CONFIG_BUILDTOOL_DEVTOOL is not set
+# CONFIG_BUILDTOOL_BITBAKE is not set
+CONFIG_BUILDTOOL_DEVTOOL=y
 
 #
 # Parallel thread execution
@@ -289,5 +291,4 @@ CONFIG_YOCTO_NETWORK_SSTATE_FEEDS_URL="http://petalinux.xilinx.com/sswreleases/r
 # User Layers
 #
 CONFIG_USER_LAYER_0=""
-
 CONFIG_SUBSYSTEM_BOOTARGS_GENERATED=" earlycon console=ttyPS0,115200 clk_ignore_unused root=/dev/ram0 rw"

@@ -1,6 +1,9 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
-SRC_URI += "file://platform-top.h"
+SRC_URI += "file://platform-top.h \
+            file://devtool-fragment.cfg \
+            file://0001-added-modified-platform-headers.patch \
+            "
 
 do_configure_append () {
 	if [ "${U_BOOT_AUTO_CONFIG}" = "1" ]; then

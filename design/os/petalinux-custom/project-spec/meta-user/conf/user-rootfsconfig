@@ -7,3 +7,8 @@
 CONFIG_odin-control
 CONFIG_odin-devices
 CONFIG_odin-sequencer
+
+CONFIG_python3-spidev
+CONFIG_python3-smbus
+
+CONFIG_spidev-test

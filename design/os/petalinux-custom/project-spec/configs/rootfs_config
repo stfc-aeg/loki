@@ -4220,6 +4220,7 @@ CONFIG_imagefeature-debug-tweaks=y
 #
 # CONFIG_gpio-demo is not set
 # CONFIG_peekpoke is not set
+CONFIG_spidev-test=y
 
 #
 # user packages 
@@ -4227,6 +4228,8 @@ CONFIG_imagefeature-debug-tweaks=y
 CONFIG_odin-control=y
 CONFIG_odin-devices=y
 CONFIG_odin-sequencer=y
+CONFIG_python3-smbus=y
+CONFIG_python3-spidev=y
 
 #
 # PetaLinux RootFS Settings

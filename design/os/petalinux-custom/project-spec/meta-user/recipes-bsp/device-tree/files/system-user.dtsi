@@ -166,3 +166,19 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
         };
     };
 };
+
+/* Additional changes for external interfaces */
+/* I2C */
+&i2c1 {
+	clock-frequency = <100000>;
+};
+
+/* SPI */
+&spi0 {
+	spidev@0x00 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <0>;
+	};
+};
+

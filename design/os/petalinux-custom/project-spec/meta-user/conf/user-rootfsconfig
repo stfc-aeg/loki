@@ -11,4 +11,6 @@ CONFIG_odin-sequencer
 CONFIG_python3-spidev
 CONFIG_python3-smbus
 
+CONFIG_python3-pip
+
 CONFIG_spidev-test

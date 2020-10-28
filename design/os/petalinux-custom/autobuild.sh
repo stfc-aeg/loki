@@ -38,8 +38,13 @@ done
 
 
 
-# Output directory
+# Directories and Targets
 OUTPUT_DIR="./images/linux/"
+HW_EXPORT_DIR="../../prebuilt/hardware/4cg_2gb/"
+HW_XSA_FILENAME="design_4cg_2gb.xsa"
+SW_EXPORT_DIR="../../prebuilt/software/4cg_2gb/"
+SW_FSBL_FILENAME="fsbl.elf"
+SW_PMUFW_FILENAME="pmufw.elf"
 
 # Printout formatting
 PRE="\t#> "
@@ -53,12 +58,26 @@ mkdir -p ${OUTPUT_DIR}
 if [ $noxsa = 0 ] ; then
 	printf "\n $(date +%T) $PRE XSA Import Enabled, starting...$SUF"
 
+	# Check if there is an XSA in the Trenz project
+	if [ -f "${HW_EXPORT_DIR}${HW_XSA_FILENAME}" ] ; then
+
+		# Check the Trenz XSA is actually different to the one in the current project.
+		printf "\n $(date +%T) $PREIND Found Trenz XSA: ${HW_XSA_FILENAME}$SUF"
+		if cmp -s "${HW_EXPORT_DIR}${HW_XSA_FILENAME}" "./project-spec/hw-description/system.xsa" ; then
+			printf "\n $(date +%T) $PREIND XSA is the same as current project XSA, aborting...$SUF"
+			exit 8
+		fi
+	else
+		printf "\n $(date +%T) $PREIND Could not find Trenx XSA at ${HW_EXPORT_DIR}${HW_XSA_FILENAME}.$SUF"
+		exit 7
+	fi
+
 	# Remove any .xsa files in the Petalinux project root
 	rm -rf ./*.xsa
 	printf "\n $(date +%T) $PREIND Old .xsa files removed from cwd...$SUF"
 
 	# Copy the latest .xsa into the PetaLinux project root
-	if cp ../../prebuilt/hardware/4cg_2gb/design_4cg_2gb.xsa ./ ; then
+	if cp ${HW_EXPORT_DIR}${HW_XSA_FILENAME} ./ ; then
 
 		# Silently run config to import XSA without menuconfig
 		if petalinux-config --get-hw-description --silentconfig ; then
@@ -80,7 +99,7 @@ if [ $nosw  = 0 ] ; then
 	printf "\n $(date +%T) $PRE FSBL and PMUFW Import Enabled, starting...$SUF"
 
 	# Replace current fsbl with Trenz-generated one
-	if cp ../../prebuilt/software/4cg_2gb/fsbl.elf ${OUTPUT_DIR} ; then
+	if cp ${SW_EXPORT_DIR}${SW_FSBL_FILENAME} ${OUTPUT_DIR} ; then
 		printf "\n $(date +%T) $PREIND New FSBL imported...$SUF"
 	else
 		printf "\n $(date +%T) $PREIND Trenz project FSBL not found.$SUF"
@@ -88,7 +107,7 @@ if [ $nosw  = 0 ] ; then
 	fi
 
 	# Replace current pmufw with Trenz-generated one
-	if cp ../../prebuilt/software/4cg_2gb/pmufw.elf ${OUTPUT_DIR} ; then
+	if cp ${SW_EXPORT_DIR}${SW_PMUFW_FILENAME} ${OUTPUT_DIR} ; then
 		printf "\n $(date +%T) $PREIND New PMUFW imported...$SUF"
 	else
 		printf "\n $(date +%T) $PREIND Trenz project PMUFW not found.$SUF"

@@ -11,7 +11,7 @@ set psu_pll_init_data {
 		# Register : RPLL_CFG @ 0XFF5E0034</p>
 
 		# PLL loop filter resistor control
-		# PSU_CRL_APB_RPLL_CFG_RES                                                        0x2
+		# PSU_CRL_APB_RPLL_CFG_RES                                                        0xc
 
 		# PLL charge pump control
 		# PSU_CRL_APB_RPLL_CFG_CP                                                         0x3
@@ -20,14 +20,14 @@ set psu_pll_init_data {
 		# PSU_CRL_APB_RPLL_CFG_LFHF                                                       0x3
 
 		# Lock circuit counter setting
-		# PSU_CRL_APB_RPLL_CFG_LOCK_CNT                                                   0x258
+		# PSU_CRL_APB_RPLL_CFG_LOCK_CNT                                                   0x339
 
 		# Lock circuit configuration settings for lock windowsize
 		# PSU_CRL_APB_RPLL_CFG_LOCK_DLY                                                   0x3f
 
 		# Helper data. Values are to be looked up in a table from Data Sheet
-		#(OFFSET, MASK, VALUE)      (0XFF5E0034, 0xFE7FEDEFU ,0x7E4B0C62U)  */
-    mask_write 0XFF5E0034 0xFE7FEDEF 0x7E4B0C62
+		#(OFFSET, MASK, VALUE)      (0XFF5E0034, 0xFE7FEDEFU ,0x7E672C6CU)  */
+    mask_write 0XFF5E0034 0xFE7FEDEF 0x7E672C6C
 		# : UPDATE FB_DIV
 		# Register : RPLL_CTRL @ 0XFF5E0030</p>
 
@@ -37,15 +37,15 @@ set psu_pll_init_data {
 		# PSU_CRL_APB_RPLL_CTRL_PRE_SRC                                                   0x0
 
 		# The integer portion of the feedback divider to the PLL
-		# PSU_CRL_APB_RPLL_CTRL_FBDIV                                                     0x48
+		# PSU_CRL_APB_RPLL_CTRL_FBDIV                                                     0x2d
 
 		# This turns on the divide by 2 that is inside of the PLL. This does not c
     # hange the VCO frequency, just the output frequency
 		# PSU_CRL_APB_RPLL_CTRL_DIV2                                                      0x1
 
 		# PLL Basic Control
-		#(OFFSET, MASK, VALUE)      (0XFF5E0030, 0x00717F00U ,0x00014800U)  */
-    mask_write 0XFF5E0030 0x00717F00 0x00014800
+		#(OFFSET, MASK, VALUE)      (0XFF5E0030, 0x00717F00U ,0x00012D00U)  */
+    mask_write 0XFF5E0030 0x00717F00 0x00012D00
 		# : BY PASS PLL
 		# Register : RPLL_CTRL @ 0XFF5E0030</p>
 
@@ -99,12 +99,12 @@ set psu_pll_init_data {
 		# Register : RPLL_TO_FPD_CTRL @ 0XFF5E0048</p>
 
 		# Divisor value for this clock.
-		# PSU_CRL_APB_RPLL_TO_FPD_CTRL_DIVISOR0                                           0x3
+		# PSU_CRL_APB_RPLL_TO_FPD_CTRL_DIVISOR0                                           0x2
 
 		# Control for a clock that will be generated in the LPD, but used in the F
     # PD as a clock source for the peripheral clock muxes.
-		#(OFFSET, MASK, VALUE)      (0XFF5E0048, 0x00003F00U ,0x00000300U)  */
-    mask_write 0XFF5E0048 0x00003F00 0x00000300
+		#(OFFSET, MASK, VALUE)      (0XFF5E0048, 0x00003F00U ,0x00000200U)  */
+    mask_write 0XFF5E0048 0x00003F00 0x00000200
 		# : RPLL FRAC CFG
 		# : SYSMON CLOCK PRESET TO RPLL AGAIN TO AVOID GLITCH WHEN NEXT IOPLL WILL BE PUT IN BYPASS MODE
 		# Register : AMS_REF_CTRL @ 0XFF5E0108</p>
@@ -738,10 +738,10 @@ set psu_clock_init_data {
 		# PSU_CRL_APB_SPI0_REF_CTRL_CLKACT                                                0x1
 
 		# 6 bit divider
-		# PSU_CRL_APB_SPI0_REF_CTRL_DIVISOR1                                              0x1
+		# PSU_CRL_APB_SPI0_REF_CTRL_DIVISOR1                                              0xf
 
 		# 6 bit divider
-		# PSU_CRL_APB_SPI0_REF_CTRL_DIVISOR0                                              0x6
+		# PSU_CRL_APB_SPI0_REF_CTRL_DIVISOR0                                              0x32
 
 		# 000 = IOPLL; 010 = RPLL; 011 = DPLL; (This signal may only be toggled af
     # ter 4 cycles of the old clock and 4 cycles of the new clock. This is not
@@ -749,8 +749,8 @@ set psu_clock_init_data {
 		# PSU_CRL_APB_SPI0_REF_CTRL_SRCSEL                                                0x2
 
 		# This register controls this reference clock
-		#(OFFSET, MASK, VALUE)      (0XFF5E007C, 0x013F3F07U ,0x01010602U)  */
-    mask_write 0XFF5E007C 0x013F3F07 0x01010602
+		#(OFFSET, MASK, VALUE)      (0XFF5E007C, 0x013F3F07U ,0x010F3202U)  */
+    mask_write 0XFF5E007C 0x013F3F07 0x010F3202
 		# Register : CAN0_REF_CTRL @ 0XFF5E0084</p>
 
 		# Clock active signal. Switch to 0 to disable the clock
@@ -1025,7 +1025,7 @@ set psu_clock_init_data {
 		# PSU_CRF_APB_DP_AUDIO_REF_CTRL_DIVISOR1                                          0x1
 
 		# 6 bit divider
-		# PSU_CRF_APB_DP_AUDIO_REF_CTRL_DIVISOR0                                          0x10
+		# PSU_CRF_APB_DP_AUDIO_REF_CTRL_DIVISOR0                                          0xf
 
 		# 000 = VPLL; 010 = DPLL; 011 = RPLL_TO_FPD - might be using extra mux; (T
     # his signal may only be toggled after 4 cycles of the old clock and 4 cyc
@@ -1037,15 +1037,15 @@ set psu_clock_init_data {
 		# PSU_CRF_APB_DP_AUDIO_REF_CTRL_CLKACT                                            0x1
 
 		# This register controls this reference clock
-		#(OFFSET, MASK, VALUE)      (0XFD1A0074, 0x013F3F07U ,0x01011003U)  */
-    mask_write 0XFD1A0074 0x013F3F07 0x01011003
+		#(OFFSET, MASK, VALUE)      (0XFD1A0074, 0x013F3F07U ,0x01010F03U)  */
+    mask_write 0XFD1A0074 0x013F3F07 0x01010F03
 		# Register : DP_STC_REF_CTRL @ 0XFD1A007C</p>
 
 		# 6 bit divider
 		# PSU_CRF_APB_DP_STC_REF_CTRL_DIVISOR1                                            0x1
 
 		# 6 bit divider
-		# PSU_CRF_APB_DP_STC_REF_CTRL_DIVISOR0                                            0xf
+		# PSU_CRF_APB_DP_STC_REF_CTRL_DIVISOR0                                            0xe
 
 		# 000 = VPLL; 010 = DPLL; 011 = RPLL_TO_FPD; (This signal may only be togg
     # led after 4 cycles of the old clock and 4 cycles of the new clock. This
@@ -1056,8 +1056,8 @@ set psu_clock_init_data {
 		# PSU_CRF_APB_DP_STC_REF_CTRL_CLKACT                                              0x1
 
 		# This register controls this reference clock
-		#(OFFSET, MASK, VALUE)      (0XFD1A007C, 0x013F3F07U ,0x01010F03U)  */
-    mask_write 0XFD1A007C 0x013F3F07 0x01010F03
+		#(OFFSET, MASK, VALUE)      (0XFD1A007C, 0x013F3F07U ,0x01010E03U)  */
+    mask_write 0XFD1A007C 0x013F3F07 0x01010E03
 		# Register : ACPU_CTRL @ 0XFD1A0060</p>
 
 		# 6 bit divider

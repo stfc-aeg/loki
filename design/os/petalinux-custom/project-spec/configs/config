@@ -258,8 +258,8 @@ CONFIG_TMP_DIR_LOCATION="/tmp/trenz-test-6/build/tmp"
 # WORKSPACE Location
 #
 CONFIG_WORKSPACE_LOCATION="${PROOT}/components/yocto/workspace"
-CONFIG_BUILDTOOL_BITBAKE=y
-# CONFIG_BUILDTOOL_DEVTOOL is not set
+# CONFIG_BUILDTOOL_BITBAKE is not set
+CONFIG_BUILDTOOL_DEVTOOL=y
 
 #
 # Parallel thread execution

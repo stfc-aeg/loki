@@ -1,0 +1,33 @@
+From 20ff3406adbe7b3b4cc5aabc0726098e24273c0c Mon Sep 17 00:00:00 2001
+From: Joseph Nobes <joseph.nobes@stfc.ac.uk>
+Date: Fri, 30 Oct 2020 14:16:09 +0000
+Subject: [PATCH] removed CS inversion
+
+---
+ drivers/spi/spi-cadence.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/spi/spi-cadence.c b/drivers/spi/spi-cadence.c
+index c36587b42e95..8a12fa8f822b 100644
+--- a/drivers/spi/spi-cadence.c
++++ b/drivers/spi/spi-cadence.c
+@@ -168,16 +168,16 @@ static void cdns_spi_init_hw(struct cdns_spi *xspi)
+ /**
+  * cdns_spi_chipselect - Select or deselect the chip select line
+  * @spi:	Pointer to the spi_device structure
+- * @enable:	Select (1) or deselect (0) the chip select line
++ * @enable:	Select (0) or deselect (1) the chip select line
+  */
+-static void cdns_spi_chipselect(struct spi_device *spi, bool enable)
++static void cdns_spi_chipselect(struct spi_device *spi, bool is_high)
+ {
+ 	struct cdns_spi *xspi = spi_master_get_devdata(spi->master);
+ 	u32 ctrl_reg;
+ 
+ 	ctrl_reg = cdns_spi_read(xspi, CDNS_SPI_CR);
+ 
+-	if (!enable) {
++	if (is_high) {
+ 		/* Deselect the slave */
+ 		ctrl_reg |= CDNS_SPI_CR_SSCTRL;
+ 	} else {

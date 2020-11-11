@@ -2888,7 +2888,7 @@ CONFIG_python3-pyvenv=y
 # CONFIG_python3-netclient is not set
 # CONFIG_python3-netserver is not set
 # CONFIG_python3-math is not set
-# CONFIG_python3-asyncio is not set
+CONFIG_python3-asyncio=y
 # CONFIG_python3-tkinter is not set
 # CONFIG_python3-compression is not set
 # CONFIG_python3-gdbm is not set

@@ -54,8 +54,8 @@ set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdout ]
 set_property PACKAGE_PIN W8 [get_ports emio_spi0_m_o_0 ]
 set_property PACKAGE_PIN Y8 [get_ports emio_spi0_m_i_0 ]
 set_property PACKAGE_PIN AE3 [get_ports emio_spi0_sclk_o_0 ]
-set_property PACKAGE_PIN AF3 [get_ports emio_spi0_ss_o_n_0 ]    # SS 0
-set_property PACKAGE_PIN AE5 [get_ports emio_spi0_ss1_o_n_0 ]   # SS 1
+set_property PACKAGE_PIN AF3 [get_ports emio_spi0_ss_o_n_0 ]
+set_property PACKAGE_PIN AE5 [get_ports emio_spi0_ss1_o_n_0 ]
 set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_m_o_0 ]
 set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_m_i_0 ]
 set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_sclk_o_0 ]

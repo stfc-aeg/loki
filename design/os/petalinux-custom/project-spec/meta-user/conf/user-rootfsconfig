@@ -14,3 +14,5 @@ CONFIG_python3-smbus
 CONFIG_python3-pip
 
 CONFIG_spidev-test
+
+#CONFIG_libgpiod-python

@@ -1578,7 +1578,7 @@ CONFIG_run-postinsts=y
 #
 # libgpiod
 #
-# CONFIG_libgpiod is not set
+CONFIG_libgpiod=y
 # CONFIG_libgpiod-dev is not set
 # CONFIG_libgpiod-dbg is not set
 
@@ -4225,6 +4225,7 @@ CONFIG_spidev-test=y
 #
 # user packages 
 #
+CONFIG_libgpiod-python=y
 CONFIG_odin-control=y
 CONFIG_odin-devices=y
 CONFIG_odin-sequencer=y

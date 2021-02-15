@@ -388,11 +388,18 @@ u32 TE_XFsbl_BoardInit_Custom(void)
   #endif
   
   // change I2C switch to get access to EEPROM 
-  xil_printf("Configure Carrier I2C Switch 0x73 for EEPROM access\r\n");
-  Status = iic_write8(0x73, 0x00,  0x20);    // Configure I2C Switch
+  //xil_printf("Configure Carrier I2C Switch 0x73 for EEPROM access\r\n");
+  //Status = iic_write8(0x73, 0x00,  0x20);    // Configure I2C Switch
+  //if (Status != XFSBL_SUCCESS) {
+  //   xil_printf("Error: Configure Carrier I2C Switch 0x73\r\n");
+  //   goto END;
+  //}
+
+  xil_printf("TCN: configure Carrier I2C Switch 0x73 for local EEPROM access\r\n");
+  Status = iic_write8(0x73, 0x00,  0x00);    // Configure I2C Switch
   if (Status != XFSBL_SUCCESS) {
-     xil_printf("Error: Configure Carrier I2C Switch 0x73\r\n");
-     goto END;
+      xil_printf("Error: Configure Carrier I2C Switch 0x73\r\n");
+      goto END;
   }
   
   xil_printf("\r\n--------------------------------------------------------------------------------\r\n");

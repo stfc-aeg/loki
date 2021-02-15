@@ -4,6 +4,7 @@ SUMMARY = "This is a recipe to build odin-control on PetaLinux"
 RDEPENDS_${PN} += "python3-tornado (>=4.3)"
 RDEPENDS_${PN} += "python3-setuptools"
 RDEPENDS_${PN} += "python3-fcntl"
+RDEPENDS_${PN} += "python3-future"
 
 SRC_URI = "git://github.com/odin-detector/odin-control.git \
 		file://odin-control-fix-non-required-dependencies.patch"

@@ -1,3 +1,197 @@
 /include/ "system-conf.dtsi"
 / {
+  chosen {
+    xlnx,eeprom = &eeprom;
+  };
+};
+
+/* notes:
+serdes: // PHY TYP see: dt-bindings/phy/phy.h
+*/
+
+/* default */
+
+/* SD */
+
+&sdhci1 {
+	// disable-wp;
+	no-1-8-v;
+
+};
+
+
+/* USB  */
+
+
+&dwc3_0 {
+    status = "okay";
+    dr_mode = "host";
+    snps,usb3_lpm_capable;
+    snps,dis_u3_susphy_quirk;
+    snps,dis_u2_susphy_quirk;
+    phy-names = "usb2-phy","usb3-phy";
+    phys = <&lane1 4 0 2 100000000>;
+    maximum-speed = "super-speed";
+};
+
+/* ETH PHY */
+
+&gem3 {
+	phy-handle = <&phy0>;
+	phy0: phy0@1 {
+		device_type = "ethernet-phy";
+		reg = <1>;
+	};
+};
+
+/* QSPI */
+
+&qspi {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    status = "okay";
+    flash0: flash@0 {
+        compatible = "jedec,spi-nor";
+        reg = <0x0>;
+        #address-cells = <1>;
+        #size-cells = <1>;
+    };
+};
+
+/* I2C */
+
+&i2c0 {
+    i2cswitch@73 { // u
+        compatible = "nxp,pca9548";
+        #address-cells = <1>;
+        #size-cells = <0>;
+        reg = <0x73>;
+        i2c-mux-idle-disconnect;
+        i2c@0 { // MCLK TEBF0808 SI5338A, 570FBB000290DG_unassembled
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <0>;
+        };
+        i2c@1 { // SFP TEBF0808 PCF8574DWR
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <1>;
+        };
+        i2c@2 { // PCIe
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <2>;
+        };
+        i2c@3 { // SFP1 TEBF0808
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <3>;
+        };
+        i2c@4 {// SFP2 TEBF0808
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <4>;
+        };
+        i2c@5 { // TEBF0808 EEPROM
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <5>;
+            eeprom: eeprom@50 {
+	            compatible = "atmel,24c08";
+	            reg = <0x50>;
+	          };
+        };
+        i2c@6 { // TEBF0808 FMC  
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <6>;
+        };
+        i2c@7 { // TEBF0808 USB HUB
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <7>;
+        };
+    };
+    i2cswitch@77 { // u
+        compatible = "nxp,pca9548";
+        #address-cells = <1>;
+        #size-cells = <0>;
+        reg = <0x77>;
+        i2c-mux-idle-disconnect;
+        i2c@0 { // TEBF0808 PMOD P1
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <0>;
+        };
+        i2c@1 { // i2c Audio Codec
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <1>;
+			/*
+            adau1761: adau1761@38 {
+                compatible = "adi,adau1761";
+                reg = <0x38>;
+            };
+			*/
+        };
+        i2c@2 { // TEBF0808 Firefly A
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <2>;
+        };
+        i2c@3 { // TEBF0808 Firefly B
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <3>;
+        };
+        i2c@4 { //Module PLL Si5338 or SI5345
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <4>;
+        };
+        i2c@5 { //TEBF0808 CPLD
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <5>;
+        };
+        i2c@6 { //TEBF0808 Firefly PCF8574DWR
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <6>;
+        };
+        i2c@7 { // TEBF0808 PMOD P3
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <7>;
+        };
+    };
+};
+
+/* Additional changes for external interfaces */
+/* I2C */
+&i2c1 {
+	clock-frequency = <100000>;
+};
+
+/* SPI (general devices) */
+&spi0 {
+	spidev@0 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <0>;
+	};
+	spidev@1 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <1>;
+	};
+};
+
+/* SPI1 (ASIC) */
+&spi1 {
+	spidev@0 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <0>;
+	};
 };

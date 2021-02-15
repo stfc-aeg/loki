@@ -48,3 +48,70 @@ set_property IOSTANDARD LVCMOS18 [get_ports I2S_lrclk ]
 set_property IOSTANDARD LVCMOS18 [get_ports I2S_bclk ]
 set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdin ]
 set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdout ]
+
+# Custom additions
+# SPI0 (General Devices)
+set_property PACKAGE_PIN W8 [get_ports emio_spi0_m_o_0 ]
+set_property PACKAGE_PIN Y8 [get_ports emio_spi0_m_i_0 ]
+set_property PACKAGE_PIN AE3 [get_ports emio_spi0_sclk_o_0 ]
+set_property PACKAGE_PIN AF3 [get_ports emio_spi0_ss_o_n_0 ]
+set_property PACKAGE_PIN AC9 [get_ports emio_spi0_ss1_o_n_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_m_o_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_m_i_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_sclk_o_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_ss_o_n_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_ss1_o_n_0 ]
+# SPI1 (ASIC)
+set_property PACKAGE_PIN AE9 [get_ports emio_spi1_m_o_0 ]
+set_property PACKAGE_PIN AH2 [get_ports emio_spi1_m_i_0 ]
+set_property PACKAGE_PIN AH1 [get_ports emio_spi1_sclk_o_0 ]
+set_property PACKAGE_PIN AE8 [get_ports emio_spi1_ss_o_n_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi1_m_o_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi1_m_i_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi1_sclk_o_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi1_ss_o_n_0 ]
+# I2C1
+set_property PACKAGE_PIN U8 [get_ports IIC_1_0_scl_io ]
+set_property PACKAGE_PIN V8 [get_ports IIC_1_0_sda_io ]
+set_property IOSTANDARD LVCMOS18 [get_ports IIC_1_0_scl_io ]
+set_property IOSTANDARD LVCMOS18 [get_ports IIC_1_0_sda_io ]
+
+#################################################################
+# GPIO
+
+#LVDS Output for (GPIO) EMIO 0
+set_property PACKAGE_PIN AD7 [get_ports {EMIO_0_LVDS_P[0]}]
+set_property PACKAGE_PIN AE7 [get_ports {EMIO_0_LVDS_N[0]}]
+set_property IOSTANDARD LVDS [get_ports {EMIO_0_LVDS_P[0]}]
+set_property IOSTANDARD LVDS [get_ports {EMIO_0_LVDS_N[0]}]
+
+#Unpaired EMIO Pin
+set_property PACKAGE_PIN AD9 [get_ports {EMIO_IO_1_11[0]} ];#EMIO 1
+
+#Other EMIO Pins in polarity Pairs
+set_property PACKAGE_PIN AD2 [get_ports {EMIO_IO_1_11[1]} ];#EMIO 2
+set_property PACKAGE_PIN AD1 [get_ports {EMIO_IO_1_11[2]} ];#EMIO 3
+
+set_property PACKAGE_PIN AB6 [get_ports {EMIO_IO_1_11[3]} ];#EMIO 4
+set_property PACKAGE_PIN AC6 [get_ports {EMIO_IO_1_11[4]} ];#EMIO 5
+
+set_property PACKAGE_PIN AH8 [get_ports {EMIO_IO_1_11[5]} ];#EMIO 6
+set_property PACKAGE_PIN AH7 [get_ports {EMIO_IO_1_11[6]} ];#EMIO 7
+
+set_property PACKAGE_PIN AF8 [get_ports {EMIO_IO_1_11[7]} ];#EMIO 8
+set_property PACKAGE_PIN AG8 [get_ports {EMIO_IO_1_11[8]} ];#EMIO 9
+
+set_property PACKAGE_PIN AG5 [get_ports {EMIO_IO_1_11[9]} ];#EMIO 10
+set_property PACKAGE_PIN AG6 [get_ports {EMIO_IO_1_11[10]} ];#EMIO 11
+
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[0]} ];#EMIO 1
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[1]} ];#EMIO 2
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[2]} ];#EMIO 3
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[3]} ];#EMIO 4
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[4]} ];#EMIO 5
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[5]} ];#EMIO 6
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[6]} ];#EMIO 7
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[7]} ];#EMIO 8
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[8]} ];#EMIO 9
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[9]} ];#EMIO 10
+set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[10]} ];#EMIO 11

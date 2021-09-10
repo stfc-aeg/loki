@@ -2880,7 +2880,7 @@ CONFIG_packagegroup-core-ssh-dropbear=y
 # CONFIG_python3-pprint is not set
 # CONFIG_python3-datetime is not set
 # CONFIG_python3-2to3 is not set
-# CONFIG_python3-modules is not set
+CONFIG_python3-modules=y
 # CONFIG_python3-xml is not set
 # CONFIG_python3-numbers is not set
 CONFIG_python3-pyvenv=y

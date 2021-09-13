@@ -17,8 +17,10 @@ CONFIG_python3-pip
 
 CONFIG_spidev-test
 
+CONFIG_python3-pyzmq
+
 # Packages Added to Menu from other sources
 
-CONFIG_python3-pyzmq
+CONFIG_python3-psutil
 
 #CONFIG_libgpiod-python

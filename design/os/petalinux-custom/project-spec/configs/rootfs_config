@@ -4230,6 +4230,7 @@ CONFIG_odin-control=y
 CONFIG_odin-devices=y
 CONFIG_odin-sequencer=y
 CONFIG_python3-pip=y
+CONFIG_python3-pyzmq=y
 CONFIG_python3-smbus=y
 CONFIG_python3-spidev=y
 

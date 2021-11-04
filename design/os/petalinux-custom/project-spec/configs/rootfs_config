@@ -461,7 +461,7 @@ CONFIG_mtd-utils=y
 #
 # dtc 
 #
-# CONFIG_dtc is not set
+CONFIG_dtc=y
 # CONFIG_dtc-dbg is not set
 # CONFIG_dtc-misc is not set
 # CONFIG_dtc-dev is not set
@@ -1578,7 +1578,7 @@ CONFIG_run-postinsts=y
 #
 # libgpiod
 #
-# CONFIG_libgpiod is not set
+CONFIG_libgpiod=y
 # CONFIG_libgpiod-dev is not set
 # CONFIG_libgpiod-dbg is not set
 
@@ -2880,15 +2880,15 @@ CONFIG_packagegroup-core-ssh-dropbear=y
 # CONFIG_python3-pprint is not set
 # CONFIG_python3-datetime is not set
 # CONFIG_python3-2to3 is not set
-# CONFIG_python3-modules is not set
+CONFIG_python3-modules=y
 # CONFIG_python3-xml is not set
 # CONFIG_python3-numbers is not set
-# CONFIG_python3-pyvenv is not set
+CONFIG_python3-pyvenv=y
 # CONFIG_python3-tests is not set
 # CONFIG_python3-netclient is not set
 # CONFIG_python3-netserver is not set
 # CONFIG_python3-math is not set
-# CONFIG_python3-asyncio is not set
+CONFIG_python3-asyncio=y
 # CONFIG_python3-tkinter is not set
 # CONFIG_python3-compression is not set
 # CONFIG_python3-gdbm is not set
@@ -4220,13 +4220,20 @@ CONFIG_imagefeature-debug-tweaks=y
 #
 # CONFIG_gpio-demo is not set
 # CONFIG_peekpoke is not set
+CONFIG_spidev-test=y
 
 #
 # user packages 
 #
+CONFIG_libgpiod-python=y
 CONFIG_odin-control=y
 CONFIG_odin-devices=y
 CONFIG_odin-sequencer=y
+CONFIG_python3-pip=y
+CONFIG_python3-psutil=y
+CONFIG_python3-pyzmq=y
+CONFIG_python3-smbus=y
+CONFIG_python3-spidev=y
 
 #
 # PetaLinux RootFS Settings

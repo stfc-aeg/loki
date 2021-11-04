@@ -9,8 +9,9 @@ RDEPENDS_${PN} += "python3-inotify"
 
 SRC_URI = "git://github.com/stfc-aeg/odin-sequencer.git \
 		file://odin-sequencer-remove-inotify-setuptools.patch"
-# Automatically latest revision.
-SRCREV = "${AUTOREV}"
+# SRCREV = "${AUTOREV}"
+# Set revision to commit hash. Update manually when satisfied with compatibility
+SRCREV = "4589ef2521897130a728759a6b1e4fbc43d5c62a"
 PV = "1.0+git${SRCPV}"
 
 # This has to be in the format expected in Yocto's license list...

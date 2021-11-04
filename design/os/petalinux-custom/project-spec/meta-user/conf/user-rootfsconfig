@@ -4,6 +4,23 @@
 #CONFIG_gpio-demo
 #CONFIG_peekpoke
 
+# Packages Included in User Layer
+
 CONFIG_odin-control
 CONFIG_odin-devices
 CONFIG_odin-sequencer
+
+CONFIG_python3-spidev
+CONFIG_python3-smbus
+
+CONFIG_python3-pip
+
+CONFIG_spidev-test
+
+CONFIG_python3-pyzmq
+
+# Packages Added to Menu from other sources
+
+CONFIG_python3-psutil
+
+#CONFIG_libgpiod-python

@@ -6,9 +6,11 @@ RDEPENDS_${PN} += "python3-setuptools"
 RDEPENDS_${PN} += "python3-fcntl"
 RDEPENDS_${PN} += "python3-future"
 
-SRC_URI = "git://github.com/odin-detector/odin-control.git \
+SRC_URI = "git://github.com/odin-detector/odin-control.git;tag=v${PV} \
 		file://odin-control-fix-non-required-dependencies.patch"
-SRCREV = "1.0.0"
+
+# SRCREV is the git tag, defined by the filename package version (wildcard)
+#SRCREV = ${PV}
 
 # This has to be in the format expected in Yocto's license list...
 LICENSE = "Apachev2"

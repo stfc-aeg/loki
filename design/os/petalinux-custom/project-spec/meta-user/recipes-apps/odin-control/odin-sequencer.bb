@@ -21,4 +21,11 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=2bd339c7a9cf03feeeee2f768a4eb0ce"
 
 inherit setuptools3
 
+do_configure_prepend() {
+	bbdebug 2 "Current working directory (pwd):" ${pwd}
+	bbdebug 2 "Build Directory:" ${B}
+	bbdebug 2 "WORKDIR Directory:" ${WORKDIR}
+	bbdebug 2 "Source Directory:" ${S}
+}
+
 S = "${WORKDIR}/git/"

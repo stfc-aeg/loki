@@ -4226,11 +4226,13 @@ CONFIG_spidev-test=y
 # user packages 
 #
 CONFIG_libgpiod-python=y
+CONFIG_libiio=y
 CONFIG_odin-control=y
 CONFIG_odin-devices=y
 CONFIG_odin-sequencer=y
 CONFIG_python3-pip=y
 CONFIG_python3-psutil=y
+# CONFIG_python3-pynq is not set
 CONFIG_python3-pyzmq=y
 CONFIG_python3-smbus=y
 CONFIG_python3-spidev=y

@@ -23,4 +23,8 @@ CONFIG_python3-pyzmq
 
 CONFIG_python3-psutil
 
+CONFIG_python3-pynq
+
+CONFIG_libiio_git-python3
+
 #CONFIG_libgpiod-python

@@ -1,6 +1,13 @@
 # loki
 LOKI detector system embedded controller 
 
+## Contents
+1. [Building](#building)
+2. [Flashing a New Image](#flashing-a-new-image)
+    - [Booting Directly form SD](#booting-directly-from-sd)
+    - [Flashing eMMC or QSPI Flash from SD](#flashing-emmc-or-qspi-flash-from-sd)
+    - [Flashing eMMC or SD with SCP](#flashing-emmc-or-sd-with-scp)
+
 ## Building
 ### Building The HW
 #TODO
@@ -25,7 +32,7 @@ Build products will appear in `images/linux/`.
 
 ## Flashing a New Image
 The method for flashing will depend on what is currently installed on the system, and the media on which the installation should appear.
-Generally speaking, the aim will be to boot from SD (if another image is not available_), and copy that installation (or another) to the desired location.
+Generally speaking, the aim will be to boot from SD (if another image is not available), and copy that installation (or another) to the desired location.
 
 Relevant Files:
 - BOOT.BIN: Packaged boot binary file containing:
@@ -55,12 +62,12 @@ There is no need to have any image on the board to do this.
 ### Flashing eMMC or QSPI Flash from SD
 The easiest method is to boot the image you are flashing on the SD, and using it to flash itself onto other media.
 This is also the only method if there is currently no image on the board.
-If there is already an image running on the board, consider using [SCP](#Flashing eMMC or SD with SCP).
+If there is already an image running on the board, consider using [SCP](#flashing-emmc-or-sd-with-scp).
 
 #### Flashing eMMC from SD
 The eMMC behaves exactly the same as the SD card (as it is currently configured).
 
-1. Boot to the new SD image as described [above](#Booting Directly from SD)
+1. Boot to the new SD image as described [above](#booting-directly-from-sd)
 2. Copy the files from SD to eMMC:
 	```bash
 	# cp /mnt/sd-mmcblk1p0/* /mnt/sd-mmcblk0p0/
@@ -77,7 +84,7 @@ Simply reboot the device at the command line to boot the new image.
 The QSPI Flash does not have a filesystem, and so the image cannot just be copied.
 Instead, the `flashcp` command must be used.
 
-1. Boot to the new SD image as described [above](#Booting Directly from SD)
+1. Boot to the new SD image as described [above](#booting-directly-from-sd)
 2. List the flash partitions and verify that `boot`, `bootscr` and `kernel` are seen:
 	```bash
 	root@petalinux-custom:~# cat /proc/mtd           
@@ -114,7 +121,7 @@ If you are going to be booting from a different device, set the dip switches and
 ### Flashing QSPI Flash with SCP
 The QSPI Flash does not have a filesystem, so is a little more involved to flash.
 
-Use `scp` to copy files to directory on the zynq, then use the `flashcp` command as shown [above](#Falshing QSPI Flash from SD) with source locations updated accordingly.
+Use `scp` to copy files to directory on the zynq, then use the `flashcp` command as shown [above](#flashing-qspi-flash-from-sd) with source locations updated accordingly.
 
 If the device already has the desired boot device selected with the dip switches (or has not changed), you can simply use `reboot` to boot the new image.
 If you are going to be booting from a different device, set the dip switches and power cycle.

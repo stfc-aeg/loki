@@ -1,4 +1,4 @@
-catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4cg_1e_tebf0808:part0:2.0, FPGA: xczu4cg-sfvc784-1-e at 2021-02-15T11:39:34."}
+catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4cg_1e_tebf0808:part0:2.0, FPGA: xczu4cg-sfvc784-1-e at 2021-11-30T15:46:11."}
 
 if { ![info exist TE::VERSION_CONTROL] } {
     set TE::VERSION_CONTROL true
@@ -530,7 +530,7 @@ proc create_root_design { parentCell } {
   # Create ports
   set EMIO_0_LVDS_N [ create_bd_port -dir O -from 0 -to 0 -type clk EMIO_0_LVDS_N ]
   set EMIO_0_LVDS_P [ create_bd_port -dir O -from 0 -to 0 -type clk EMIO_0_LVDS_P ]
-  set EMIO_IO_1_11 [ create_bd_port -dir IO -from 10 -to 0 EMIO_IO_1_11 ]
+  set EMIO_IO_1_25 [ create_bd_port -dir IO -from 24 -to 0 EMIO_IO_1_25 ]
   set emio_spi0_m_i_0 [ create_bd_port -dir I emio_spi0_m_i_0 ]
   set emio_spi0_m_o_0 [ create_bd_port -dir O emio_spi0_m_o_0 ]
   set emio_spi0_sclk_o_0 [ create_bd_port -dir O emio_spi0_sclk_o_0 ]
@@ -550,12 +550,14 @@ proc create_root_design { parentCell } {
   # Create instance: axis_live_audio_0, and set properties
   set axis_live_audio_0 [ create_bd_cell -type ip -vlnv trenz.biz:user:axis_live_audio axis_live_audio_0 ]
 
-  # Create instance: iobuff_emio_1_11, and set properties
-  set iobuff_emio_1_11 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf iobuff_emio_1_11 ]
+  # Create instance: iobuff_emio_1_25, and set properties
+  set iobuff_emio_1_25 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf iobuff_emio_1_25 ]
+  set_property USER_COMMENTS.comment_4 "Split remaining GPIO as i/o/t,
+then recombine to single bus" [get_bd_cells /iobuff_emio_1_25]
   set_property -dict [ list \
    CONFIG.C_BUF_TYPE {IOBUF} \
-   CONFIG.C_SIZE {11} \
- ] $iobuff_emio_1_11
+   CONFIG.C_SIZE {25} \
+ ] $iobuff_emio_1_25
 
   # Create instance: proc_sys_reset_0, and set properties
   set proc_sys_reset_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset proc_sys_reset_0 ]
@@ -574,38 +576,40 @@ proc create_root_design { parentCell } {
    CONFIG.C_NUM_PROBE_OUT {3} \
  ] $vio_general
 
-  # Create instance: xlconcat_emio1_11_in, and set properties
-  set xlconcat_emio1_11_in [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat xlconcat_emio1_11_in ]
+  # Create instance: xlconcat_emio1_25_in, and set properties
+  set xlconcat_emio1_25_in [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat xlconcat_emio1_25_in ]
   set_property -dict [ list \
-   CONFIG.IN0_WIDTH {11} \
- ] $xlconcat_emio1_11_in
+   CONFIG.IN0_WIDTH {25} \
+ ] $xlconcat_emio1_25_in
 
   # Create instance: xlslice_emio0_out, and set properties
   set xlslice_emio0_out [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice xlslice_emio0_out ]
   set_property -dict [ list \
    CONFIG.DIN_FROM {0} \
    CONFIG.DIN_TO {0} \
-   CONFIG.DIN_WIDTH {12} \
+   CONFIG.DIN_WIDTH {26} \
    CONFIG.DOUT_WIDTH {1} \
  ] $xlslice_emio0_out
+  set_property USER_COMMENTS.comment_3 "Split out GPIO 0 output signal for LVDS output.
+Bus can only be split if handling i/o/t separately" [get_bd_pins /xlslice_emio0_out/Dout]
 
-  # Create instance: xlslice_emio1_11_out, and set properties
-  set xlslice_emio1_11_out [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice xlslice_emio1_11_out ]
+  # Create instance: xlslice_emio1_25_out, and set properties
+  set xlslice_emio1_25_out [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice xlslice_emio1_25_out ]
   set_property -dict [ list \
-   CONFIG.DIN_FROM {11} \
+   CONFIG.DIN_FROM {25} \
    CONFIG.DIN_TO {1} \
-   CONFIG.DIN_WIDTH {12} \
-   CONFIG.DOUT_WIDTH {11} \
- ] $xlslice_emio1_11_out
+   CONFIG.DIN_WIDTH {26} \
+   CONFIG.DOUT_WIDTH {25} \
+ ] $xlslice_emio1_25_out
 
-  # Create instance: xlslice_emio1_11_tri, and set properties
-  set xlslice_emio1_11_tri [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice xlslice_emio1_11_tri ]
+  # Create instance: xlslice_emio1_25_tri, and set properties
+  set xlslice_emio1_25_tri [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice xlslice_emio1_25_tri ]
   set_property -dict [ list \
-   CONFIG.DIN_FROM {11} \
+   CONFIG.DIN_FROM {25} \
    CONFIG.DIN_TO {1} \
-   CONFIG.DIN_WIDTH {12} \
-   CONFIG.DOUT_WIDTH {11} \
- ] $xlslice_emio1_11_tri
+   CONFIG.DIN_WIDTH {26} \
+   CONFIG.DOUT_WIDTH {25} \
+ ] $xlslice_emio1_25_tri
 
   # Create instance: zynq_ultra_ps_e_0, and set properties
   set zynq_ultra_ps_e_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e zynq_ultra_ps_e_0 ]
@@ -1657,9 +1661,9 @@ proc create_root_design { parentCell } {
    CONFIG.PSU__GPIO0_MIO__PERIPHERAL__ENABLE {1} \
    CONFIG.PSU__GPIO1_MIO__PERIPHERAL__ENABLE {0} \
    CONFIG.PSU__GPIO2_MIO__PERIPHERAL__ENABLE {0} \
-   CONFIG.PSU__GPIO_EMIO_WIDTH {12} \
+   CONFIG.PSU__GPIO_EMIO_WIDTH {26} \
    CONFIG.PSU__GPIO_EMIO__PERIPHERAL__ENABLE {1} \
-   CONFIG.PSU__GPIO_EMIO__PERIPHERAL__IO {12} \
+   CONFIG.PSU__GPIO_EMIO__PERIPHERAL__IO {26} \
    CONFIG.PSU__GPIO_EMIO__WIDTH {[94:0]} \
    CONFIG.PSU__GPU_PP0__POWER__ON {0} \
    CONFIG.PSU__GPU_PP1__POWER__ON {0} \
@@ -2142,27 +2146,27 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_M_AXIS_MIXED_AUDIO [get_bd_intf_pins axis_live_audio_0/s_axis] [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXIS_MIXED_AUDIO]
 
   # Create port connections
-  connect_bd_net -net Net [get_bd_ports EMIO_IO_1_11] [get_bd_pins iobuff_emio_1_11/IOBUF_IO_IO]
+  connect_bd_net -net Net [get_bd_ports EMIO_IO_1_25] [get_bd_pins iobuff_emio_1_25/IOBUF_IO_IO]
   connect_bd_net -net SC0808BF_0_PS_AUX_DI [get_bd_pins SC0808BF_0/PS_AUX_DI] [get_bd_pins zynq_ultra_ps_e_0/dp_aux_data_in]
   connect_bd_net -net SC0808BF_0_PS_DP_HPD [get_bd_pins SC0808BF_0/PS_DP_HPD] [get_bd_pins zynq_ultra_ps_e_0/dp_hot_plug_detect]
   connect_bd_net -net emio_spi0_m_i_0_1 [get_bd_ports emio_spi0_m_i_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi0_m_i]
   connect_bd_net -net emio_spi1_m_i_0_1 [get_bd_ports emio_spi1_m_i_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi1_m_i]
-  connect_bd_net -net iobuff_emio_IOBUF_IO_O [get_bd_pins iobuff_emio_1_11/IOBUF_IO_O] [get_bd_pins xlconcat_emio1_11_in/In0]
+  connect_bd_net -net iobuff_emio_IOBUF_IO_O [get_bd_pins iobuff_emio_1_25/IOBUF_IO_O] [get_bd_pins xlconcat_emio1_25_in/In0]
   connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins RGPIO/RGPIO_M_RESET_N] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
   connect_bd_net -net util_ds_buf_0_OBUF_DS_N [get_bd_ports EMIO_0_LVDS_N] [get_bd_pins ubuff_lvds_emio_0/OBUF_DS_N]
   connect_bd_net -net util_ds_buf_0_OBUF_DS_P [get_bd_ports EMIO_0_LVDS_P] [get_bd_pins ubuff_lvds_emio_0/OBUF_DS_P]
   connect_bd_net -net vio_CAN_0_S [get_bd_pins SC0808BF_0/CAN_S] [get_bd_pins vio_general/probe_out2]
   connect_bd_net -net vio_LED_HD [get_bd_pins SC0808BF_0/LED_HD] [get_bd_pins vio_general/probe_out0]
   connect_bd_net -net vio_LED_XMOD2 [get_bd_pins SC0808BF_0/LED_XMOD2] [get_bd_pins vio_general/probe_out1]
-  connect_bd_net -net xlconcat_0_dout [get_bd_pins xlconcat_emio1_11_in/dout] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_i]
-  connect_bd_net -net xlslice_1_Dout [get_bd_pins iobuff_emio_1_11/IOBUF_IO_T] [get_bd_pins xlslice_emio1_11_tri/Dout]
-  connect_bd_net -net xlslice_emio1_11_out_Dout [get_bd_pins iobuff_emio_1_11/IOBUF_IO_I] [get_bd_pins xlslice_emio1_11_out/Dout]
+  connect_bd_net -net xlconcat_0_dout [get_bd_pins xlconcat_emio1_25_in/dout] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_i]
+  connect_bd_net -net xlslice_1_Dout [get_bd_pins iobuff_emio_1_25/IOBUF_IO_T] [get_bd_pins xlslice_emio1_25_tri/Dout]
+  connect_bd_net -net xlslice_emio1_11_out_Dout [get_bd_pins iobuff_emio_1_25/IOBUF_IO_I] [get_bd_pins xlslice_emio1_25_out/Dout]
   connect_bd_net -net xlslice_emio2_Dout [get_bd_pins ubuff_lvds_emio_0/OBUF_IN] [get_bd_pins xlslice_emio0_out/Dout]
   connect_bd_net -net zynq_ultra_ps_e_0_dp_audio_ref_clk [get_bd_pins axis_live_audio_0/axis_aclk] [get_bd_pins zynq_ultra_ps_e_0/dp_audio_ref_clk] [get_bd_pins zynq_ultra_ps_e_0/dp_s_axis_audio_clk]
   connect_bd_net -net zynq_ultra_ps_e_0_dp_aux_data_oe_n [get_bd_pins SC0808BF_0/PS_AUX_OE] [get_bd_pins zynq_ultra_ps_e_0/dp_aux_data_oe_n]
   connect_bd_net -net zynq_ultra_ps_e_0_dp_aux_data_out [get_bd_pins SC0808BF_0/PS_AUX_DO] [get_bd_pins zynq_ultra_ps_e_0/dp_aux_data_out]
-  connect_bd_net -net zynq_ultra_ps_e_0_emio_gpio_o [get_bd_pins xlslice_emio0_out/Din] [get_bd_pins xlslice_emio1_11_out/Din] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_o]
-  connect_bd_net -net zynq_ultra_ps_e_0_emio_gpio_t [get_bd_pins xlslice_emio1_11_tri/Din] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_t]
+  connect_bd_net -net zynq_ultra_ps_e_0_emio_gpio_o [get_bd_pins xlslice_emio0_out/Din] [get_bd_pins xlslice_emio1_25_out/Din] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_o]
+  connect_bd_net -net zynq_ultra_ps_e_0_emio_gpio_t [get_bd_pins xlslice_emio1_25_tri/Din] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_t]
   connect_bd_net -net zynq_ultra_ps_e_0_emio_spi0_m_o [get_bd_ports emio_spi0_m_o_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi0_m_o]
   connect_bd_net -net zynq_ultra_ps_e_0_emio_spi0_sclk_o [get_bd_ports emio_spi0_sclk_o_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi0_sclk_o]
   connect_bd_net -net zynq_ultra_ps_e_0_emio_spi0_ss1_o_n [get_bd_ports emio_spi0_ss1_o_n_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi0_ss1_o_n]

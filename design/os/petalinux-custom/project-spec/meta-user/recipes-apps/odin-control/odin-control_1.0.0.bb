@@ -6,7 +6,7 @@ RDEPENDS_${PN} += "python3-setuptools"
 RDEPENDS_${PN} += "python3-fcntl"
 RDEPENDS_${PN} += "python3-future"
 
-SRC_URI = "git://github.com/odin-detector/odin-control.git;tag=v${PV} \
+SRC_URI = "git://github.com/odin-detector/odin-control.git;tag=${PV} \
 		file://odin-control-fix-non-required-dependencies.patch"
 
 # SRCREV is the git tag, defined by the filename package version (wildcard)

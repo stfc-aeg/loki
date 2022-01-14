@@ -6,11 +6,11 @@ RDEPENDS_${PN} += "odin-control"
 RDEPENDS_${PN} += "python3-spidev"
 RDEPENDS_${PN} += "python3-smbus"
 
-SRC_URI = "git://github.com/stfc-aeg/odin-devices.git"
-#SRCREV = "${AUTOREV}"
+SRC_URI = "git://github.com/stfc-aeg/odin-devices.git;tag=${PV}"
+
 # Set revision to commit hash. Update manually when satisfied with compatibility
-SRCREV = "5332440d9bb9a33dbd254b2c8ba35e5120097a0e"
-PV = "1.0+git${SRCPV}"
+#SRCREV = "5332440d9bb9a33dbd254b2c8ba35e5120097a0e"
+#PV = "1.0+git${SRCPV}"
 
 # This has to be in the format expected in Yocto's license list...
 LICENSE = "CLOSED"

@@ -6,9 +6,9 @@
 
 # Packages Included in User Layer
 
-CONFIG_odin-control
-CONFIG_odin-devices
-CONFIG_odin-sequencer
+##CONFIG_odin-control
+##CONFIG_odin-devices
+##CONFIG_odin-sequencer
 
 CONFIG_python3-spidev
 CONFIG_python3-smbus

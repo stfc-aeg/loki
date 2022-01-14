@@ -40,5 +40,25 @@ do_compile_prepend() {
 }
 
 do_install_prepend() {
+	# Change directory to setup.py location when not in repository root
 	cd ${DISTUTILS_SETUP_PATH}
 }
+
+do_install_append() {
+	# With the python module installed, the static resources need to be installed into rootfs
+
+	# Create the config directory
+	install -d  ${D}${base_prefix}/opt/hexitec-mhz-detector
+
+	# Install individual file in destination
+	#install -m 0644 '${DISTUTILS_SETUP_PATH}/test/config/test_emulator.cfg' '${D}${base_prefix}/opt/hexitec-mhz-detector/config/test_emulator.cfg'
+
+	# gnu install does not work well for recursive directories, so copy recursively
+	cp -R '${DISTUTILS_SETUP_PATH}/test/'* '${D}${base_prefix}/opt/hexitec-mhz-detector/'
+
+	#find '${DISTUTILS_SETUP_PATH}/test/config' -type f -exec 'install -m 0644 "{}" -D --target-directory=${D}${base_prefix}/opt/hexitec-mhz-detector/config/' \;
+	#install -m 0644 '${DISTUTILS_SETUP_PATH}/test/config' '${D}${base_prefix}/opt/hexitec-mhz-detector/config/'
+}
+
+# include the /opt build directory in the yocto rootfs
+FILES_${PN} += "${base_prefix}/opt/*"

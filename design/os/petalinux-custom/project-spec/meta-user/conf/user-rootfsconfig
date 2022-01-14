@@ -9,6 +9,7 @@
 ##CONFIG_odin-control
 ##CONFIG_odin-devices
 ##CONFIG_odin-sequencer
+CONFIG_hexitec-mhz
 
 CONFIG_python3-spidev
 CONFIG_python3-smbus

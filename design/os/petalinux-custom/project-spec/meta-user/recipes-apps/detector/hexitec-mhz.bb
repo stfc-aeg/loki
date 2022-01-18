@@ -11,7 +11,9 @@ RDEPENDS_${PN} += "python3-msgpack"
 
 # Repo URL. NOTE: Remove branch speficiation when back on master
 SRC_URI = "git://github.com/stfc-aeg/mercury-detector.git;branch=add-carrier-adapter \
-		file://hexitec-mhz-startup.sh"
+           file://hexitec-mhz-startup.sh \
+           file://0001-Change-default-interface-from-127.0.0.1-to-0.0.0.0.patch \
+           "
 
 # Pull specific commit from mercury-detector repository
 SRCREV = "5088c4c16d47f3806ad4ab21508b64f74d813b9e"

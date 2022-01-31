@@ -258,7 +258,7 @@ CONFIG_YOCTO_MACHINE_NAME="zynqmp-generic"
 #
 # TMPDIR Location
 #
-CONFIG_TMP_DIR_LOCATION="/tmp/trenz-test-6/build/tmp"
+CONFIG_TMP_DIR_LOCATION="/tmp/trenz-test-7/build/tmp"
 
 #
 # WORKSPACE Location

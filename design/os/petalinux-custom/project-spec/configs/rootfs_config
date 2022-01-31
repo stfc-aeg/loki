@@ -4226,9 +4226,10 @@ CONFIG_spidev-test=y
 # user packages 
 #
 CONFIG_libgpiod-python=y
-CONFIG_odin-control=y
-CONFIG_odin-devices=y
-CONFIG_odin-sequencer=y
+CONFIG_hexitec-mhz=y
+# CONFIG_odin-control is not set
+# CONFIG_odin-devices is not set
+# CONFIG_odin-sequencer is not set
 CONFIG_python3-pip=y
 CONFIG_python3-psutil=y
 CONFIG_python3-pyzmq=y

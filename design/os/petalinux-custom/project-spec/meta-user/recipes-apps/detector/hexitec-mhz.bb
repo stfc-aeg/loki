@@ -74,8 +74,8 @@ do_install_append() {
 	install -m 0644 '${WORKDIR}/${STARTUP_SCRIPT_NAME}' '${D}${base_prefix}/etc/init.d/${STARTUP_SCRIPT_NAME}'
 
 	# Set the script to run at startup by symlinking in to startup runlevel
-	install -d ${D}${sysconfdir}/rc${STARTUP_SCRIPT_RUNLEVEL}.d
-	ln -sf ../init.d/${STARTUP_SCRIPT_NAME}  ${D}${sysconfdir}/rc${STARTUP_SCRIPT_RUNLEVEL}.d/S90${STARTUP_SCRIPT_NAME}
+	#install -d ${D}${sysconfdir}/rc${STARTUP_SCRIPT_RUNLEVEL}.d
+	#ln -sf ../init.d/${STARTUP_SCRIPT_NAME}  ${D}${sysconfdir}/rc${STARTUP_SCRIPT_RUNLEVEL}.d/S90${STARTUP_SCRIPT_NAME}
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit

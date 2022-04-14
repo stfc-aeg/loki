@@ -3,7 +3,7 @@ SUMMARY = "This is a recipe for the HEXITEC-MHz Odin-Control Instance"
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
 RDEPENDS_${PN} += "python3-setuptools"
 #RDEPENDS_${PN} += "odin-control (=1.0.0)"
-RDEPENDS_${PN} += "odin-control (>=1.0.0)"
+RDEPENDS_${PN} += "odin-control (>=1.2.0)"
 #RDEPENDS_${PN} += "odin-control-async"
 RDEPENDS_${PN} += "odin-sequencer"
 RDEPENDS_${PN} += "odin-devices (=1.0.0)"

@@ -6,7 +6,7 @@ RDEPENDS_${PN} += "odin-control"
 RDEPENDS_${PN} += "python3-spidev"
 RDEPENDS_${PN} += "python3-smbus"
 
-SRC_URI = "git://github.com/stfc-aeg/odin-devices.git;tag=${PV}"
+SRC_URI = "git://git@github.com/stfc-aeg/odin-devices.git;protocol=ssh;tag=${PV}"
 
 # Set revision to commit hash. Update manually when satisfied with compatibility
 #SRCREV = "5332440d9bb9a33dbd254b2c8ba35e5120097a0e"

@@ -6,7 +6,7 @@ RDEPENDS_${PN} += "python3-setuptools"
 RDEPENDS_${PN} += "odin-control (>=1.2.0)"
 #RDEPENDS_${PN} += "odin-control-async"
 RDEPENDS_${PN} += "odin-sequencer"
-RDEPENDS_${PN} += "odin-devices (=1.0.0)"
+RDEPENDS_${PN} += "odin-devices (=1.1.0)"
 RDEPENDS_${PN} += "python3-msgpack"
 RDEPENDS_${PN} += "loki-config"
 

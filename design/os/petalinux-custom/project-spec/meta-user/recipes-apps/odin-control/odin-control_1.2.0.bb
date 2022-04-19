@@ -9,7 +9,7 @@ RDEPENDS_${PN} += "python3-future"
 RDEPENDS_${PN} += "python3-pyzmq (>=17.0)"
 RDEPENDS_${PN} += "python3-psutil"
 
-SRC_URI = "https://github.com/odin-detector/odin-control.git;protocol=https;tag=${PV}"
+SRC_URI = "git://git@github.com/odin-detector/odin-control.git;protocol=ssh;tag=${PV}"
 SRC_URI[md5sum] = "1af5b49ffe84b3360b23086c7bb06a15"
 
 # SRCREV is the git tag, defined by the filename package version (wildcard)

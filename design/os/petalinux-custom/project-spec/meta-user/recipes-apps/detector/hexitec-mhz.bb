@@ -3,7 +3,7 @@ SUMMARY = "This is a recipe for the HEXITEC-MHz Odin-Control Instance"
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
 RDEPENDS_${PN} += "python3-setuptools"
 #RDEPENDS_${PN} += "odin-control (=1.0.0)"
-RDEPENDS_${PN} += "odin-control (>=1.2.0)"
+RDEPENDS_${PN} += "odin-control (= 1.2.0)"
 #RDEPENDS_${PN} += "odin-control-async"
 RDEPENDS_${PN} += "odin-sequencer"
 RDEPENDS_${PN} += "odin-devices (=1.1.0)"
@@ -16,7 +16,7 @@ SRC_URI = "git://github.com/stfc-aeg/mercury-detector.git;branch=add-carrier-ada
            "
 
 # Pull specific commit from mercury-detector repository
-SRCREV = "1e02c43dfcebda7d7e900aaa74a96b3bbd8047a3"
+SRCREV = "1ad0d3c8055db039907cd01c0ab4828f62f54fc2"
 PV = "0.0+git${SRCPV}"
 
 # This has to be in the format expected in Yocto's license list...

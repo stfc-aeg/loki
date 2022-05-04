@@ -13,6 +13,9 @@
 REMOTE_CONFIGURATION_LOCATION="/mnt/sd-mmcblk1p1/loki-config/"
 REMOTE_CONFIGURATION_FILENAME="loki-config.conf"
 CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
+REMOTE_NETWORK_CONFIGURATION_FILENAME="interfaces"
+NETWORK_CONFIG_DEFAULT_LOCATION="/etc/network/interfaces"
+STATIC_IP_INTERFACE_NAME="eth0"
 CONFIG_VERSION=1
 EXECUTABLE_NAME="odin_control"
 PIDFILE="/var/run/detector.pid"
@@ -48,7 +51,7 @@ else
         # If the external configuration directory exists (but the file does not), copy the
         # default configuration to the directory
         echo "Configuration directory found, but no configuration."
-        echo "Copying default config to $REMOVE_CONFIGURATION_LOCATION"
+        echo "Copying default config to $REMOTE_CONFIGURATION_LOCATION"
         cp $CONFIG_DEFAULT_LOCATION $REMOTE_CONFIGURATION_LOCATION$REMOTE_CONFIGURATION_FILENAME
         echo "The configuration can now be modified."
     else
@@ -65,8 +68,54 @@ fi
 
 # Check compatability of external configuration this script
 if [ "$CONFIG_VERSION" -gt "$conf_CONFIG_VERSION" ]; then
-    echo "External Configuration out of date, aborting..."
+    echo "Configuration out of date (version $conf_CONFIG_VERSION, vs system version $CONFIG_VERSION), aborting..."
     exit 1
+fi
+
+#--------------------------------------------------------------------------------------------------------
+# Perform network config override if desired
+
+# Copy the existing filesystem default file to the destination, only if there is no file there. This is so
+# that it can be edited, even if it is not currently in use.
+remote_network_conf_found=0
+remote_network_conf_path="$REMOTE_CONFIGURATION_LOCATION$REMOTE_NETWORK_CONFIGURATION_FILENAME"
+if test -f "$remote_network_conf_path"; then
+    echo "External network configuration file found at $remote_network_conf_path"
+    remote_network_conf_found=1
+else
+    if test -d "$REMOTE_CONFIGURATION_LOCATION"; then
+        # If the external configuration directory exists (but the file does not), copy the
+        # default configuration to the directory
+        echo "No external network configuration file found, but directory exists, copying $NETWORK_CONFIG_DEFAULT_LOCATION to $remote_network_conf_path"
+        cp $NETWORK_CONFIG_DEFAULT_LOCATION $remote_network_conf_path
+        remote_network_conf_found=1
+    else
+        # If the config location does not exist, abort and use the default live config
+        echo "Configuration destination directory does not exist, must use internal config"
+        remote_network_conf_found=0
+    fi
+fi
+
+# Activate the external configuration, if actually present as well as enabled by the main config file
+if [ "$conf_NETWORK_OVERRIDE_ENABLE" = "1" ] && [ $remote_network_conf_found = 1 ]; then
+    echo "Overriding network configuration with interfaces file at $remote_network_conf_path"
+
+    # Copy the destination file to the live system file to 'install'
+    cp $remote_network_conf_path $NETWORK_CONFIG_DEFAULT_LOCATION || echo "Error in network config copy..."
+
+    # Re-start the network configuration service
+    /etc/init.d/networking restart
+
+    echo "External network configuration installed and activated"
+else
+    echo "Using default network configuration (override enabled: $conf_NETWORK_OVERRIDE_ENABLE, found: $remote_network_conf_found)"
+fi
+
+# If the static IP has been specified, apply this *after* the config file. This way any other settings will
+# be retained.
+if [ "$conf_NETWORK_STATIC_IP_ENABLE" = "1" ]; then
+    echo "Network configuration will be overridden with static IP $conf_NETWORK_STATIC_IP for interface $STATIC_IP_INTERFACE_NAME"
+    ifconfig $STATIC_IP_INTERFACE_NAME $conf_NETWORK_STATIC_IP
 fi
 
 #--------------------------------------------------------------------------------------------------------
@@ -145,5 +194,8 @@ case "$1" in
         ;;
 esac
 
-# Deactivate python virtual environment
-deactivate
+# Deactivate python virtual environment if currently in one
+if [[ "$VIRTUAL_ENV" != "" ]]
+then
+    deactivate
+fi

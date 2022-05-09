@@ -20,10 +20,3 @@ index f205e3b..170896b 100644
  static_path = test/static
  adapters   = detector, asic_emulator, odin_sequencer, carrier
  
-@@ -25,4 +25,4 @@ sequence_location = test/sequences
- [adapter.carrier]
- module = mercury.carrier.adapter.CarrierAdapter
- clk_config_location = ./test/carrier/clk_config/
--clk_default_config_filename = Si5344-RevD-merc0000-Registers.txt
-\ No newline at end of file
-+clk_default_config_filename = Si5344-RevD-merc0000-Registers.txt

@@ -1,6 +1,6 @@
 PETALINUX_VER=2020.1
 VALIDATE_HW_CHKSUM=1
-HARDWARE_PATH=/u/ucm28261/develop/projects/cfi-daq/cfi-daq/loki-2020-fixed/loki/design/os/petalinux-custom/design_4cg_2gb.xsa
-HARDWARE_CHECKSUM=cf64b8b449d951ef57cfe3434c60f4da
+HARDWARE_PATH=/u/ucm28261/develop/projects/cfi-daq/cfi-daq/loki-2022/loki/design/os/petalinux-custom/design_4cg_2gb.xsa
+HARDWARE_CHECKSUM=2e6e0d947c1629f2f29758dec92f0602
 YOCTO_SDK=b034efc026f5f7d24a4732927cb62e43
-RFSCONFIG_CHKSUM=2201a5fc85dc4141ed9833e74649aef2
+RFSCONFIG_CHKSUM=ae302c94ae0eac24e4fd770595abe2cb

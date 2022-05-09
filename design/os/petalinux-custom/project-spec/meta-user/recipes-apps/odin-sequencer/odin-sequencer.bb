@@ -7,7 +7,7 @@ RDEPENDS_${PN} += "odin-control"
 #RDEPENDS_${PN} += "python3-pytest-runner"
 RDEPENDS_${PN} += "python3-inotify"
 
-SRC_URI = "git://github.com/stfc-aeg/odin-sequencer.git \
+SRC_URI = "git://git@github.com/stfc-aeg/odin-sequencer.git;protocol=ssh \
 		file://odin-sequencer-remove-inotify-setuptools.patch"
 # SRCREV = "${AUTOREV}"
 # Set revision to commit hash. Update manually when satisfied with compatibility

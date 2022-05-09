@@ -30,8 +30,10 @@ DISTUTILS_SETUP_PATH = "${S}/control"
 STATIC_RESOURCES_INSTALL_PATH = "/opt/loki-detector/"
 STATIC_RESOURCES_REPO_PATH = "/test"
 STATIC_RESOURCES_CONF_LOC = "/test/config/test_emulator.cfg"
+SEQUENCES_LOC = "/test/sequences"
 
 LOKI_CONFIG_DESTINATION = "/opt/loki-detector/config.cfg"
+LOKI_SEQUENCES_DESTINATION = "/opt/loki-detector/sequences"
 
 inherit setuptools3
 
@@ -73,6 +75,10 @@ do_install_append() {
     # To comply with generic loki detector, the configuration file should be placed or symlinked to the loki opt directory
     cd /
     ln -sfr '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}${STATIC_RESOURCES_CONF_LOC}' '${D}${base_prefix}${LOKI_CONFIG_DESTINATION}'
+
+    # To comply with generic loki detector, the sequences directory should be placed or symlinked to the loki opt directory
+    cd /
+    ln -sfr '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}${SEQUENCES_LOC}' '${D}${base_prefix}${LOKI_SEQUENCES_DESTINATION}'
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit

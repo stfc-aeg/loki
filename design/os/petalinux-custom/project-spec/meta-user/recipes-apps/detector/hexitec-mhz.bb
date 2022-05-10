@@ -2,9 +2,7 @@ SUMMARY = "This is a recipe for the HEXITEC-MHz Odin-Control Instance"
 
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
 RDEPENDS_${PN} += "python3-setuptools"
-#RDEPENDS_${PN} += "odin-control (=1.0.0)"
 RDEPENDS_${PN} += "odin-control (= 1.2.0)"
-#RDEPENDS_${PN} += "odin-control-async"
 RDEPENDS_${PN} += "odin-sequencer"
 RDEPENDS_${PN} += "odin-devices (=1.1.0)"
 RDEPENDS_${PN} += "python3-msgpack"
@@ -35,7 +33,14 @@ SEQUENCES_LOC = "/test/sequences"
 LOKI_CONFIG_DESTINATION = "/opt/loki-detector/config.cfg"
 LOKI_SEQUENCES_DESTINATION = "/opt/loki-detector/sequences"
 
+LOKI_USERNAME = "loki"
+
 inherit setuptools3
+inherit useradd
+
+USERADD_PACKAGES = "${PN}"
+
+USERADD_PARAM_${PN} = "-d /home/${LOKI_USERNAME} -r -s /bin/bash ${LOKI_USERNAME}"
 
 do_configure_prepend() {
 	cd ${DISTUTILS_SETUP_PATH}
@@ -71,14 +76,18 @@ do_install_append() {
 
 	# gnu install does not work well for recursive directories, so copy recursively
 	cp -R '${DISTUTILS_SETUP_PATH}${STATIC_RESOURCES_REPO_PATH}' '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}'
+    chown -R ${LOKI_USERNAME} '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}'
 
     # To comply with generic loki detector, the configuration file should be placed or symlinked to the loki opt directory
     cd /
     ln -sfr '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}${STATIC_RESOURCES_CONF_LOC}' '${D}${base_prefix}${LOKI_CONFIG_DESTINATION}'
+    chown -R ${LOKI_USERNAME} '${D}${base_prefix}${LOKI_CONFIG_DESTINATION}'
 
     # To comply with generic loki detector, the sequences directory should be placed or symlinked to the loki opt directory
     cd /
     ln -sfr '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}${SEQUENCES_LOC}' '${D}${base_prefix}${LOKI_SEQUENCES_DESTINATION}'
+    chown -R ${LOKI_USERNAME} '${D}${base_prefix}${LOKI_SEQUENCES_DESTINATION}'
+
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit

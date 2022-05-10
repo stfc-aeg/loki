@@ -4,6 +4,9 @@ inherit useradd
 
 LICENSE = "CLOSED"
 
+# Ensure that if any recipe intends to include this directory that it has DEPENDS += "loki-user".
+LOKI_INSTALL_DIRECTORY = "/opt/loki-detector/"
+SYSROOT_DIRS += "${LOKI_INSTALL_DIRECTORY}"
 LOKI_USERNAME = "loki"
 
 USERADD_PACKAGES = "${PN}"
@@ -15,6 +18,13 @@ GROUPMEMS_PARAM_${PN} = "--group gpiod --add ${LOKI_USERNAME}; \
                             --group smbususer --add ${LOKI_USERNAME}"
 
 do_install_append() {
+    # Create  detector operational directory so that loki can execute from it
+    install -d ${D}${base_prefix}${LOKI_INSTALL_DIRECTORY}
+
+    # Create a directory that may be written to by the loki user in case of file exports
+    install -d ${D}${base_prefix}${LOKI_INSTALL_DIRECTORY}/exports
+    chown -R ${LOKI_USERNAME} '${D}${base_prefix}${LOKI_INSTALL_DIRECTORY}/exports'
+
     # Allow loki to operate all GPIO lines
     install -d '${D}${base_prefix}/etc/udev/rules.d'
     echo -e 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpiod", MODE="0660"\n' >> '${D}${base_prefix}/etc/udev/rules.d/10-gpiod.rules'
@@ -27,4 +37,5 @@ do_install_append() {
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
+FILES_${PN} += "${base_prefix}${LOKI_INSTALL_DIRECTORY}"
 FILES_${PN} += "${base_prefix}/etc/udev/rules.d/*"

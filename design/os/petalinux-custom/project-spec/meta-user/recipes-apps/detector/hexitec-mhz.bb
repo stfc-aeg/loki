@@ -24,6 +24,8 @@ LICENSE = "CLOSED"
 
 S = "${WORKDIR}/git/"
 
+DIRFILES = "1"
+
 # Used to determine non-standard location of setup.py for setuptools
 DISTUTILS_SETUP_PATH = "${S}/control"
 
@@ -38,11 +40,6 @@ LOKI_SEQUENCES_DESTINATION = "/opt/loki-detector/sequences"
 LOKI_USERNAME = "loki"
 
 inherit setuptools3
-inherit useradd
-
-USERADD_PACKAGES = "${PN}"
-
-USERADD_PARAM_${PN} = "-d /home/${LOKI_USERNAME} -r -s /bin/bash ${LOKI_USERNAME}"
 
 do_configure_prepend() {
 	cd ${DISTUTILS_SETUP_PATH}
@@ -78,20 +75,17 @@ do_install_append() {
 
 	# gnu install does not work well for recursive directories, so copy recursively
 	cp -R '${DISTUTILS_SETUP_PATH}${STATIC_RESOURCES_REPO_PATH}' '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}'
-    chown -R ${LOKI_USERNAME} '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}'
 
     # To comply with generic loki detector, the configuration file should be placed or symlinked to the loki opt directory
     cd /
     ln -sfr '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}${STATIC_RESOURCES_CONF_LOC}' '${D}${base_prefix}${LOKI_CONFIG_DESTINATION}'
-    chown -R ${LOKI_USERNAME} '${D}${base_prefix}${LOKI_CONFIG_DESTINATION}'
 
     # To comply with generic loki detector, the sequences directory should be placed or symlinked to the loki opt directory
     cd /
     ln -sfr '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}${SEQUENCES_LOC}' '${D}${base_prefix}${LOKI_SEQUENCES_DESTINATION}'
-    chown -R ${LOKI_USERNAME} '${D}${base_prefix}${LOKI_SEQUENCES_DESTINATION}'
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
-FILES_${PN} += "${base_prefix}/opt/*"
+FILES_${PN} += "${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}/*"
 FILES_${PN} += "${base_prefix}/etc/init.d/*"
 FILES_${PN} += "${base_prefix}${sysconfdir}/*"

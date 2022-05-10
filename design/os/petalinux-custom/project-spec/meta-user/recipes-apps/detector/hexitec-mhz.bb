@@ -7,6 +7,8 @@ RDEPENDS_${PN} += "odin-sequencer"
 RDEPENDS_${PN} += "odin-devices (=1.1.0)"
 RDEPENDS_${PN} += "python3-msgpack"
 RDEPENDS_${PN} += "loki-config"
+RDEPENDS_${PN} += "loki-user"
+DEPENDS += "loki-user"
 
 # Repo URL. NOTE: Remove branch speficiation when back on master
 SRC_URI = "git://github.com/stfc-aeg/mercury-detector.git;branch=add-carrier-adapter \
@@ -41,10 +43,6 @@ inherit useradd
 USERADD_PACKAGES = "${PN}"
 
 USERADD_PARAM_${PN} = "-d /home/${LOKI_USERNAME} -r -s /bin/bash ${LOKI_USERNAME}"
-GROUPADD_PARAM_${PN} = "-r gpiod; -r spiuser; -r smbususer"
-GROUPMEMS_PARAM_${PN} = "--group gpiod --add ${LOKI_USERNAME}; \
-                            --group spiuser --add ${LOKI_USERNAME}; \
-                            --group smbususer --add ${LOKI_USERNAME}"
 
 do_configure_prepend() {
 	cd ${DISTUTILS_SETUP_PATH}
@@ -91,20 +89,9 @@ do_install_append() {
     cd /
     ln -sfr '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}${SEQUENCES_LOC}' '${D}${base_prefix}${LOKI_SEQUENCES_DESTINATION}'
     chown -R ${LOKI_USERNAME} '${D}${base_prefix}${LOKI_SEQUENCES_DESTINATION}'
-
-    # Allow loki to operate all GPIO lines
-    install -d '${D}${base_prefix}/etc/udev/rules.d'
-    echo -e 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpiod", MODE="0660"\n' >> '${D}${base_prefix}/etc/udev/rules.d/10-gpiod.rules'
-
-    # Allow loki to operate all spidev devices
-    echo -e 'KERNEL=="spidev*", GROUP="spiuser", MODE="0660"' >> '${D}${base_prefix}/etc/udev/rules.d/10-spidev.rules'
-
-    # Allow loki to operate all smbus (i2c) devices
-    echo -e 'KERNEL=="i2c*", GROUP="smbususer", MODE="0660"' >> '${D}${base_prefix}/etc/udev/rules.d/10-smbus.rules'
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
 FILES_${PN} += "${base_prefix}/opt/*"
 FILES_${PN} += "${base_prefix}/etc/init.d/*"
 FILES_${PN} += "${base_prefix}${sysconfdir}/*"
-FILES_${PN} += "${base_prefix}/etc/udev/rules.d/*"

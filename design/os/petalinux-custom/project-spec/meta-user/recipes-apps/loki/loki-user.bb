@@ -33,7 +33,7 @@ do_install_append() {
     echo -e 'KERNEL=="spidev*", GROUP="spiuser", MODE="0660"' >> '${D}${base_prefix}/etc/udev/rules.d/10-spidev.rules'
 
     # Allow loki to operate all smbus (i2c) devices
-    echo -e 'KERNEL=="i2c*", GROUP="smbususer", MODE="0660"' >> '${D}${base_prefix}/etc/udev/rules.d/10-smbus.rules'
+    echo -e 'KERNEL=="i2c-[1]*", GROUP="smbususer", MODE="0660"' >> '${D}${base_prefix}/etc/udev/rules.d/10-smbus.rules'
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit

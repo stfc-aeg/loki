@@ -4239,5 +4239,5 @@ CONFIG_python3-spidev=y
 #
 # PetaLinux RootFS Settings
 #
-CONFIG_ROOTFS_ROOT_PASSWD="root"
+CONFIG_ROOTFS_ROOT_PASSWD="lokiroot"
 CONFIG_ADD_EXTRA_USERS="petalinux:petalinux;"

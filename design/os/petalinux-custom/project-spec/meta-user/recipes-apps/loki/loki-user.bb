@@ -7,11 +7,16 @@ LICENSE = "CLOSED"
 # Ensure that if any recipe intends to include this directory that it has DEPENDS += "loki-user".
 LOKI_INSTALL_DIRECTORY = "/opt/loki-detector/"
 SYSROOT_DIRS += "${LOKI_INSTALL_DIRECTORY}"
+
 LOKI_USERNAME = "loki"
+
+# Encrypted form of password created with openssl passwd. Note: $ signs must be escaped.
+LOKI_PASS_ENC = '\$1\$egoKrtB7\$.UUBtRsxiasoHU1W.4NYV/'
 
 USERADD_PACKAGES = "${PN}"
 
-USERADD_PARAM_${PN} = "-d /home/${LOKI_USERNAME} -r -s /bin/bash ${LOKI_USERNAME}"
+# Note: single quotes around LOKI_PASS_ENC are crucial
+USERADD_PARAM_${PN} = "-p '${LOKI_PASS_ENC}' -m -d /home/${LOKI_USERNAME} -r -s /bin/bash ${LOKI_USERNAME}"
 GROUPADD_PARAM_${PN} = "-r gpiod; -r spiuser; -r smbususer"
 GROUPMEMS_PARAM_${PN} = "--group gpiod --add ${LOKI_USERNAME}; \
                             --group spiuser --add ${LOKI_USERNAME}; \

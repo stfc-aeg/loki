@@ -2,13 +2,13 @@ SUMMARY = "This is a recipe for the HEXITEC-MHz Odin-Control Instance"
 
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
 RDEPENDS_${PN} += "python3-setuptools"
-#RDEPENDS_${PN} += "odin-control (=1.0.0)"
 RDEPENDS_${PN} += "odin-control (= 1.2.0)"
-#RDEPENDS_${PN} += "odin-control-async"
 RDEPENDS_${PN} += "odin-sequencer"
 RDEPENDS_${PN} += "odin-devices (=1.1.0)"
 RDEPENDS_${PN} += "python3-msgpack"
 RDEPENDS_${PN} += "loki-config"
+RDEPENDS_${PN} += "loki-user"
+DEPENDS += "loki-user"
 
 # Repo URL. NOTE: Remove branch speficiation when back on master
 SRC_URI = "git://github.com/stfc-aeg/mercury-detector.git;branch=add-carrier-adapter \
@@ -24,6 +24,8 @@ LICENSE = "CLOSED"
 
 S = "${WORKDIR}/git/"
 
+DIRFILES = "1"
+
 # Used to determine non-standard location of setup.py for setuptools
 DISTUTILS_SETUP_PATH = "${S}/control"
 
@@ -34,6 +36,8 @@ SEQUENCES_LOC = "/test/sequences"
 
 LOKI_CONFIG_DESTINATION = "/opt/loki-detector/config.cfg"
 LOKI_SEQUENCES_DESTINATION = "/opt/loki-detector/sequences"
+
+LOKI_USERNAME = "loki"
 
 inherit setuptools3
 
@@ -82,6 +86,6 @@ do_install_append() {
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
-FILES_${PN} += "${base_prefix}/opt/*"
+FILES_${PN} += "${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}/*"
 FILES_${PN} += "${base_prefix}/etc/init.d/*"
 FILES_${PN} += "${base_prefix}${sysconfdir}/*"

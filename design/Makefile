@@ -48,14 +48,19 @@ os: hardware software
 	$(MAKE) -C ${OS_PATH} all
 
 mostlyclean:
-	# Delete built hardware and software, and clean PetaLinux project.
+	# Delete built hardware and software, and mostlyclean PetaLinux project.
+	$(info cleaning prebuilt hardware and software)
 	rm -rf prebuilt/hardware/*
 	rm -rf prebuitt/software/*
-	$(MAKE) -C ${OS_PATH} clean
+	$(info cleaning OS image files)
+	$(MAKE) -C ${OS_PATH} mostlyclean
 
 clean: mostlyclean export_bd_tcl
 	# Same as mostlyclean but make sure that current design is exported to TCL
-	# for revision control, and then delete vivado project.
+	# for revision control, and then delete vivado project. The OS is also
+	# fully cleaned.
+	$(info cleaning OS image and build files)
+	$(MAKE) -C ${OS_PATH} clean
 	$(warning Deleting Vivado project directory, changes not exported to TCL will be lost)
 	rm -rf ./vivado
 

@@ -11,3 +11,4 @@ pre-built/linux/
 *.xsa
 /components/plnx_workspace
 /components/yocto
+/project-spec/hw-description/system.xsa

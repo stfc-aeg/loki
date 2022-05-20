@@ -8,6 +8,7 @@ PL_ROOT = .
 OUTPUT_DIR = ${PL_ROOT}/images/linux
 
 DESIGN_BITSTREAM = ${PL_ROOT}/${HW_XSA_FILENAME}
+PL_PROJ_BITSTREAM = ${PL_ROOT}/project-spec/hw-description/system.xsa
 LOW_LEVEL_SW = ${SW_EXPORT_DIR}${SW_FSBL_FILENAME} ${SW_EXPORT_DIR}${SW_PMUFW_FILENAME}
 LOW_LEVEL_SW_LOCAL = ${OUTPUT_DIR}${SW_FSBL_FILENAME} ${OUTPUT_DIR}${SW_PMUFW_FILENAME}
 
@@ -21,10 +22,10 @@ BUILD_DEPS := $(shell find ${PL_ROOT}/project-spec/)
 # Build all required files for upload to hardware, plus human-readable device tree
 all: ${OUTPUT_DIR}/BOOT.BIN ${OUTPUT_DIR}/boot.scr ${OUTPUT_DIR}/image.ub ${DTS} ;
 
-# Local directory file depends on Xilinx build path
-${DESIGN_BITSTREAM}: ${HW_EXPORT_DIR}/${HW_XSA_FILENAME}
+# If the bitstream has been imported into the project it will appear here
+${PL_PROJ_BITSTREAM}: ${HW_EXPORT_DIR}/${HW_XSA_FILENAME}
 	# Copy the latest design into this directory
-	cp ${HW_EXPORT_DIR}/${HW_XSA_FILENAME} ./
+	cp ${HW_EXPORT_DIR}/${HW_XSA_FILENAME} ${DESIGN_BITSTREAM}
 
 	# Use PetaLinux tools to install new design
 	petalinux-config --get-hw-description --silentconfig
@@ -48,7 +49,7 @@ ${OUTPUT_DIR}/${SW_PMUFW_FILENAME}: ${SW_EXPORT_DIR}/${SW_PMUFW_FILENAME} | ${OU
 
 # Create intermediate product so that PHONY is not executed unless changes have been made
 # This means that build can provide multiple files without multiple runs
-${OUTPUT_DIR}/.build_complete: ${DESIGN_BITSTREAM} ${BUILD_DEPS}
+${OUTPUT_DIR}/.build_complete: ${PL_PROJ_BITSTREAM} ${BUILD_DEPS}
 	$(info Modified build dependencies: $?)
 	$(info performing petalinux-build...)
 	petalinux-build

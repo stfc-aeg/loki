@@ -51,6 +51,11 @@ function vivado_start {
           echo Automatically compiling LOKI Hardware
           vivado -source ../scripts/script_loki_buildhw.tcl -mode batch -notrace
       fi
+      if [ "${LOKI_AUTO_BUILD}" = "TCL" ]
+      then
+          echo Automatically exporting Vivado block diagram changes to TCL
+          vivado -source ../scripts/script_loki_export_bd_tcl.tcl -mode batch -notrace
+      fi
   fi
   echo -------------------------scripts finished----------------------------
   echo --------------------------------------------------------------------

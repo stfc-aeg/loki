@@ -1,12 +1,13 @@
-HW_EXPORT_DIR = ../../prebuilt/hardware/4cg_2gb
-HW_XSA_FILENAME = design_4cg_2gb.xsa
-SW_EXPORT_DIR = ../../prebuilt/software/4cg_2gb
+PLATFORM = 4cg_2gb
+HW_EXPORT_DIR = ../../prebuilt/hardware/${PLATFORM}
+HW_XSA_FILENAME = design_${PLATFORM}.xsa
+SW_EXPORT_DIR = ../../prebuilt/software/${PLATFORM}
 SW_FSBL_FILENAME = fsbl.elf
 SW_PMUFW_FILENAME = pmufw.elf
 PL_ROOT = .
 OUTPUT_DIR = ${PL_ROOT}/images/linux
 
-DESIGN_BITSTREAM = ${PL_ROOT}/design_4cg_2gb.xsa
+DESIGN_BITSTREAM = ${PL_ROOT}/${HW_XSA_FILENAME}
 LOW_LEVEL_SW = ${SW_EXPORT_DIR}${SW_FSBL_FILENAME} ${SW_EXPORT_DIR}${SW_PMUFW_FILENAME}
 LOW_LEVEL_SW_LOCAL = ${OUTPUT_DIR}${SW_FSBL_FILENAME} ${OUTPUT_DIR}${SW_PMUFW_FILENAME}
 

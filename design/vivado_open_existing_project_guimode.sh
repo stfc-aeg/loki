@@ -36,7 +36,22 @@ function vivado_start {
   # setenv XILINX_TCLSTORE_USERAREA tmp
   echo --------------------------------------------------------------------
   echo -------------------------Start VIVADO scripts -----------------------
-  vivado -source ../scripts/script_main.tcl  -mode batch -notrace -tclargs --gui 1
+  if [ -z "${LOKI_AUTO_BUILD}" ]
+  then
+      echo Test failed, using gui mode
+      vivado -source ../scripts/script_main.tcl -mode batch -notrace -tclargs --gui 1
+  else
+      if [ "${LOKI_AUTO_BUILD}" = "SW" ]
+      then
+          echo Automatically compiling LOKI Software
+          vivado -source ../scripts/script_loki_buildsw.tcl -mode batch -notrace
+      fi
+      if [ "${LOKI_AUTO_BUILD}" = "HW" ]
+      then
+          echo Automatically compiling LOKI Hardware
+          vivado -source ../scripts/script_loki_buildhw.tcl -mode batch -notrace
+      fi
+  fi
   echo -------------------------scripts finished----------------------------
   echo --------------------------------------------------------------------
   echo --------------------Change to design folder-------------------------

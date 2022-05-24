@@ -107,3 +107,4 @@ clean:
 
 	# Force next build to re-import hardware from hardware export directory
 	rm -rf ${DESIGN_BITSTREAM}
+	rm -rf ${PL_PROJ_BITSTREAM}

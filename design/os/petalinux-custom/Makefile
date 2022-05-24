@@ -28,6 +28,7 @@ ${PL_PROJ_BITSTREAM}: ${HW_EXPORT_DIR}/${HW_XSA_FILENAME}
 	cp ${HW_EXPORT_DIR}/${HW_XSA_FILENAME} ${DESIGN_BITSTREAM}
 
 	# Use PetaLinux tools to install new design
+	mkdir -p project-spec/hw-description
 	petalinux-config --get-hw-description --silentconfig
 
 # Create the output directory if required

@@ -9,12 +9,12 @@
 
 ### END INIT INFO
 
-#TODO Eventually, this remote conf location should depend on a 'loki board type'
 REMOTE_CONFIGURATION_LOCATION="/mnt/sd-mmcblk1p1/loki-config/"
 REMOTE_CONFIGURATION_FILENAME="loki-config.conf"
 CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
 REMOTE_NETWORK_CONFIGURATION_FILENAME="interfaces"
 NETWORK_CONFIG_DEFAULT_LOCATION="/etc/network/interfaces"
+LOKI_USERNAME="loki"
 STATIC_IP_INTERFACE_NAME="eth0"
 CONFIG_VERSION=1
 EXECUTABLE_NAME="odin_control"
@@ -150,6 +150,9 @@ function service_start {
     cd $conf_ODIN_DETECTOR_ROOT_LOC
 
     echo "Logging to $conf_ODIN_DETECTOR_LOGDESTINATION"
+    # Create the logging file with permission for the running user to edit it
+    touch $conf_ODIN_DETECTOR_LOGDESTINATION
+    chown $LOKI_USERNAME $conf_ODIN_DETECTOR_LOGDESTINATION
 
     # Remove the old PID file
     rm -rf $PIDFILE
@@ -157,6 +160,7 @@ function service_start {
     start-stop-daemon -S \
         -b \
         -p $PIDFILE -m \
+        -c $LOKI_USERNAME \
         -x "$EXECUTABLE_NAME" \
         -- \
         --logging=$conf_ODIN_DETECTOR_LOGLEVEL \

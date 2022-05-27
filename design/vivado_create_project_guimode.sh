@@ -36,7 +36,16 @@ function vivado_start {
   # setenv XILINX_TCLSTORE_USERAREA tmp
   echo --------------------------------------------------------------------
   echo -------------------------Start VIVADO scripts -----------------------
-  vivado -source ../scripts/script_main.tcl  -mode batch -notrace -tclargs --run 1 --gui 1 --clean 2 --boardpart ${PARTNUMBER}
+  # Setting LOKI_AUTO_CREATE will result in running Vivado with no GUI
+  if [ -z "${LOKI_AUTO_CREATE}" ]
+  then
+    GUIMODE=1
+  else
+    echo "LOKI will run project creation without GUI"
+    GUIMODE=0
+  fi
+
+  vivado -source ../scripts/script_main.tcl  -mode batch -notrace -tclargs --run 1 --gui ${GUIMODE} --clean 2 --boardpart ${PARTNUMBER}
   echo -------------------------scripts finished----------------------------
   echo --------------------------------------------------------------------
   echo --------------------Change to design folder-------------------------

@@ -325,12 +325,12 @@ CONFIG_mtd-utils=y
 #
 # tzdata 
 #
-# CONFIG_tzdata is not set
+CONFIG_tzdata=y
 # CONFIG_tzdata-pacific is not set
 # CONFIG_tzdata-posix is not set
 # CONFIG_tzdata-antarctica is not set
 # CONFIG_tzdata-africa is not set
-# CONFIG_tzdata-europe is not set
+CONFIG_tzdata-europe=y
 # CONFIG_tzdata-americas is not set
 # CONFIG_tzdata-right is not set
 # CONFIG_tzdata-atlantic is not set
@@ -4212,7 +4212,7 @@ CONFIG_imagefeature-ssh-server-dropbear=y
 # CONFIG_imagefeature-ssh-server-openssh is not set
 CONFIG_imagefeature-hwcodecs=y
 # CONFIG_imagefeature-package-management is not set
-CONFIG_imagefeature-debug-tweaks=y
+# CONFIG_imagefeature-debug-tweaks is not set
 # CONFIG_auto-login is not set
 
 #
@@ -4239,5 +4239,5 @@ CONFIG_python3-spidev=y
 #
 # PetaLinux RootFS Settings
 #
-CONFIG_ROOTFS_ROOT_PASSWD="root"
+CONFIG_ROOTFS_ROOT_PASSWD="lokiroot"
 CONFIG_ADD_EXTRA_USERS="petalinux:petalinux;"

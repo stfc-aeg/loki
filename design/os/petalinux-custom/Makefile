@@ -11,6 +11,8 @@ DESIGN_BITSTREAM = ${PL_ROOT}/${HW_XSA_FILENAME}
 PL_PROJ_BITSTREAM = ${PL_ROOT}/project-spec/hw-description/system.xsa
 LOW_LEVEL_SW = ${SW_EXPORT_DIR}${SW_FSBL_FILENAME} ${SW_EXPORT_DIR}${SW_PMUFW_FILENAME}
 LOW_LEVEL_SW_LOCAL = ${OUTPUT_DIR}${SW_FSBL_FILENAME} ${OUTPUT_DIR}${SW_PMUFW_FILENAME}
+DTS = ${OUTPUT_DIR}/system.dts
+DTB = ${OUTPUT_DIR}/system.dtb
 
 # The yocto workspace contains recipes brought into the workspace under modification.
 BUILD_DEPS = $(shell find ${PL_ROOT}/components/yocto/workspace/)
@@ -83,8 +85,6 @@ ${OUTPUT_DIR}/BOOT.BIN: package ;
 ${OUTPUT_DIR}/boot.scr: package ;
 ${OUTPUT_DIR}/image.ub: package ;
 
-DTS = ${OUTPUT_DIR}/system.dts
-DTB = ${OUTPUT_DIR}/system.dtb
 ${DTS}: ${DTB}
 	dtc -I dtb -O dts -o ${OUTPUT_DIR}/system.dts ${OUTPUT_DIR}/system.dtb
 	$(info New device tree exported to ${OUTPUT_DIR}/system.dts)

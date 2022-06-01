@@ -29,6 +29,7 @@ export_bd_tcl: | ${VIVADO_PROJ_PATH}
 # changes can be committed with 'export_tcl'
 HARDWARE_DEPS = $(shell find ./block_design/)
 HARDWARE_DEPS := $(shell find ./constraints/)
+HARDWARE_DEPS := ${VIVADO_PROJ_PATH}/design*
 ${HARDWARE_OUTPUT}: ${HARDWARE_DEPS} | ${VIVADO_PROJ_PATH}
 	$(info Modified hardware synth dependencies: $?)
 	LOKI_AUTO_BUILD="HW"; \

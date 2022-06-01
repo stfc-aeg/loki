@@ -15,6 +15,8 @@ CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
 REMOTE_NETWORK_CONFIGURATION_FILENAME="interfaces"
 NETWORK_CONFIG_DEFAULT_LOCATION="/etc/network/interfaces"
 LOKI_USERNAME="loki"
+SSHCONFDIR_FLASH="/mnt/flashmtd1/.ssh"
+SSHCONFDIR_IMG="/home/${LOKI_USERNAME}/.ssh"
 STATIC_IP_INTERFACE_NAME="eth0"
 CONFIG_VERSION=1
 EXECUTABLE_NAME="odin_control"
@@ -116,6 +118,30 @@ fi
 if [ "$conf_NETWORK_STATIC_IP_ENABLE" = "1" ]; then
     echo "Network configuration will be overridden with static IP $conf_NETWORK_STATIC_IP for interface $STATIC_IP_INTERFACE_NAME"
     ifconfig $STATIC_IP_INTERFACE_NAME $conf_NETWORK_STATIC_IP
+fi
+
+# If the loki user .ssh directory is to be persistent, create it in flash and bind mount over existing version
+if [ "$conf_PERSISTENT_SSH_AUTH" = "1" ]; then
+    echo "SSH authorized keys will persist between boots and image updates"
+
+    # Make directories on flash as well as internal one if it does not exist
+    mkdir -p ${SSHCONFDIR_FLASH}
+    mkdir -p ${SSHCONFDIR_IMG}
+
+    # If there are any keys already in the internal .ssh authorized_keys that do not appear in the flash
+    # version, add them
+    if test -f "${SSHCONFDIR_IMG}/authorized_keys"; then
+        if test -f "${SSHCONFDIR_FLASH}/authorized_keys"; then
+            # Append any keys that appear only in the internal file to the flash one
+            cat ${SSHCONFDIR_IMG}/authorized_keys ${SSHCONFDIR_FLASH}/authorized_keys ${SSHCONFDIR_FLASH}/authorized_keys \
+                | sort | uniq -u >> ${SSHCONFDIR_FLASH}/authorized_keys
+        fi
+    fi
+
+    # Config and other files in flash will simply overwrite the image version
+
+    # Bind mount the flash directory to the internal one
+    mount --bind ${SSHCONFDIR_FLASH} ${SSHCONFDIR_IMG}
 fi
 
 #--------------------------------------------------------------------------------------------------------

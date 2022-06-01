@@ -115,3 +115,11 @@ set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[7]} ];#EMIO 8
 set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[8]} ];#EMIO 9
 set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[9]} ];#EMIO 10
 set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_IO_1_11[10]} ];#EMIO 11
+
+# PL SYSMON XADC
+#set_property PACKAGE_PIN AB1 [get_ports VAUXP0]
+set_property PACKAGE_PIN C3 [get_ports VAUXP0]
+set_property IOSTANDARD ANALOG [get_ports VAUXP0]
+#set_property PACKAGE_PIN AC1 [get_ports VAUXN0]
+set_property PACKAGE_PIN C2 [get_ports VAUXN0]
+set_property IOSTANDARD ANALOG [get_ports VAUXN0]

@@ -146,6 +146,7 @@ trenz.biz:user:SC0808BF:*\
 trenz.biz:user:axis_live_audio:*\
 xilinx.com:ip:util_ds_buf:*\
 xilinx.com:ip:proc_sys_reset:*\
+xilinx.com:ip:system_management_wiz:*\
 xilinx.com:ip:vio:*\
 xilinx.com:ip:xlconcat:*\
 xilinx.com:ip:xlslice:*\
@@ -526,6 +527,14 @@ proc create_root_design { parentCell } {
 
   set IIC_1_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:iic_rtl:1.0 IIC_1_0 ]
 
+  set Vaux0_0 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_analog_io_rtl:1.0 Vaux0_0 ]
+
+  set Vaux0_1 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_analog_io_rtl:1.0 Vaux0_1 ]
+
+  set Vaux0_2 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_analog_io_rtl:1.0 Vaux0_2 ]
+
+  set Vp_Vn_0 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_analog_io_rtl:1.0 Vp_Vn_0 ]
+
 
   # Create ports
   set EMIO_0_LVDS_N [ create_bd_port -dir O -from 0 -to 0 -type clk EMIO_0_LVDS_N ]
@@ -559,6 +568,58 @@ proc create_root_design { parentCell } {
 
   # Create instance: proc_sys_reset_0, and set properties
   set proc_sys_reset_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset proc_sys_reset_0 ]
+
+  # Create instance: system_management_wiz_0, and set properties
+  set system_management_wiz_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_management_wiz system_management_wiz_0 ]
+  set_property -dict [ list \
+   CONFIG.ANALOG_BANK_SELECTION {66} \
+   CONFIG.CHANNEL_ENABLE_VAUXP0_VAUXN0 {true} \
+   CONFIG.CHANNEL_ENABLE_VAUXP1_VAUXN1 {false} \
+   CONFIG.CHANNEL_ENABLE_VBRAM {false} \
+   CONFIG.CHANNEL_ENABLE_VCCAUX {true} \
+   CONFIG.CHANNEL_ENABLE_VCCINT {true} \
+   CONFIG.CHANNEL_ENABLE_VREFN {true} \
+   CONFIG.CHANNEL_ENABLE_VREFP {true} \
+   CONFIG.COMMON_N_VAUXP0_VAUXN0 {false} \
+   CONFIG.ENABLE_RESET {true} \
+   CONFIG.ENABLE_TEMP_BUS {false} \
+   CONFIG.INTERFACE_SELECTION {None} \
+   CONFIG.SEQUENCER_MODE {Continuous} \
+   CONFIG.SERIAL_INTERFACE {None} \
+   CONFIG.SYSMONE1_STARUP_SELECTION {channel_sequencer} \
+   CONFIG.VAUXN0_LOC {B8} \
+   CONFIG.VAUXN10_LOC {E8} \
+   CONFIG.VAUXN11_LOC {F6} \
+   CONFIG.VAUXN12_LOC {A3} \
+   CONFIG.VAUXN13_LOC {B1} \
+   CONFIG.VAUXN14_LOC {E3} \
+   CONFIG.VAUXN15_LOC {E2} \
+   CONFIG.VAUXN1_LOC {B6} \
+   CONFIG.VAUXN2_LOC {D9} \
+   CONFIG.VAUXN3_LOC {F7} \
+   CONFIG.VAUXN4_LOC {A4} \
+   CONFIG.VAUXN5_LOC {A1} \
+   CONFIG.VAUXN6_LOC {F5} \
+   CONFIG.VAUXN7_LOC {F3} \
+   CONFIG.VAUXN8_LOC {A6} \
+   CONFIG.VAUXN9_LOC {A5} \
+   CONFIG.VAUXP0_LOC {C8} \
+   CONFIG.VAUXP10_LOC {F8} \
+   CONFIG.VAUXP11_LOC {G6} \
+   CONFIG.VAUXP12_LOC {B3} \
+   CONFIG.VAUXP13_LOC {C1} \
+   CONFIG.VAUXP14_LOC {E4} \
+   CONFIG.VAUXP15_LOC {F2} \
+   CONFIG.VAUXP1_LOC {C6} \
+   CONFIG.VAUXP2_LOC {E9} \
+   CONFIG.VAUXP3_LOC {G8} \
+   CONFIG.VAUXP4_LOC {B4} \
+   CONFIG.VAUXP5_LOC {A2} \
+   CONFIG.VAUXP6_LOC {G5} \
+   CONFIG.VAUXP7_LOC {G3} \
+   CONFIG.VAUXP8_LOC {A7} \
+   CONFIG.VAUXP9_LOC {B5} \
+ ] $system_management_wiz_0
 
   # Create instance: ubuff_lvds_emio_0, and set properties
   set ubuff_lvds_emio_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf ubuff_lvds_emio_0 ]
@@ -2136,6 +2197,8 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net RGPIO_Master_CPLD_RGPIO_M_EXT [get_bd_intf_pins RGPIO/RGPIO_M_EXT] [get_bd_intf_pins SC0808BF_0/RGPIO_MASTER_CPLD]
   connect_bd_intf_net -intf_net RGPIO_Slave_CPLD_RGPIO_M_EXT [get_bd_intf_pins RGPIO/RGPIO_M_EXT1] [get_bd_intf_pins SC0808BF_0/RGPIO_SLAVE_CPLD]
   connect_bd_intf_net -intf_net SC0808BF_0_BASE [get_bd_intf_ports BASE] [get_bd_intf_pins SC0808BF_0/BASE]
+  connect_bd_intf_net -intf_net Vaux0_2_1 [get_bd_intf_ports Vaux0_2] [get_bd_intf_pins system_management_wiz_0/Vaux0]
+  connect_bd_intf_net -intf_net Vp_Vn_0_1 [get_bd_intf_ports Vp_Vn_0] [get_bd_intf_pins system_management_wiz_0/Vp_Vn]
   connect_bd_intf_net -intf_net axis_live_audio_0_m_axis [get_bd_intf_pins axis_live_audio_0/m_axis] [get_bd_intf_pins zynq_ultra_ps_e_0/S_AXIS_AUDIO]
   connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_CAN_0 [get_bd_intf_pins SC0808BF_0/CAN] [get_bd_intf_pins zynq_ultra_ps_e_0/CAN_0]
   connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_IIC_1 [get_bd_intf_ports IIC_1_0] [get_bd_intf_pins zynq_ultra_ps_e_0/IIC_1]
@@ -2148,7 +2211,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net emio_spi0_m_i_0_1 [get_bd_ports emio_spi0_m_i_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi0_m_i]
   connect_bd_net -net emio_spi1_m_i_0_1 [get_bd_ports emio_spi1_m_i_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi1_m_i]
   connect_bd_net -net iobuff_emio_IOBUF_IO_O [get_bd_pins iobuff_emio_1_11/IOBUF_IO_O] [get_bd_pins xlconcat_emio1_11_in/In0]
-  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins RGPIO/RGPIO_M_RESET_N] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
+  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins RGPIO/RGPIO_M_RESET_N] [get_bd_pins proc_sys_reset_0/peripheral_aresetn] [get_bd_pins system_management_wiz_0/reset_in]
   connect_bd_net -net util_ds_buf_0_OBUF_DS_N [get_bd_ports EMIO_0_LVDS_N] [get_bd_pins ubuff_lvds_emio_0/OBUF_DS_N]
   connect_bd_net -net util_ds_buf_0_OBUF_DS_P [get_bd_ports EMIO_0_LVDS_P] [get_bd_pins ubuff_lvds_emio_0/OBUF_DS_P]
   connect_bd_net -net vio_CAN_0_S [get_bd_pins SC0808BF_0/CAN_S] [get_bd_pins vio_general/probe_out2]
@@ -2171,7 +2234,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net zynq_ultra_ps_e_0_emio_spi1_sclk_o [get_bd_ports emio_spi1_sclk_o_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi1_sclk_o]
   connect_bd_net -net zynq_ultra_ps_e_0_emio_spi1_ss_o_n [get_bd_ports emio_spi1_ss_o_n_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi1_ss_o_n]
   connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins RGPIO/clk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk1]
-  connect_bd_net -net zynq_ultra_ps_e_0_pl_clk1 [get_bd_pins RGPIO/clk1] [get_bd_pins vio_general/clk] [get_bd_pins zynq_ultra_ps_e_0/maxihpm0_lpd_aclk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]
+  connect_bd_net -net zynq_ultra_ps_e_0_pl_clk1 [get_bd_pins RGPIO/clk1] [get_bd_pins system_management_wiz_0/dclk_in] [get_bd_pins vio_general/clk] [get_bd_pins zynq_ultra_ps_e_0/maxihpm0_lpd_aclk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]
   connect_bd_net -net zynq_ultra_ps_e_0_pl_resetn0 [get_bd_pins proc_sys_reset_0/ext_reset_in] [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0]
 
   # Create address segments

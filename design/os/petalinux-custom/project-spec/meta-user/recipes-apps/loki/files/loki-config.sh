@@ -179,6 +179,8 @@ function service_start {
     # Create the logging file with permission for the running user to edit it
     touch $conf_ODIN_DETECTOR_LOGDESTINATION
     chown $LOKI_USERNAME $conf_ODIN_DETECTOR_LOGDESTINATION
+    touch $conf_ODIN_DETECTOR_STDERRDESTINATION
+    chown $LOKI_USERNAME $conf_ODIN_DETECTOR_STDERRDESTINATION
 
     # Remove the old PID file
     rm -rf $PIDFILE
@@ -187,11 +189,12 @@ function service_start {
         -b \
         -p $PIDFILE -m \
         -c $LOKI_USERNAME \
-        -x "$EXECUTABLE_NAME" \
-        -- \
-        --logging=$conf_ODIN_DETECTOR_LOGLEVEL \
-        --log_file_prefix=$conf_ODIN_DETECTOR_LOGDESTINATION \
-        --config=$conf_ODIN_DETECTOR_CONFIG_LOC
+        -x "/bin/bash" \
+        -- -c "exec $EXECUTABLE_NAME \
+	--logging=$conf_ODIN_DETECTOR_LOGLEVEL \
+	--log_file_prefix=$conf_ODIN_DETECTOR_LOGDESTINATION \
+	--config=$conf_ODIN_DETECTOR_CONFIG_LOC \
+	2>> $conf_ODIN_DETECTOR_STDERRDESTINATION"
 
     echo "Launch complete"
 }

@@ -24,6 +24,8 @@ export_bd_tcl: | ${VIVADO_PROJ_PATH}
 	source ./vivado_open_existing_project_guimode.sh
 	$(info TCL block design up to date)
 
+${VIVADO_PROJ_PATH}/design*: ${VIVADO_PROJ_PATH}
+
 # Build hardware if TCL design changes or if intermiediate block design
 # has been updated. However, block design should be extracted so that
 # changes can be committed with 'export_tcl'

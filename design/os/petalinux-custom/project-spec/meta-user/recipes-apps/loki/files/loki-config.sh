@@ -176,11 +176,9 @@ function service_start {
     cd $conf_ODIN_DETECTOR_ROOT_LOC
 
     echo "Logging to $conf_ODIN_DETECTOR_LOGDESTINATION"
-    # Create the logging file with permission for the running user to edit it
-    touch $conf_ODIN_DETECTOR_LOGDESTINATION
-    chown $LOKI_USERNAME $conf_ODIN_DETECTOR_LOGDESTINATION
-    touch $conf_ODIN_DETECTOR_STDERRDESTINATION
-    chown $LOKI_USERNAME $conf_ODIN_DETECTOR_STDERRDESTINATION
+    # Create the default logging location directory with permission for the LOKI user to write.
+    mkdir -p /var/log/loki
+    chown $LOKI_USERNAME /var/log/loki
 
     # Remove the old PID file
     rm -rf $PIDFILE

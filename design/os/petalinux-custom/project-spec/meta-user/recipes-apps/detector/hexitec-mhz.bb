@@ -16,7 +16,7 @@ SRC_URI = "git://github.com/stfc-aeg/mercury-detector.git;branch=add-carrier-ada
            "
 
 # Pull specific commit from mercury-detector repository
-SRCREV = "33d158413ea9e818443d7db649760848122ec0c9"
+SRCREV = "6c1576e7b827dcf65131c07289b16c4c55e44bf3"
 PV = "0.0+git${SRCPV}"
 
 # This has to be in the format expected in Yocto's license list...

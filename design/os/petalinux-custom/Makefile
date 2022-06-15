@@ -15,9 +15,9 @@ DTS = ${OUTPUT_DIR}/system.dts
 DTB = ${OUTPUT_DIR}/system.dtb
 
 # The yocto workspace contains recipes brought into the workspace under modification.
-BUILD_DEPS = $(shell find ${PL_ROOT}/components/yocto/workspace/)
+BUILD_DEPS = $(shell find ${PL_ROOT}/components/yocto/workspace/ -type f)
 #project-spec contains main user recipes and config.
-BUILD_DEPS := $(shell find ${PL_ROOT}/project-spec/)
+BUILD_DEPS := $(shell find ${PL_ROOT}/project-spec/ -type f)
 
 .PHONY: default all build package rootfs simulate clean mostlyclean
 

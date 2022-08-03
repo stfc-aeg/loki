@@ -1,5 +1,7 @@
 SUMMARY = "Installer for generic LOKI setup script, which facilitates the configuration of a non-volatile debug setup."
 
+RDEPENDS_${PN} += "loki-config"
+
 # Repo URL.
 SRC_URI = "file://loki-config.sh \
     file://config-default.conf \

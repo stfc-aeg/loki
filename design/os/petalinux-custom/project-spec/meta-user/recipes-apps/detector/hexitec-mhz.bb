@@ -6,6 +6,8 @@ RDEPENDS_${PN} += "odin-control (= 1.2.0)"
 RDEPENDS_${PN} += "odin-sequencer"
 RDEPENDS_${PN} += "odin-devices (=1.1.0)"
 RDEPENDS_${PN} += "python3-msgpack"
+RDEPENDS_${PN} += "python3-matplotlib"
+RDEPENDS_${PN} += "python3-pillow"
 RDEPENDS_${PN} += "loki-config"
 RDEPENDS_${PN} += "loki-user"
 DEPENDS += "loki-user"
@@ -16,7 +18,7 @@ SRC_URI = "git://github.com/stfc-aeg/mercury-detector.git;branch=add-carrier-ada
            "
 
 # Pull specific commit from mercury-detector repository
-SRCREV = "33d158413ea9e818443d7db649760848122ec0c9"
+SRCREV = "304f74e336704efa57cf76675e18674746161171"
 PV = "0.0+git${SRCPV}"
 
 # This has to be in the format expected in Yocto's license list...
@@ -83,6 +85,11 @@ do_install_append() {
     # To comply with generic loki detector, the sequences directory should be placed or symlinked to the loki opt directory
     cd /
     ln -sfr '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}${SEQUENCES_LOC}' '${D}${base_prefix}${LOKI_SEQUENCES_DESTINATION}'
+
+    # Create a static imgout directory for generating images that can be loaded by the UI.
+    cd /
+    mkdir '${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}/test/static/imgout'
+    chown ${LOKI_USERNAME} ${D}${base_prefix}${STATIC_RESOURCES_INSTALL_PATH}/test/static/imgout
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit

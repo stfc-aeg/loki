@@ -183,6 +183,7 @@ function service_start {
     # Remove the old PID file
     rm -rf $PIDFILE
 
+    set -x
     start-stop-daemon -S \
         -b \
         -p $PIDFILE -m \
@@ -192,7 +193,9 @@ function service_start {
 	--logging=$conf_ODIN_DETECTOR_LOGLEVEL \
 	--log_file_prefix=$conf_ODIN_DETECTOR_LOGDESTINATION \
 	--config=$conf_ODIN_DETECTOR_CONFIG_LOC \
+    $conf_ODIN_DETECTOR_ADDITIONAL_ARGUMENTS \
 	2>> $conf_ODIN_DETECTOR_STDERRDESTINATION"
+    set +x
 
     echo "Launch complete"
 }

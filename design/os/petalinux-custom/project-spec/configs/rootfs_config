@@ -4233,6 +4233,7 @@ CONFIG_hexitec-mhz=y
 CONFIG_python3-pip=y
 CONFIG_python3-psutil=y
 CONFIG_python3-pyzmq=y
+CONFIG_python3-requests=y
 CONFIG_python3-smbus=y
 CONFIG_python3-spidev=y
 

@@ -24,4 +24,7 @@ CONFIG_python3-pyzmq
 
 CONFIG_python3-psutil
 
+CONFIG_python3-requests
+CONFIG_start-stop-daemon
+
 #CONFIG_libgpiod-python

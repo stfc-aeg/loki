@@ -2,11 +2,11 @@ SHELL := /bin/bash
 
 .PHONY: hardware software all os mostlyclean clean export_bd_tcl
 
-PLATFORM = 4cg_2gb
-OS_PATH = ./os/petalinux-custom/
-VIVADO_PROJ_PATH = vivado
+# Now defined by the environment
+#PLATFORM = 4cg_2gb
+#OS_PATH = ./os/petalinux-custom/
 
-all: os
+VIVADO_PROJ_PATH = vivado
 
 HARDWARE_OUTPUT = prebuilt/hardware/${PLATFORM}/design_${PLATFORM}.xsa
 SOFTWARE_OUTPUT = prebuilt/software/${PLATFORM}/fsbl.elf prebuilt/software/${PLATFORM}/pmufw.elf
@@ -50,31 +50,21 @@ ${SOFTWARE_OUTPUT}: ${HARDWARE_OUTPUT} ${SOFTWARE_DEPS}
 	$(info finished building FSBL and PMUFW)
 software: ${SOFTWARE_OUTPUT} ;
 
-os: hardware software
-	$(MAKE) -C ${OS_PATH} all
-
 mostlyclean:
-	# Delete built hardware and software, and mostlyclean PetaLinux project.
+	# Delete built hardware and software
 	$(info cleaning prebuilt hardware and software)
 	rm -rf prebuilt/hardware/*
 	rm -rf prebuitt/software/*
-	$(info cleaning OS image files)
-	$(MAKE) -C ${OS_PATH} mostlyclean
 
 clean: mostlyclean export_bd_tcl
 	# Same as mostlyclean but make sure that current design is exported to TCL
-	# for revision control, and then delete vivado project. The OS is also
-	# fully cleaned.
-	$(info cleaning OS image and build files)
-	$(MAKE) -C ${OS_PATH} clean
+	# for revision control, and then delete vivado project.
 	$(warning Deleting Vivado project directory, changes not exported to TCL will be lost)
 	rm -rf ./vivado
 
 clobber: mostlyclean
-	# Remove build artifacts from OS, SW and HW. Additionally delete the vivado
+	# Remove build artifacts from SW and HW. Additionally delete the vivado
 	# project WITHOUT exporting current edits to TCL. If changes have not been
 	# exported to TCL, they WILL be lost.
-	$(info cleaning OS image and build files)
-	$(MAKE) -C ${OS_PATH} clean
 	$(warning Deleting Vivado project directory, changes not exported to TCL will be lost)
 	rm -rf ./vivado

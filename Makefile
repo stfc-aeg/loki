@@ -4,6 +4,12 @@ SHELL := /bin/bash
 
 all: os
 
+hardware:
+	$(MAKE) -C ${HWSW_PATH} hardware
+
+software:
+	$(MAKE) -C ${HWSW_PATH} software
+
 os: hardware software
 	$(MAKE) -C ${OS_PATH} all
 

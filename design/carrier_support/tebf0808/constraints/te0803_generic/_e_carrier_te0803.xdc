@@ -48,3 +48,31 @@ set_property IOSTANDARD LVCMOS18 [get_ports I2S_lrclk ]
 set_property IOSTANDARD LVCMOS18 [get_ports I2S_bclk ]
 set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdin ]
 set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdout ]
+
+# SPI0 (General Devices) is exposed through EMIO
+set_property PACKAGE_PIN W8 [get_ports emio_spi0_m_o_0 ]
+set_property PACKAGE_PIN Y8 [get_ports emio_spi0_m_i_0 ]
+set_property PACKAGE_PIN AE3 [get_ports emio_spi0_sclk_o_0 ]
+set_property PACKAGE_PIN AF3 [get_ports emio_spi0_ss_o_n_0 ]
+set_property PACKAGE_PIN AC9 [get_ports emio_spi0_ss1_o_n_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_m_o_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_m_i_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_sclk_o_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_ss_o_n_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi0_ss1_o_n_0 ]
+
+# SPI1 (ASIC) is exposed through EMIO
+set_property PACKAGE_PIN AE9 [get_ports emio_spi1_m_o_0 ]
+set_property PACKAGE_PIN AH2 [get_ports emio_spi1_m_i_0 ]
+set_property PACKAGE_PIN AH1 [get_ports emio_spi1_sclk_o_0 ]
+set_property PACKAGE_PIN AE8 [get_ports emio_spi1_ss_o_n_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi1_m_o_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi1_m_i_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi1_sclk_o_0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports emio_spi1_ss_o_n_0 ]
+
+# I2C1 is exposed through EMIO
+set_property PACKAGE_PIN U8 [get_ports IIC_1_0_scl_io ]
+set_property PACKAGE_PIN V8 [get_ports IIC_1_0_sda_io ]
+set_property IOSTANDARD LVCMOS18 [get_ports IIC_1_0_scl_io ]
+set_property IOSTANDARD LVCMOS18 [get_ports IIC_1_0_sda_io ]

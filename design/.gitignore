@@ -1,5 +1,7 @@
 v_log/
 ./prebuilt/
+./block_design
+./constraints
 doc/
 vivado/
 workspace/

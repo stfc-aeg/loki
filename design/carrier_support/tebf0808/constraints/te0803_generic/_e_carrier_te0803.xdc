@@ -1,3 +1,4 @@
+# This file contains carrier specific constraints only.
 
 # system controller ip
 #LED_HD SC0 J3:31
@@ -76,3 +77,77 @@ set_property PACKAGE_PIN U8 [get_ports IIC_1_0_scl_io ]
 set_property PACKAGE_PIN V8 [get_ports IIC_1_0_sda_io ]
 set_property IOSTANDARD LVCMOS18 [get_ports IIC_1_0_scl_io ]
 set_property IOSTANDARD LVCMOS18 [get_ports IIC_1_0_sda_io ]
+
+# GPIO-operated control lines for on-carrier devices
+# Override in appl xdc as necessary (in particular IOSTANDARD)
+##############################################################
+
+# Application Present Input (EMIO GPIO 0)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN AF6 [get_ports APP_PRESENT_lc0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports APP_PRESENT_lc0 ]
+
+# Backplane Present Input (EMIO GPIO 1)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN AF7 [get_ports BKPLN_PRESENT_lc1 ]
+set_property IOSTANDARD LVCMOS18 [get_ports BKPLN_PRESENT_lc1 ]
+
+# User Button Inputs (EMIO GPIO 2&3)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN AF5 [get_ports USER_BTN_0_lc2 ]
+set_property IOSTANDARD LVCMOS18 [get_ports USER_BTN_0_lc2 ]
+set_property PACKAGE_PIN AE5 [get_ports USER_BTN_1_lc3 ]
+set_property IOSTANDARD LVCMOS18 [get_ports USER_BTN_1_lc3 ]
+
+# Temperature IC (LTC2986) Interrupt (EMIO GPIO 4)
+set_property PACKAGE_PIN AG8 [get_ports TEMP_INT_lc4 ]
+set_property IOSTANDARD LVCMOS18 [get_ports TEMP_INT_lc4 ]
+
+# CTRL1 (unassigned) Output (EMIO GPIO 5)
+# Does not exist on this carrier, routed to SoM NC Pin
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN AG10 [get_ports CTRL1_lc5 ]
+set_property IOSTANDARD LVCMOS18 [get_ports CTRL1_lc5 ]
+
+# Application Peripherals nRST Output (EMIO GPIO 6)
+set_property PACKAGE_PIN AD2 [get_ports APP_PER_NRST_lc6 ]
+set_property IOSTANDARD LVCMOS18 [get_ports APP_PER_NRST_lc6 ]
+
+# Application (ASIC) nRST Output (EMIO GPIO 7)
+set_property PACKAGE_PIN AD1 [get_ports APP_NRST_lc7 ]
+set_property IOSTANDARD LVCMOS18 [get_ports APP_NRST_lc7 ]
+
+# Clock Generator nRST Output (EMIO GPIO 8)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN AC3 [get_ports CLKGEN_NRST_lc8 ]
+set_property IOSTANDARD LVCMOS18 [get_ports CLKGEN_NRST_lc8 ]
+
+# Clock Generator AC Output (EMIO GPIO 9-11)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN AC2 [get_ports {CLKGEN_AC_lc9_11[0]} ]
+set_property PACKAGE_PIN AB2 [get_ports {CLKGEN_AC_lc9_11[1]} ]
+set_property PACKAGE_PIN AC1 [get_ports {CLKGEN_AC_lc9_11[2]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {CLKGEN_AC_lc9_11[0]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {CLKGEN_AC_lc9_11[1]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {CLKGEN_AC_lc9_11[2]} ]
+
+# Temperature IC (LTC2986) nRST (EMIO GPIO 12)
+set_property PACKAGE_PIN AH8 [get_ports TEMP_NRST_lc12 ]
+set_property IOSTANDARD LVCMOS18 [get_ports TEMP_NRST_lc12 ]
+
+# User LEDs (EMIO GPIO 13-16)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN AB1 [get_ports {ULED_lc13_16[0]} ]
+set_property PACKAGE_PIN AH4 [get_ports {ULED_lc13_16[1]} ]
+set_property PACKAGE_PIN AG4 [get_ports {ULED_lc13_16[2]} ]
+set_property PACKAGE_PIN AC4 [get_ports {ULED_lc13_16[3]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[0]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[1]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[2]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[3]} ]

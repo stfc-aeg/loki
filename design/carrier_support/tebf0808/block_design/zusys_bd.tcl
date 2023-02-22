@@ -1,4 +1,4 @@
-catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4eg_1e_tebf0808:part0:2.0, FPGA: xczu4eg-sfvc784-1-e at 2023-02-20T14:08:20."}
+catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4eg_1e_tebf0808:part0:2.0, FPGA: xczu4eg-sfvc784-1-e at 2023-02-20T17:01:37."}
 
 if { ![info exist TE::VERSION_CONTROL] } {
     set TE::VERSION_CONTROL true
@@ -529,13 +529,13 @@ proc create_hier_cell_LOKI_Control { parentCell nameHier } {
   create_bd_pin -dir I -from 0 -to 0 BKPLN_PRESENT_lc1
   create_bd_pin -dir O -from 2 -to 0 CLKGEN_AC_lc9_11
   create_bd_pin -dir O -from 0 -to 0 CLKGEN_NRST_lc8
-  create_bd_pin -dir O -from 0 -to 0 CTRL1_0_lc5
-  create_bd_pin -dir IO -from 17 -to 0 LOKI_Ctrl
+  create_bd_pin -dir O -from 0 -to 0 CTRL1_lc5
   create_bd_pin -dir I -from 0 -to 0 TEMP_INT_lc4
   create_bd_pin -dir O -from 0 -to 0 TEMP_NRST_lc12
   create_bd_pin -dir O -from 3 -to 0 ULED_lc13_16
   create_bd_pin -dir I -from 0 -to 0 USER_BTN_0_lc2
   create_bd_pin -dir I -from 0 -to 0 USER_BTN_1_lc3
+  create_bd_pin -dir IO -from 16 -to 0 loki_ctrl
 
   # Create instance: util_ds_buf_0, and set properties
   set util_ds_buf_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf util_ds_buf_0 ]
@@ -552,7 +552,8 @@ proc create_hier_cell_LOKI_Control { parentCell nameHier } {
    CONFIG.IN2_WIDTH {1} \
    CONFIG.IN3_WIDTH {1} \
    CONFIG.IN4_WIDTH {1} \
-   CONFIG.NUM_PORTS {5} \
+   CONFIG.IN5_WIDTH {12} \
+   CONFIG.NUM_PORTS {6} \
  ] $xlconcat_0
 
   # Create instance: xlslice_0, and set properties
@@ -624,10 +625,10 @@ proc create_hier_cell_LOKI_Control { parentCell nameHier } {
   connect_bd_net -net In2_0_1 [get_bd_pins USER_BTN_0_lc2] [get_bd_pins xlconcat_0/In2]
   connect_bd_net -net In3_0_1 [get_bd_pins USER_BTN_1_lc3] [get_bd_pins xlconcat_0/In3]
   connect_bd_net -net In4_0_1 [get_bd_pins TEMP_INT_lc4] [get_bd_pins xlconcat_0/In4]
-  connect_bd_net -net Net [get_bd_pins LOKI_Ctrl] [get_bd_pins util_ds_buf_0/IOBUF_IO_IO]
+  connect_bd_net -net Net [get_bd_pins loki_ctrl] [get_bd_pins util_ds_buf_0/IOBUF_IO_IO]
   connect_bd_net -net util_ds_buf_0_IOBUF_IO_O [get_bd_pins util_ds_buf_0/IOBUF_IO_O] [get_bd_pins xlslice_0/Din] [get_bd_pins xlslice_1/Din] [get_bd_pins xlslice_2/Din] [get_bd_pins xlslice_3/Din] [get_bd_pins xlslice_4/Din] [get_bd_pins xlslice_5/Din] [get_bd_pins xlslice_8/Din]
   connect_bd_net -net xlconcat_0_dout [get_bd_pins util_ds_buf_0/IOBUF_IO_I] [get_bd_pins xlconcat_0/dout]
-  connect_bd_net -net xlslice_0_Dout [get_bd_pins CTRL1_0_lc5] [get_bd_pins xlslice_0/Dout]
+  connect_bd_net -net xlslice_0_Dout [get_bd_pins CTRL1_lc5] [get_bd_pins xlslice_0/Dout]
   connect_bd_net -net xlslice_1_Dout [get_bd_pins APP_PER_NRST_lc6] [get_bd_pins xlslice_1/Dout]
   connect_bd_net -net xlslice_2_Dout [get_bd_pins APP_NRST_lc7] [get_bd_pins xlslice_2/Dout]
   connect_bd_net -net xlslice_3_Dout [get_bd_pins CLKGEN_NRST_lc8] [get_bd_pins xlslice_3/Dout]
@@ -754,10 +755,10 @@ proc create_hier_cell_GPIO_Tree { parentCell nameHier } {
   # Create instance: xlslice_emio1_11_out2, and set properties
   set xlslice_emio1_11_out2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice xlslice_emio1_11_out2 ]
   set_property -dict [ list \
-   CONFIG.DIN_FROM {31} \
-   CONFIG.DIN_TO {21} \
+   CONFIG.DIN_FROM {94} \
+   CONFIG.DIN_TO {32} \
    CONFIG.DIN_WIDTH {95} \
-   CONFIG.DOUT_WIDTH {11} \
+   CONFIG.DOUT_WIDTH {63} \
  ] $xlslice_emio1_11_out2
 
   # Create instance: xlslice_emio1_11_tri, and set properties
@@ -790,10 +791,10 @@ proc create_hier_cell_GPIO_Tree { parentCell nameHier } {
   # Create instance: xlslice_emio1_11_tri3, and set properties
   set xlslice_emio1_11_tri3 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice xlslice_emio1_11_tri3 ]
   set_property -dict [ list \
-   CONFIG.DIN_FROM {31} \
-   CONFIG.DIN_TO {21} \
+   CONFIG.DIN_FROM {94} \
+   CONFIG.DIN_TO {32} \
    CONFIG.DIN_WIDTH {95} \
-   CONFIG.DOUT_WIDTH {11} \
+   CONFIG.DOUT_WIDTH {63} \
  ] $xlslice_emio1_11_tri3
 
   # Create port connections
@@ -864,21 +865,21 @@ proc create_root_design { parentCell } {
 
 
   # Create ports
-  set APP_NRST_lc7_0 [ create_bd_port -dir O -from 0 -to 0 APP_NRST_lc7_0 ]
-  set APP_PER_NRST_lc6_0 [ create_bd_port -dir O -from 0 -to 0 APP_PER_NRST_lc6_0 ]
-  set APP_PRESENT_lc0_0 [ create_bd_port -dir I -from 0 -to 0 APP_PRESENT_lc0_0 ]
-  set BKPLN_PRESENT_lc1_0 [ create_bd_port -dir I -from 0 -to 0 BKPLN_PRESENT_lc1_0 ]
-  set CLKGEN_AC_lc9_11_0 [ create_bd_port -dir O -from 2 -to 0 CLKGEN_AC_lc9_11_0 ]
-  set CLKGEN_NRST_lc8_0 [ create_bd_port -dir O -from 0 -to 0 CLKGEN_NRST_lc8_0 ]
-  set CTRL1_0_lc5_0 [ create_bd_port -dir O -from 0 -to 0 CTRL1_0_lc5_0 ]
+  set APP_NRST_lc7 [ create_bd_port -dir O -from 0 -to 0 APP_NRST_lc7 ]
+  set APP_PER_NRST_lc6 [ create_bd_port -dir O -from 0 -to 0 APP_PER_NRST_lc6 ]
+  set APP_PRESENT_lc0 [ create_bd_port -dir I -from 0 -to 0 APP_PRESENT_lc0 ]
+  set BKPLN_PRESENT_lc1 [ create_bd_port -dir I -from 0 -to 0 BKPLN_PRESENT_lc1 ]
+  set CLKGEN_AC_lc9_11 [ create_bd_port -dir O -from 2 -to 0 CLKGEN_AC_lc9_11 ]
+  set CLKGEN_NRST_lc8 [ create_bd_port -dir O -from 0 -to 0 CLKGEN_NRST_lc8 ]
+  set CTRL1_lc5 [ create_bd_port -dir O -from 0 -to 0 CTRL1_lc5 ]
   set GPIO_APP_21_31 [ create_bd_port -dir IO -from 10 -to 0 GPIO_APP_21_31 ]
   set GPIO_LVDS_N_17_20 [ create_bd_port -dir IO -from 3 -to 0 GPIO_LVDS_N_17_20 ]
   set GPIO_LVDS_P_17_20 [ create_bd_port -dir IO -from 3 -to 0 GPIO_LVDS_P_17_20 ]
-  set TEMP_INT_lc4_0 [ create_bd_port -dir I -from 0 -to 0 TEMP_INT_lc4_0 ]
-  set TEMP_NRST_lc12_0 [ create_bd_port -dir O -from 0 -to 0 TEMP_NRST_lc12_0 ]
-  set ULED_lc13_16_0 [ create_bd_port -dir O -from 3 -to 0 ULED_lc13_16_0 ]
-  set USER_BTN_0_lc2_0 [ create_bd_port -dir I -from 0 -to 0 USER_BTN_0_lc2_0 ]
-  set USER_BTN_1_lc3_0 [ create_bd_port -dir I -from 0 -to 0 USER_BTN_1_lc3_0 ]
+  set TEMP_INT_lc4 [ create_bd_port -dir I -from 0 -to 0 TEMP_INT_lc4 ]
+  set TEMP_NRST_lc12 [ create_bd_port -dir O -from 0 -to 0 TEMP_NRST_lc12 ]
+  set ULED_lc13_16 [ create_bd_port -dir O -from 3 -to 0 ULED_lc13_16 ]
+  set USER_BTN_0_lc2 [ create_bd_port -dir I -from 0 -to 0 USER_BTN_0_lc2 ]
+  set USER_BTN_1_lc3 [ create_bd_port -dir I -from 0 -to 0 USER_BTN_1_lc3 ]
   set emio_spi0_m_i_0 [ create_bd_port -dir I emio_spi0_m_i_0 ]
   set emio_spi0_m_o_0 [ create_bd_port -dir O emio_spi0_m_o_0 ]
   set emio_spi0_sclk_o_0 [ create_bd_port -dir O emio_spi0_sclk_o_0 ]
@@ -2450,25 +2451,25 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_M_AXIS_MIXED_AUDIO [get_bd_intf_pins axis_live_audio_0/s_axis] [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXIS_MIXED_AUDIO]
 
   # Create port connections
-  connect_bd_net -net APP_PRESENT_lc0_0_1 [get_bd_ports APP_PRESENT_lc0_0] [get_bd_pins LOKI_Control/APP_PRESENT_lc0]
-  connect_bd_net -net BKPLN_PRESENT_lc1_0_1 [get_bd_ports BKPLN_PRESENT_lc1_0] [get_bd_pins LOKI_Control/BKPLN_PRESENT_lc1]
+  connect_bd_net -net APP_PRESENT_lc0_0_1 [get_bd_ports APP_PRESENT_lc0] [get_bd_pins LOKI_Control/APP_PRESENT_lc0]
+  connect_bd_net -net BKPLN_PRESENT_lc1_0_1 [get_bd_ports BKPLN_PRESENT_lc1] [get_bd_pins LOKI_Control/BKPLN_PRESENT_lc1]
   connect_bd_net -net GPIO_Tree_dout_0 [get_bd_pins GPIO_Tree/dout_0] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_i]
-  connect_bd_net -net LOKI_Control_APP_NRST_lc7 [get_bd_ports APP_NRST_lc7_0] [get_bd_pins LOKI_Control/APP_NRST_lc7]
-  connect_bd_net -net LOKI_Control_APP_PER_NRST_lc6 [get_bd_ports APP_PER_NRST_lc6_0] [get_bd_pins LOKI_Control/APP_PER_NRST_lc6]
-  connect_bd_net -net LOKI_Control_CLKGEN_AC_lc9_11 [get_bd_ports CLKGEN_AC_lc9_11_0] [get_bd_pins LOKI_Control/CLKGEN_AC_lc9_11]
-  connect_bd_net -net LOKI_Control_CLKGEN_NRST_lc8 [get_bd_ports CLKGEN_NRST_lc8_0] [get_bd_pins LOKI_Control/CLKGEN_NRST_lc8]
-  connect_bd_net -net LOKI_Control_CTRL1_0_lc5 [get_bd_ports CTRL1_0_lc5_0] [get_bd_pins LOKI_Control/CTRL1_0_lc5]
-  connect_bd_net -net LOKI_Control_TEMP_NRST_lc12 [get_bd_ports TEMP_NRST_lc12_0] [get_bd_pins LOKI_Control/TEMP_NRST_lc12]
-  connect_bd_net -net LOKI_Control_ULED_lc13_16 [get_bd_ports ULED_lc13_16_0] [get_bd_pins LOKI_Control/ULED_lc13_16]
-  connect_bd_net -net Net [get_bd_pins GPIO_Tree/GPIO_CTRL_0_16] [get_bd_pins LOKI_Control/LOKI_Ctrl]
+  connect_bd_net -net LOKI_Control_APP_NRST_lc7 [get_bd_ports APP_NRST_lc7] [get_bd_pins LOKI_Control/APP_NRST_lc7]
+  connect_bd_net -net LOKI_Control_APP_PER_NRST_lc6 [get_bd_ports APP_PER_NRST_lc6] [get_bd_pins LOKI_Control/APP_PER_NRST_lc6]
+  connect_bd_net -net LOKI_Control_CLKGEN_AC_lc9_11 [get_bd_ports CLKGEN_AC_lc9_11] [get_bd_pins LOKI_Control/CLKGEN_AC_lc9_11]
+  connect_bd_net -net LOKI_Control_CLKGEN_NRST_lc8 [get_bd_ports CLKGEN_NRST_lc8] [get_bd_pins LOKI_Control/CLKGEN_NRST_lc8]
+  connect_bd_net -net LOKI_Control_CTRL1_0_lc5 [get_bd_ports CTRL1_lc5] [get_bd_pins LOKI_Control/CTRL1_lc5]
+  connect_bd_net -net LOKI_Control_TEMP_NRST_lc12 [get_bd_ports TEMP_NRST_lc12] [get_bd_pins LOKI_Control/TEMP_NRST_lc12]
+  connect_bd_net -net LOKI_Control_ULED_lc13_16 [get_bd_ports ULED_lc13_16] [get_bd_pins LOKI_Control/ULED_lc13_16]
+  connect_bd_net -net Net [get_bd_pins GPIO_Tree/GPIO_CTRL_0_16] [get_bd_pins LOKI_Control/loki_ctrl]
   connect_bd_net -net Net1 [get_bd_ports GPIO_LVDS_P_17_20] [get_bd_pins GPIO_Tree/GPIO_LVDS_P_17_20]
   connect_bd_net -net Net2 [get_bd_ports GPIO_LVDS_N_17_20] [get_bd_pins GPIO_Tree/GPIO_LVDS_N_17_20]
   connect_bd_net -net Net3 [get_bd_ports GPIO_APP_21_31] [get_bd_pins GPIO_Tree/GPIO_21_31]
   connect_bd_net -net SC0808BF_0_PS_AUX_DI [get_bd_pins SC0808BF_0/PS_AUX_DI] [get_bd_pins zynq_ultra_ps_e_0/dp_aux_data_in]
   connect_bd_net -net SC0808BF_0_PS_DP_HPD [get_bd_pins SC0808BF_0/PS_DP_HPD] [get_bd_pins zynq_ultra_ps_e_0/dp_hot_plug_detect]
-  connect_bd_net -net TEMP_INT_lc4_0_1 [get_bd_ports TEMP_INT_lc4_0] [get_bd_pins LOKI_Control/TEMP_INT_lc4]
-  connect_bd_net -net USER_BTN_0_lc2_0_1 [get_bd_ports USER_BTN_0_lc2_0] [get_bd_pins LOKI_Control/USER_BTN_0_lc2]
-  connect_bd_net -net USER_BTN_1_lc3_0_1 [get_bd_ports USER_BTN_1_lc3_0] [get_bd_pins LOKI_Control/USER_BTN_1_lc3]
+  connect_bd_net -net TEMP_INT_lc4_0_1 [get_bd_ports TEMP_INT_lc4] [get_bd_pins LOKI_Control/TEMP_INT_lc4]
+  connect_bd_net -net USER_BTN_0_lc2_0_1 [get_bd_ports USER_BTN_0_lc2] [get_bd_pins LOKI_Control/USER_BTN_0_lc2]
+  connect_bd_net -net USER_BTN_1_lc3_0_1 [get_bd_ports USER_BTN_1_lc3] [get_bd_pins LOKI_Control/USER_BTN_1_lc3]
   connect_bd_net -net emio_spi0_m_i_0_1 [get_bd_ports emio_spi0_m_i_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi0_m_i]
   connect_bd_net -net emio_spi1_m_i_0_1 [get_bd_ports emio_spi1_m_i_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi1_m_i]
   connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins RGPIO/RGPIO_M_RESET_N] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]

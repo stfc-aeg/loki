@@ -137,7 +137,7 @@ set_property IOSTANDARD LVCMOS18 [get_ports {CLKGEN_AC_lc9_11[1]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {CLKGEN_AC_lc9_11[2]} ]
 
 # Temperature IC (LTC2986) nRST (EMIO GPIO 12)
-set_property PACKAGE_PIN AH8 [get_ports TEMP_NRST_lc12 ]
+set_property PACKAGE_PIN AF8 [get_ports TEMP_NRST_lc12 ]
 set_property IOSTANDARD LVCMOS18 [get_ports TEMP_NRST_lc12 ]
 
 # User LEDs (EMIO GPIO 13-16)
@@ -152,7 +152,7 @@ set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[1]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[2]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[3]} ]
 
-# Application-specific GPIO (always built)
+# Application-specific GPIO (always built, EMIO GPIO 21-31)
 # On this carrier have been routed to P2 PMOD (dir pins also)
 # The last three pins are NC on SoM
 set_property PACKAGE_PIN C7 [get_ports {GPIO_APP_21_31[0]} ]
@@ -178,7 +178,7 @@ set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[8]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[9]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[10]} ]
 
-# Application-specific LVDS IO (always built)
+# Application-specific LVDS IO (always built, EMIO GPIO 17-20)
 set_property PACKAGE_PIN AD7 [get_ports {GPIO_LVDS_P_17_20[0]} ]
 set_property PACKAGE_PIN AE7 [get_ports {GPIO_LVDS_N_17_20[0]} ]
 set_property IOSTANDARD LVDS [get_ports {GPIO_LVDS_P_17_20[0]} ]

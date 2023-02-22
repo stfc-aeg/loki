@@ -1,4 +1,4 @@
-catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4eg_1e_tebf0808:part0:2.0, FPGA: xczu4eg-sfvc784-1-e at 2023-02-20T17:01:37."}
+catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4eg_1e_tebf0808:part0:2.0, FPGA: xczu4eg-sfvc784-1-e at 2023-02-22T15:25:34."}
 
 if { ![info exist TE::VERSION_CONTROL] } {
     set TE::VERSION_CONTROL true
@@ -535,14 +535,8 @@ proc create_hier_cell_LOKI_Control { parentCell nameHier } {
   create_bd_pin -dir O -from 3 -to 0 ULED_lc13_16
   create_bd_pin -dir I -from 0 -to 0 USER_BTN_0_lc2
   create_bd_pin -dir I -from 0 -to 0 USER_BTN_1_lc3
-  create_bd_pin -dir IO -from 16 -to 0 loki_ctrl
-
-  # Create instance: util_ds_buf_0, and set properties
-  set util_ds_buf_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf util_ds_buf_0 ]
-  set_property -dict [ list \
-   CONFIG.C_BUF_TYPE {IOBUF} \
-   CONFIG.C_SIZE {17} \
- ] $util_ds_buf_0
+  create_bd_pin -dir O -from 16 -to 0 loki_ctrl_i
+  create_bd_pin -dir I -from 16 -to 0 loki_ctrl_o
 
   # Create instance: xlconcat_0, and set properties
   set xlconcat_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat xlconcat_0 ]
@@ -625,9 +619,8 @@ proc create_hier_cell_LOKI_Control { parentCell nameHier } {
   connect_bd_net -net In2_0_1 [get_bd_pins USER_BTN_0_lc2] [get_bd_pins xlconcat_0/In2]
   connect_bd_net -net In3_0_1 [get_bd_pins USER_BTN_1_lc3] [get_bd_pins xlconcat_0/In3]
   connect_bd_net -net In4_0_1 [get_bd_pins TEMP_INT_lc4] [get_bd_pins xlconcat_0/In4]
-  connect_bd_net -net Net [get_bd_pins loki_ctrl] [get_bd_pins util_ds_buf_0/IOBUF_IO_IO]
-  connect_bd_net -net util_ds_buf_0_IOBUF_IO_O [get_bd_pins util_ds_buf_0/IOBUF_IO_O] [get_bd_pins xlslice_0/Din] [get_bd_pins xlslice_1/Din] [get_bd_pins xlslice_2/Din] [get_bd_pins xlslice_3/Din] [get_bd_pins xlslice_4/Din] [get_bd_pins xlslice_5/Din] [get_bd_pins xlslice_8/Din]
-  connect_bd_net -net xlconcat_0_dout [get_bd_pins util_ds_buf_0/IOBUF_IO_I] [get_bd_pins xlconcat_0/dout]
+  connect_bd_net -net util_ds_buf_0_IOBUF_IO_O [get_bd_pins loki_ctrl_o] [get_bd_pins xlslice_0/Din] [get_bd_pins xlslice_1/Din] [get_bd_pins xlslice_2/Din] [get_bd_pins xlslice_3/Din] [get_bd_pins xlslice_4/Din] [get_bd_pins xlslice_5/Din] [get_bd_pins xlslice_8/Din]
+  connect_bd_net -net xlconcat_0_dout [get_bd_pins loki_ctrl_i] [get_bd_pins xlconcat_0/dout]
   connect_bd_net -net xlslice_0_Dout [get_bd_pins CTRL1_lc5] [get_bd_pins xlslice_0/Dout]
   connect_bd_net -net xlslice_1_Dout [get_bd_pins APP_PER_NRST_lc6] [get_bd_pins xlslice_1/Dout]
   connect_bd_net -net xlslice_2_Dout [get_bd_pins APP_NRST_lc7] [get_bd_pins xlslice_2/Dout]
@@ -678,21 +671,17 @@ proc create_hier_cell_GPIO_Tree { parentCell nameHier } {
 
   # Create pins
   create_bd_pin -dir IO -from 10 -to 0 GPIO_21_31
-  create_bd_pin -dir IO -from 62 -to 0 GPIO_APP_32_94
-  set_property USER_COMMENTS.comment_3 "Make external if application requires it. All ports will need connections (otherwise Slice)" [get_bd_pins /GPIO_Tree/GPIO_APP_32_94]
-  create_bd_pin -dir IO -from 16 -to 0 GPIO_CTRL_0_16
+  create_bd_pin -dir I -from 94 -to 32 GPIO_APP_i
+  create_bd_pin -dir O -from 62 -to 0 GPIO_APP_o
+  create_bd_pin -dir O -from 62 -to 0 GPIO_APP_t
   create_bd_pin -dir IO -from 3 -to 0 GPIO_LVDS_N_17_20
   create_bd_pin -dir IO -from 3 -to 0 GPIO_LVDS_P_17_20
   create_bd_pin -dir I -from 94 -to 0 din
   create_bd_pin -dir O -from 94 -to 0 dout_0
+  create_bd_pin -dir I -from 16 -to 0 loki_ctrl_i_0_16
+  create_bd_pin -dir O -from 16 -to 0 loki_ctrl_o_0_16
+  create_bd_pin -dir O -from 16 -to 0 loki_ctrl_t_0_16
   create_bd_pin -dir I -from 94 -to 0 tri_in
-
-  # Create instance: iobuff_emio_1_11, and set properties
-  set iobuff_emio_1_11 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf iobuff_emio_1_11 ]
-  set_property -dict [ list \
-   CONFIG.C_BUF_TYPE {IOBUF} \
-   CONFIG.C_SIZE {17} \
- ] $iobuff_emio_1_11
 
   # Create instance: iobuff_emio_1_12, and set properties
   set iobuff_emio_1_12 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf iobuff_emio_1_12 ]
@@ -700,13 +689,6 @@ proc create_hier_cell_GPIO_Tree { parentCell nameHier } {
    CONFIG.C_BUF_TYPE {IOBUF} \
    CONFIG.C_SIZE {11} \
  ] $iobuff_emio_1_12
-
-  # Create instance: iobuff_emio_1_13, and set properties
-  set iobuff_emio_1_13 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf iobuff_emio_1_13 ]
-  set_property -dict [ list \
-   CONFIG.C_BUF_TYPE {IOBUF} \
-   CONFIG.C_SIZE {63} \
- ] $iobuff_emio_1_13
 
   # Create instance: ubuff_lvds_emio_0, and set properties
   set ubuff_lvds_emio_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf ubuff_lvds_emio_0 ]
@@ -798,24 +780,22 @@ proc create_hier_cell_GPIO_Tree { parentCell nameHier } {
  ] $xlslice_emio1_11_tri3
 
   # Create port connections
-  connect_bd_net -net Net [get_bd_pins GPIO_CTRL_0_16] [get_bd_pins iobuff_emio_1_11/IOBUF_IO_IO]
+  connect_bd_net -net GPIO_APP_i_1 [get_bd_pins GPIO_APP_i] [get_bd_pins xlconcat_emio1_11_in/In3]
   connect_bd_net -net Net1 [get_bd_pins GPIO_LVDS_P_17_20] [get_bd_pins ubuff_lvds_emio_0/IOBUF_DS_P]
   connect_bd_net -net Net2 [get_bd_pins GPIO_LVDS_N_17_20] [get_bd_pins ubuff_lvds_emio_0/IOBUF_DS_N]
   connect_bd_net -net Net3 [get_bd_pins GPIO_21_31] [get_bd_pins iobuff_emio_1_12/IOBUF_IO_IO]
-  connect_bd_net -net Net4 [get_bd_pins GPIO_APP_32_94] [get_bd_pins iobuff_emio_1_13/IOBUF_IO_IO]
   connect_bd_net -net iobuff_emio_1_12_IOBUF_IO_O [get_bd_pins iobuff_emio_1_12/IOBUF_IO_O] [get_bd_pins xlconcat_emio1_11_in/In2]
-  connect_bd_net -net iobuff_emio_1_13_IOBUF_IO_O [get_bd_pins iobuff_emio_1_13/IOBUF_IO_O] [get_bd_pins xlconcat_emio1_11_in/In3]
-  connect_bd_net -net iobuff_emio_IOBUF_IO_O [get_bd_pins iobuff_emio_1_11/IOBUF_IO_O] [get_bd_pins xlconcat_emio1_11_in/In0]
+  connect_bd_net -net loki_ctrl_i_0_16_1 [get_bd_pins loki_ctrl_i_0_16] [get_bd_pins xlconcat_emio1_11_in/In0]
   connect_bd_net -net ubuff_lvds_emio_0_IOBUF_IO_O [get_bd_pins ubuff_lvds_emio_0/IOBUF_IO_O] [get_bd_pins xlconcat_emio1_11_in/In1]
   connect_bd_net -net xlconcat_emio1_11_in_dout [get_bd_pins dout_0] [get_bd_pins xlconcat_emio1_11_in/dout]
-  connect_bd_net -net xlslice_1_Dout [get_bd_pins iobuff_emio_1_11/IOBUF_IO_T] [get_bd_pins xlslice_emio1_11_tri/Dout]
   connect_bd_net -net xlslice_emio0_out_Dout [get_bd_pins ubuff_lvds_emio_0/IOBUF_IO_I] [get_bd_pins xlslice_emio0_out/Dout]
   connect_bd_net -net xlslice_emio1_11_out1_Dout [get_bd_pins iobuff_emio_1_12/IOBUF_IO_I] [get_bd_pins xlslice_emio1_11_out1/Dout]
-  connect_bd_net -net xlslice_emio1_11_out2_Dout [get_bd_pins iobuff_emio_1_13/IOBUF_IO_T] [get_bd_pins xlslice_emio1_11_out2/Dout]
-  connect_bd_net -net xlslice_emio1_11_out_Dout [get_bd_pins iobuff_emio_1_11/IOBUF_IO_I] [get_bd_pins xlslice_emio1_11_out/Dout]
+  connect_bd_net -net xlslice_emio1_11_out2_Dout [get_bd_pins GPIO_APP_o] [get_bd_pins xlslice_emio1_11_out2/Dout]
+  connect_bd_net -net xlslice_emio1_11_out_Dout [get_bd_pins loki_ctrl_o_0_16] [get_bd_pins xlslice_emio1_11_out/Dout]
   connect_bd_net -net xlslice_emio1_11_tri1_Dout [get_bd_pins ubuff_lvds_emio_0/IOBUF_IO_T] [get_bd_pins xlslice_emio1_11_tri1/Dout]
   connect_bd_net -net xlslice_emio1_11_tri2_Dout [get_bd_pins iobuff_emio_1_12/IOBUF_IO_T] [get_bd_pins xlslice_emio1_11_tri2/Dout]
-  connect_bd_net -net xlslice_emio1_11_tri3_Dout [get_bd_pins iobuff_emio_1_13/IOBUF_IO_I] [get_bd_pins xlslice_emio1_11_tri3/Dout]
+  connect_bd_net -net xlslice_emio1_11_tri3_Dout [get_bd_pins GPIO_APP_t] [get_bd_pins xlslice_emio1_11_tri3/Dout]
+  connect_bd_net -net xlslice_emio1_11_tri_Dout [get_bd_pins loki_ctrl_t_0_16] [get_bd_pins xlslice_emio1_11_tri/Dout]
   connect_bd_net -net zynq_ultra_ps_e_0_emio_gpio_o [get_bd_pins din] [get_bd_pins xlslice_emio0_out/Din] [get_bd_pins xlslice_emio1_11_out/Din] [get_bd_pins xlslice_emio1_11_out1/Din] [get_bd_pins xlslice_emio1_11_tri3/Din]
   connect_bd_net -net zynq_ultra_ps_e_0_emio_gpio_t [get_bd_pins tri_in] [get_bd_pins xlslice_emio1_11_out2/Din] [get_bd_pins xlslice_emio1_11_tri/Din] [get_bd_pins xlslice_emio1_11_tri1/Din] [get_bd_pins xlslice_emio1_11_tri2/Din]
 
@@ -2454,6 +2434,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net APP_PRESENT_lc0_0_1 [get_bd_ports APP_PRESENT_lc0] [get_bd_pins LOKI_Control/APP_PRESENT_lc0]
   connect_bd_net -net BKPLN_PRESENT_lc1_0_1 [get_bd_ports BKPLN_PRESENT_lc1] [get_bd_pins LOKI_Control/BKPLN_PRESENT_lc1]
   connect_bd_net -net GPIO_Tree_dout_0 [get_bd_pins GPIO_Tree/dout_0] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_i]
+  connect_bd_net -net GPIO_Tree_loki_ctrl_o_0_16 [get_bd_pins GPIO_Tree/loki_ctrl_o_0_16] [get_bd_pins LOKI_Control/loki_ctrl_o]
   connect_bd_net -net LOKI_Control_APP_NRST_lc7 [get_bd_ports APP_NRST_lc7] [get_bd_pins LOKI_Control/APP_NRST_lc7]
   connect_bd_net -net LOKI_Control_APP_PER_NRST_lc6 [get_bd_ports APP_PER_NRST_lc6] [get_bd_pins LOKI_Control/APP_PER_NRST_lc6]
   connect_bd_net -net LOKI_Control_CLKGEN_AC_lc9_11 [get_bd_ports CLKGEN_AC_lc9_11] [get_bd_pins LOKI_Control/CLKGEN_AC_lc9_11]
@@ -2461,7 +2442,6 @@ proc create_root_design { parentCell } {
   connect_bd_net -net LOKI_Control_CTRL1_0_lc5 [get_bd_ports CTRL1_lc5] [get_bd_pins LOKI_Control/CTRL1_lc5]
   connect_bd_net -net LOKI_Control_TEMP_NRST_lc12 [get_bd_ports TEMP_NRST_lc12] [get_bd_pins LOKI_Control/TEMP_NRST_lc12]
   connect_bd_net -net LOKI_Control_ULED_lc13_16 [get_bd_ports ULED_lc13_16] [get_bd_pins LOKI_Control/ULED_lc13_16]
-  connect_bd_net -net Net [get_bd_pins GPIO_Tree/GPIO_CTRL_0_16] [get_bd_pins LOKI_Control/loki_ctrl]
   connect_bd_net -net Net1 [get_bd_ports GPIO_LVDS_P_17_20] [get_bd_pins GPIO_Tree/GPIO_LVDS_P_17_20]
   connect_bd_net -net Net2 [get_bd_ports GPIO_LVDS_N_17_20] [get_bd_pins GPIO_Tree/GPIO_LVDS_N_17_20]
   connect_bd_net -net Net3 [get_bd_ports GPIO_APP_21_31] [get_bd_pins GPIO_Tree/GPIO_21_31]
@@ -2472,6 +2452,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net USER_BTN_1_lc3_0_1 [get_bd_ports USER_BTN_1_lc3] [get_bd_pins LOKI_Control/USER_BTN_1_lc3]
   connect_bd_net -net emio_spi0_m_i_0_1 [get_bd_ports emio_spi0_m_i_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi0_m_i]
   connect_bd_net -net emio_spi1_m_i_0_1 [get_bd_ports emio_spi1_m_i_0] [get_bd_pins zynq_ultra_ps_e_0/emio_spi1_m_i]
+  connect_bd_net -net loki_ctrl_i_0_16_1 [get_bd_pins GPIO_Tree/loki_ctrl_i_0_16] [get_bd_pins LOKI_Control/loki_ctrl_i]
   connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins RGPIO/RGPIO_M_RESET_N] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
   connect_bd_net -net vio_CAN_0_S [get_bd_pins SC0808BF_0/CAN_S] [get_bd_pins vio_general/probe_out2]
   connect_bd_net -net vio_LED_HD [get_bd_pins SC0808BF_0/LED_HD] [get_bd_pins vio_general/probe_out0]

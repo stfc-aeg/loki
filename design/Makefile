@@ -2,10 +2,6 @@ SHELL := /bin/bash
 
 .PHONY: hardware software all os mostlyclean clean export_bd_tcl
 
-# Now defined by the environment
-#PLATFORM = 4cg_2gb
-#OS_PATH = ./os/petalinux-custom/
-
 VIVADO_PROJ_PATH = vivado
 
 HARDWARE_OUTPUT = prebuilt/hardware/${PLATFORM}/design_${PLATFORM}.xsa

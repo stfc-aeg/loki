@@ -1,7 +1,8 @@
 v_log/
-./prebuilt/
-./block_design
-./constraints
+/prebuilt
+/block_design
+/constraints
 doc/
 vivado/
 workspace/
+file_location.txt

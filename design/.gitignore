@@ -6,3 +6,4 @@ doc/
 vivado/
 workspace/
 file_location.txt
+/Makefile

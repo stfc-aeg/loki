@@ -4,10 +4,27 @@ SHELL := /bin/bash
 
 VIVADO_PROJ_PATH = vivado
 
+PLATFORM=@platform_module_shortname@
+CARRIER=@platform_carrier@
+BLOCKDESIGN_OVERRIDE_DIR=@blockdesign_override_dir@
+
 HARDWARE_OUTPUT = prebuilt/hardware/${PLATFORM}/design_${PLATFORM}.xsa
 SOFTWARE_OUTPUT = prebuilt/software/${PLATFORM}/fsbl.elf prebuilt/software/${PLATFORM}/pmufw.elf
 
-${VIVADO_PROJ_PATH}:
+carrier_select:
+	$(info Configuring LOKI project to use carrier ${CARRIER})
+ifdef (${BLOCKDESIGN_OVERRIDE_DIR})
+	$(info linking custom application block design)
+	ln -sfT ${BLOCKDESIGN_OVERRIDE_DIR} block_design
+else
+	$(info linking default block design for ${CARRIER} carrier)
+	ln -sfT ./carrier_support/${CARRIER}/block_design block_design
+endif
+
+	$(info linking constraints for ${CARRIER} carrier)
+	ln -sfT ./carrier_support/${CARRIER}/constraints constraints
+
+${VIVADO_PROJ_PATH}: carrier_select
 	$(warning Vivado project does not exist, attempting to create it...)
 	LOKI_AUTO_CREATE="1"; \
 	source ./vivado_create_project_guimode.sh

@@ -2,7 +2,6 @@ SHELL := /bin/bash
 
 .PHONY: all os mostlyclean clean
 
-PLATFORM=@platform_module_shortname@
 OS_PATH=@os_path@
 
 all: os

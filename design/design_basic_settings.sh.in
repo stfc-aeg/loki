@@ -51,7 +51,7 @@ export VIVADO_VERSION=2020.1
 #    -Example TE0726 Module : 
 #      -USE ID           |USE PRODID                 
 #      -@set PARTNUMBER=1|@set PARTNUMBER=<complete TE article name from the CSV list> 
-export PARTNUMBER=50
+export PARTNUMBER=@platform_module_shortname@
 # --------------------
 # For program*file.cmd only:
 #    -Select Software App, which should be configured.

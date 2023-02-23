@@ -1,0 +1,4 @@
+config.status
+config.log
+Makefile
+design/design_basic_settings.sh

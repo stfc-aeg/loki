@@ -26,6 +26,9 @@ endif
 	$(info linking constraints for ${CARRIER} carrier)
 	ln -sfT ./carrier_support/${CARRIER}/constraints constraints
 
+	$(info linking low-level software for ${CARRIER} carrier module ${PLATFORM})
+	ln -sfT ./carrier_support/${CARRIER}/sw_lib/${PLATFORM} sw_lib
+
 	touch .platform_configured
 
 ${VIVADO_PROJ_PATH}: .platform_configured

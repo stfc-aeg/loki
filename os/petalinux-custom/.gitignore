@@ -12,3 +12,4 @@ pre-built/linux/
 /components/plnx_workspace
 /components/yocto
 /project-spec/hw-description/*
+/Makefile

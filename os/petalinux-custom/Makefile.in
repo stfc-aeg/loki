@@ -1,4 +1,4 @@
-PLATFORM = 4cg_2gb
+PLATFORM = @platform_module_shortname@
 HW_EXPORT_DIR = ../../prebuilt/hardware/${PLATFORM}
 HW_XSA_FILENAME = design_${PLATFORM}.xsa
 SW_EXPORT_DIR = ../../prebuilt/software/${PLATFORM}
@@ -13,6 +13,8 @@ LOW_LEVEL_SW = ${SW_EXPORT_DIR}${SW_FSBL_FILENAME} ${SW_EXPORT_DIR}${SW_PMUFW_FI
 LOW_LEVEL_SW_LOCAL = ${OUTPUT_DIR}${SW_FSBL_FILENAME} ${OUTPUT_DIR}${SW_PMUFW_FILENAME}
 DTS = ${OUTPUT_DIR}/system.dts
 DTB = ${OUTPUT_DIR}/system.dtb
+
+APPLICATION_YOCTO_LAYER = @add_yocto_layer@
 
 # The yocto workspace contains recipes brought into the workspace under modification.
 BUILD_DEPS = $(shell find ${PL_ROOT}/components/yocto/workspace/ -type f)
@@ -54,6 +56,12 @@ ${OUTPUT_DIR}/${SW_PMUFW_FILENAME}: ${SW_EXPORT_DIR}/${SW_PMUFW_FILENAME} | ${OU
 # This means that build can provide multiple files without multiple runs
 ${OUTPUT_DIR}/.build_complete: ${PL_PROJ_BITSTREAM} ${BUILD_DEPS}
 	$(info Modified build dependencies: $?)
+
+ifdef (${APPLICATION_LAYER})
+	$(info enabling user-specified application Yocto layer)
+	source <plnx-proj-root>/components/yocto/environment-setup-aarch64-xilinx-linux; source <plnx-proj-root>/components/yocto/layers/core/oe-init-build-env; export PATH=/opt/pkg/petalinux/tools/xsct/bin:$PATH; export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE PETALINUX"; bitbake-layers add-layer ${APPLICATION_LAYER}
+endif
+
 	$(info performing petalinux-build...)
 	petalinux-build
 	touch ${OUTPUT_DIR}/.build_complete

@@ -1,5 +1,6 @@
 {
-    # run with: cat ../../../board_files/TE080x_board_files.csv | awk -f create_symlinks.awk
+    # run with: cat ../../../board_files/TE080x_board_files.csv| grep -Ev '#|CSV_VERSION|SHORTNAME' | awk -F ',' -f create_symlinks.awk
+    # Ignore the 'File Exists' lines
     if ($1 < 1000)
         destination="sw_lib_te0803";
     else if ($1 > 1999)

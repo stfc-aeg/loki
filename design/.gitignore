@@ -7,3 +7,4 @@ vivado/
 workspace/
 file_location.txt
 /Makefile
+/.platform_configured

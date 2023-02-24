@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: hardware software all os mostlyclean clean export_bd_tcl
+.PHONY: hardware software all os mostlyclean clean export_bd_tcl platform_configure
 
 VIVADO_PROJ_PATH = vivado
 
@@ -11,7 +11,9 @@ BLOCKDESIGN_OVERRIDE_DIR=@blockdesign_override_dir@
 HARDWARE_OUTPUT = prebuilt/hardware/${PLATFORM}/design_${PLATFORM}.xsa
 SOFTWARE_OUTPUT = prebuilt/software/${PLATFORM}/fsbl.elf prebuilt/software/${PLATFORM}/pmufw.elf
 
-carrier_select:
+# Depends on this file because the autoconf will modify it with platform specification
+.platform_configured: Makefile
+	$(info carrier_select modified build dependencies: $?)
 	$(info Configuring LOKI project to use carrier ${CARRIER})
 ifdef (${BLOCKDESIGN_OVERRIDE_DIR})
 	$(info linking custom application block design)
@@ -24,11 +26,17 @@ endif
 	$(info linking constraints for ${CARRIER} carrier)
 	ln -sfT ./carrier_support/${CARRIER}/constraints constraints
 
-${VIVADO_PROJ_PATH}: carrier_select
+	touch .platform_configured
+
+${VIVADO_PROJ_PATH}: .platform_configured
+	$(info Vivado Project Directory modified build dependencies: $?)
 	$(warning Vivado project does not exist, attempting to create it...)
 	LOKI_AUTO_CREATE="1"; \
 	source ./vivado_create_project_guimode.sh
 	$(info Finished creating new project...)
+
+	# Update timestamp
+	touch ${VIVADO_PROJ_PATH}
 
 # Up-to-date TCL files are exported from the existing Vivado design
 export_bd_tcl: | ${VIVADO_PROJ_PATH}

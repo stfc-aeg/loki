@@ -583,6 +583,7 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+add_yocto_layer
 blockdesign_override_dir
 platform_carrier
 os_path
@@ -1686,7 +1687,8 @@ platform_carrier=tebf0808
 
 
 
-ac_config_files="$ac_config_files Makefile design/Makefile design/design_basic_settings.sh"
+
+ac_config_files="$ac_config_files Makefile design/Makefile design/design_basic_settings.sh os/petalinux-custom/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -2397,6 +2399,7 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "design/Makefile") CONFIG_FILES="$CONFIG_FILES design/Makefile" ;;
     "design/design_basic_settings.sh") CONFIG_FILES="$CONFIG_FILES design/design_basic_settings.sh" ;;
+    "os/petalinux-custom/Makefile") CONFIG_FILES="$CONFIG_FILES os/petalinux-custom/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

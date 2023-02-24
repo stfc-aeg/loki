@@ -4,6 +4,7 @@ SHELL := /bin/bash
 
 VIVADO_PROJ_PATH = vivado
 
+LOKI_ROOT_ABS = @abs_top_builddir@
 PLATFORM=@platform_module_shortname@
 CARRIER=@platform_carrier@
 BLOCKDESIGN_OVERRIDE_DIR=@blockdesign_override_dir@

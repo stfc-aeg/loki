@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: all os mostlyclean clean
+.PHONY: all mostlyclean clean hardware software os
 
 LOKI_ROOT_ABS = @abs_top_builddir@
 HWSW_PATH=${LOKI_ROOT_ABS}/design/

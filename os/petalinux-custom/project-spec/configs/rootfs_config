@@ -4226,7 +4226,6 @@ CONFIG_spidev-test=y
 # user packages 
 #
 CONFIG_libgpiod-python=y
-CONFIG_hexitec-mhz=y
 # CONFIG_odin-control is not set
 # CONFIG_odin-devices is not set
 # CONFIG_odin-sequencer is not set
@@ -4236,6 +4235,7 @@ CONFIG_python3-pyzmq=y
 CONFIG_python3-requests=y
 CONFIG_python3-smbus=y
 CONFIG_python3-spidev=y
+# CONFIG_start-stop-daemon is not set
 
 #
 # PetaLinux RootFS Settings

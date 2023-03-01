@@ -1,5 +1,7 @@
 # Generated with autoconf from @configure_input@
 
+SHELL := /bin/bash
+
 LOKI_ROOT_ABS = @abs_top_builddir@
 PLATFORM = @platform_module_shortname@
 HW_EXPORT_DIR = ${LOKI_ROOT_ABS}/design/prebuilt/hardware/${PLATFORM}
@@ -17,7 +19,7 @@ LOW_LEVEL_SW_LOCAL = ${OUTPUT_DIR}${SW_FSBL_FILENAME} ${OUTPUT_DIR}${SW_PMUFW_FI
 DTS = ${OUTPUT_DIR}/system.dts
 DTB = ${OUTPUT_DIR}/system.dtb
 
-APPLICATION_YOCTO_LAYER = @add_yocto_layer@
+APPLICATION_LAYER = @add_yocto_layer@
 
 # The yocto workspace contains recipes brought into the workspace under modification.
 BUILD_DEPS = $(shell find ${PL_ROOT}/components/yocto/workspace/ -type f)
@@ -60,9 +62,17 @@ ${OUTPUT_DIR}/${SW_PMUFW_FILENAME}: ${SW_EXPORT_DIR}/${SW_PMUFW_FILENAME} | ${OU
 ${OUTPUT_DIR}/.build_complete: ${PL_PROJ_BITSTREAM} ${BUILD_DEPS}
 	$(info Modified build dependencies: $?)
 
-ifdef (${APPLICATION_LAYER})
+ifdef APPLICATION_LAYER
 	$(info enabling user-specified application Yocto layer)
-	source <plnx-proj-root>/components/yocto/environment-setup-aarch64-xilinx-linux; source <plnx-proj-root>/components/yocto/layers/core/oe-init-build-env; export PATH=/opt/pkg/petalinux/tools/xsct/bin:$PATH; export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE PETALINUX"; bitbake-layers add-layer ${APPLICATION_LAYER}
+	#source ${PL_ROOT}/components/yocto/environment-setup-aarch64-xilinx-linux; source ${PL_ROOT}/components/yocto/layers/core/oe-init-build-env; export PATH=/opt/pkg/petalinux/tools/xsct/bin:$PATH; export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE PETALINUX"; bitbake-layers add-layer ${APPLICATION_LAYER}
+	#source ${PL_ROOT}/components/yocto/environment-setup-aarch64-xilinx-linux && \
+	#	source ${PL_ROOT}/components/yocto/layers/core/oe-init-build-env && \
+	#	export PATH=/opt/pkg/petalinux/tools/xsct/bin:$PATH && \
+	#	export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE PETALINUX" && \
+	#	bitbake-layers show-layers
+	#bitbake-layers show-layers
+
+	#source ./access_bitbake.sh ${APPLICATION_LAYER}
 endif
 
 	$(info performing petalinux-build...)

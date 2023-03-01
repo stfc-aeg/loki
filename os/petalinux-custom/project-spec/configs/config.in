@@ -1,4 +1,5 @@
 #
+# Generated with autoconf from @configure_input@
 # Automatically generated file; DO NOT EDIT.
 # misc/config System Configuration
 #
@@ -295,4 +296,8 @@ CONFIG_YOCTO_NETWORK_SSTATE_FEEDS_URL="http://petalinux.xilinx.com/sswreleases/r
 #
 CONFIG_USER_LAYER_0="/aeg_sw/work/users/ucm28261/develop/projects/loki/software/loki-application/meta-mercury"
 CONFIG_USER_LAYER_1=""
+
+
+
+
 CONFIG_SUBSYSTEM_BOOTARGS_GENERATED=" earlycon console=ttyPS0,115200 clk_ignore_unused root=/dev/ram0 rw"

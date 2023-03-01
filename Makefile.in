@@ -1,3 +1,5 @@
+# Generated with autoconf from @configure_input@
+
 SHELL := /bin/bash
 
 .PHONY: all mostlyclean clean hardware software os

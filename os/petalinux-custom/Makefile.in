@@ -19,12 +19,14 @@ LOW_LEVEL_SW_LOCAL = ${OUTPUT_DIR}${SW_FSBL_FILENAME} ${OUTPUT_DIR}${SW_PMUFW_FI
 DTS = ${OUTPUT_DIR}/system.dts
 DTB = ${OUTPUT_DIR}/system.dtb
 
-APPLICATION_LAYER = @add_yocto_layer@
+YOCTO_USER_LAYER_0 = @yocto_user_layer_0@
 
 # The yocto workspace contains recipes brought into the workspace under modification.
 BUILD_DEPS = $(shell find ${PL_ROOT}/components/yocto/workspace/ -type f)
 #project-spec contains main user recipes and config.
 BUILD_DEPS := $(shell find ${PL_ROOT}/project-spec/ -type f)
+#optional user layer for recipes
+BUILD_DEPS := $(shell find ${YOCTO_USER_LAYER_0} -type f)
 
 .PHONY: default all build package rootfs simulate clean mostlyclean
 
@@ -60,21 +62,6 @@ ${OUTPUT_DIR}/${SW_PMUFW_FILENAME}: ${SW_EXPORT_DIR}/${SW_PMUFW_FILENAME} | ${OU
 # Create intermediate product so that PHONY is not executed unless changes have been made
 # This means that build can provide multiple files without multiple runs
 ${OUTPUT_DIR}/.build_complete: ${PL_PROJ_BITSTREAM} ${BUILD_DEPS}
-	$(info Modified build dependencies: $?)
-
-ifdef APPLICATION_LAYER
-	$(info enabling user-specified application Yocto layer)
-	#source ${PL_ROOT}/components/yocto/environment-setup-aarch64-xilinx-linux; source ${PL_ROOT}/components/yocto/layers/core/oe-init-build-env; export PATH=/opt/pkg/petalinux/tools/xsct/bin:$PATH; export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE PETALINUX"; bitbake-layers add-layer ${APPLICATION_LAYER}
-	#source ${PL_ROOT}/components/yocto/environment-setup-aarch64-xilinx-linux && \
-	#	source ${PL_ROOT}/components/yocto/layers/core/oe-init-build-env && \
-	#	export PATH=/opt/pkg/petalinux/tools/xsct/bin:$PATH && \
-	#	export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE PETALINUX" && \
-	#	bitbake-layers show-layers
-	#bitbake-layers show-layers
-
-	#source ./access_bitbake.sh ${APPLICATION_LAYER}
-endif
-
 	$(info performing petalinux-build...)
 	petalinux-build
 	touch ${OUTPUT_DIR}/.build_complete

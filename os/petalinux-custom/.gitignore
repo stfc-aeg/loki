@@ -13,3 +13,4 @@ pre-built/linux/
 /components/yocto
 /project-spec/hw-description/*
 /Makefile
+/project-spec/configs/config

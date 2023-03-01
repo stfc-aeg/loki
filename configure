@@ -583,6 +583,7 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+yocto_tmpdir
 yocto_user_layer_0
 blockdesign_override_dir
 platform_carrier
@@ -1686,6 +1687,8 @@ os_path=./os/petalinux-custom
 platform_carrier=tebf0808
 
 
+
+yocto_tmpdir=/tmp/loki
 
 
 ac_config_files="$ac_config_files Makefile design/Makefile design/design_basic_settings.sh os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config"

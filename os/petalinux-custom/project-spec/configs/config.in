@@ -259,7 +259,7 @@ CONFIG_YOCTO_MACHINE_NAME="zynqmp-generic"
 #
 # TMPDIR Location
 #
-CONFIG_TMP_DIR_LOCATION="/tmp/loki1"
+CONFIG_TMP_DIR_LOCATION="@yocto_tmpdir@"
 
 #
 # WORKSPACE Location

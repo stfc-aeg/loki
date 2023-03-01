@@ -34,7 +34,8 @@ BUILD_DEPS := $(shell find ${YOCTO_USER_LAYER_0} -type f)
 all: ${OUTPUT_DIR}/BOOT.BIN ${OUTPUT_DIR}/boot.scr ${OUTPUT_DIR}/image.ub ${DTS} ;
 
 # If the bitstream has been imported into the project it will appear here
-${PL_PROJ_BITSTREAM}: ${HW_EXPORT_DIR}/${HW_XSA_FILENAME}
+# Config must also re-run if config file has been modified (potentially by autoconf)
+${PL_PROJ_BITSTREAM}: ${HW_EXPORT_DIR}/${HW_XSA_FILENAME} ${PL_ROOT}/project-spec/configs/config
 	# Copy the latest design into this directory
 	cp ${HW_EXPORT_DIR}/${HW_XSA_FILENAME} ${DESIGN_BITSTREAM}
 

@@ -1,5 +1,7 @@
 #
 # Generated with autoconf from @configure_input@
+#
+# Note that this file is also edited by petalinux-config
 # Automatically generated file; DO NOT EDIT.
 # misc/config System Configuration
 #
@@ -271,8 +273,8 @@ CONFIG_BUILDTOOL_DEVTOOL=y
 #
 # Parallel thread execution
 #
-CONFIG_YOCTO_BB_NUMBER_THREADS="8"
-CONFIG_YOCTO_PARALLEL_MAKE="8"
+CONFIG_YOCTO_BB_NUMBER_THREADS="14"
+CONFIG_YOCTO_PARALLEL_MAKE="14"
 
 #
 # Add pre-mirror url 

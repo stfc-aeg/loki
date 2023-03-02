@@ -585,10 +585,10 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 yocto_tmpdir
 yocto_user_layer_0
-blockdesign_override_dir
 platform_carrier
-os_path
 platform_module_shortname
+os_path
+blockdesign_override_dir
 target_alias
 host_alias
 build_alias
@@ -634,7 +634,13 @@ enable_option_checking
 '
       ac_precious_vars='build_alias
 host_alias
-target_alias'
+target_alias
+blockdesign_override_dir
+os_path
+platform_module_shortname
+platform_carrier
+yocto_user_layer_0
+yocto_tmpdir'
 
 
 # Initialize some variables set by options.
@@ -1251,6 +1257,31 @@ if test -n "$ac_init_help"; then
    esac
   cat <<\_ACEOF
 
+Some influential environment variables:
+  blockdesign_override_dir
+              Optional, advanced: Build using an out-of-tree version of the
+              block design, with path o block design .bd file specified here.
+              Consider using custom constraints first. Not yet implemented.
+  os_path     Optional, advanced: Build using an out-of-tree version of
+              petalinux, with path to PL_ROOT specified here. Consider using a
+              custom user layer with yocto_user_layer_0 first.
+  platform_module_shortname
+              Required: Shortname of the Trenz module used for the build. See
+              loki/design/board_files/TE080x_board_files.csv for full list.
+  platform_carrier
+              Required: Name of the carrier board to be used. Choose from:
+              tebf0808
+  yocto_user_layer_0
+              Optional: Absolute path to yocto recipe layer for
+              application-specifics. Will be included automatically. Do not
+              set to not include a layer.
+  yocto_tmpdir
+              Optional, but recommended: Absolute TMPDIR location for Yocto
+              build, not on NTFS. Required.
+
+Use these variables to override the choices made by `configure' or to help
+it to find libraries and programs with nonstandard names/locations.
+
 Report bugs to the package provider.
 _ACEOF
 ac_status=$?
@@ -1680,15 +1711,17 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-platform_module_shortname=4cg_2gb
-
-os_path=./os/petalinux-custom
-
-platform_carrier=tebf0808
 
 
 
-yocto_tmpdir=/tmp/loki
+
+
+
+
+
+# If left blank, will default to not including layer, which is fine.
+
+
 
 
 ac_config_files="$ac_config_files Makefile design/Makefile design/design_basic_settings.sh os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config"

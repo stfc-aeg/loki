@@ -24,3 +24,18 @@ then
     echo "Platform module shortname must be specified with platform_module_shortname="
     exit 1
 fi
+
+if ! command -v petalinux-config  &> /dev/null; then
+    echo "Petalinux toolchain is required"
+    exit 1
+fi
+
+if ! command -v vivado &> /dev/null; then
+    echo "Xilinx Vivado is required"
+    exit 1
+fi
+
+if ! command -v vitis &> /dev/null; then
+    echo "Xilinx Vitis is required"
+    exit 1
+fi

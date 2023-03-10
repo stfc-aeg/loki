@@ -79,7 +79,7 @@ mostlyclean:
 	# Delete built hardware and software
 	$(info cleaning prebuilt hardware and software)
 	rm -rf prebuilt/hardware/*
-	rm -rf prebuitt/software/*
+	rm -rf prebuilt/software/*
 
 clean: mostlyclean export_bd_tcl
 	# Same as mostlyclean but make sure that current design is exported to TCL

@@ -135,5 +135,7 @@ distclean: clean
 	rm -rf Makefile
 
 clobber: distclean
-	# There is nothing currently that differs between clobber and distclean.
+	# Same as distclean, but delete prebuilt, which currently houses the pmufw for QEMU,
+	# therefore for simluation it will need to be included again (via external download).
+	rm -rf pre-built
 

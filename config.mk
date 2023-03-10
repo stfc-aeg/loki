@@ -1,6 +1,7 @@
-# BEFORE including this file, define LOKI_DIR as its own location either
-# absolute, or relative to the calling Makefile. Also define AUTOCONF_PARAMS
-# to specify parameters that will be used to configure the LOKI project.
+# BEFORE including this file, define LOKI_DIR as its own location (must be
+# relative to the including Makefile.
+# Also define AUTOCONF_PARAMS to specify parameters that will be used to
+# configure the LOKI project.
 #
 # To see available parameters, run 'make loki-configure-help' from this
 # makefile (or after including this file in the project makefile).
@@ -31,7 +32,7 @@ ${AUTOCONF_HW_OUTPUTS}: ${AUTOCONF_HW_INPUTS} ${AUTOCONF_INPUTS}
 ${AUTOCONF_SW_OUTPUTS}: ${AUTOCONF_SW_INPUTS} ${AUTOCONF_INPUTS}
 ${AUTOCONF_OS_OUTPUTS}: ${AUTOCONF_OS_INPUTS} ${AUTOCONF_INPUTS}
 	echo "Configuring LOKI with parameters: ${AUTOCONF_PARAMS}"
-	cd ${LOKI_DIR}; ./configure --prefix=$(pwd) \
+	cd ${LOKI_DIR}; ./configure --prefix=$(shell pwd)/${LOKI_DIR} \
 		${AUTOCONF_PARAMS}
 
 # Call from other (application ) makefiles without knowing the files autoconf depends on

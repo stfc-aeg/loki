@@ -43,6 +43,11 @@ ${PL_PROJ_BITSTREAM}: ${HW_EXPORT_DIR}/${HW_XSA_FILENAME} ${PL_ROOT}/project-spe
 	mkdir -p project-spec/hw-description
 	petalinux-config --get-hw-description --silentconfig
 
+	# Touch the resulting bitstream so that its timestamp is always updated (useful if this recipe
+	# is triggered by config file change rather than the input XSA being modified.
+	# Do not create an empty file if it was not built.
+	touch --no-create $(PL_PROJ_BITSTREAM)
+
 # Create the output directory if required
 ${OUTPUT_DIR}:
 	$(info Creating non-existent output directory...)

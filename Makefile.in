@@ -31,8 +31,24 @@ clean:
 	$(info cleaning OS image files)
 	$(MAKE) -C ${OS_PATH} clean
 
+distclean:
+	# Allow sub-makefiles the chance to cleanly delete things (potentially exporting
+	# changes to other places), then manually delete anything untracked
+	$(info distcleaning HW/SW files)
+	$(MAKE) -C ${HWSW_PATH} distclean
+	$(info distcleaning OS image files)
+	$(MAKE) -C ${OS_PATH} distclean
+
+	$(warning Attempting to remove any untracked files from loki)
+	rm -rf $(git ls-files -o --exclude-standard)
+
 clobber:
+	# Command sub-makefiles to clobber their directories, then manually delete
+	# anything untracked.
 	$(info clobbering HW/SW files)
-	$(MAKE) -C ${HWSW_PATH} clean
-	$(info cleaning OS image files)
-	$(MAKE) -C ${OS_PATH} clean
+	$(MAKE) -C ${HWSW_PATH} clobber
+	$(info clobbering OS image files)
+	$(MAKE) -C ${OS_PATH} clobber
+
+	$(warning Attempting to remove any untracked files from loki)
+	rm -rf $(git ls-files -o --exclude-standard)

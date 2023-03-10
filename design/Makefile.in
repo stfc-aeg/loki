@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: hardware software all os mostlyclean clean export_bd_tcl platform_configure
+.PHONY: hardware software all os mostlyclean clean distclean clobber export_bd_tcl platform_configure
 
 VIVADO_PROJ_PATH = vivado
 
@@ -84,8 +84,22 @@ mostlyclean:
 clean: mostlyclean export_bd_tcl
 	# Same as mostlyclean but make sure that current design is exported to TCL
 	# for revision control, and then delete vivado project.
-	$(warning Deleting Vivado project directory, changes not exported to TCL will be lost)
 	rm -rf ./vivado
+
+distclean: clean
+	# clean, respecting the export of tcl script, but also remove anything that will
+	# not form part of the final repo, for example the symlinks created for block design,
+	# constraints and sw_lib (these should be created as part of the build).
+	# Essentially, attempt to restore the directory to a state as close as possible to the
+	# cloned state.
+	rm -rf ./block_design
+	rm -rf ./constraints
+	rm -rf ./sw_lib
+	rm -rf ./workspace
+	rm -rf v_log
+
+	# Actually delete this file so that the configure must be run again.
+	rm -rf Makefile
 
 clobber: mostlyclean
 	# Remove build artifacts from SW and HW. Additionally delete the vivado
@@ -93,3 +107,13 @@ clobber: mostlyclean
 	# exported to TCL, they WILL be lost.
 	$(warning Deleting Vivado project directory, changes not exported to TCL will be lost)
 	rm -rf ./vivado
+
+	# Following this is the same as distclean, without the dependency
+	rm -rf ./block_design
+	rm -rf ./constraints
+	rm -rf ./sw_lib
+	rm -rf ./workspace
+	rm -rf v_log
+
+	# Actually delete this file so that the configure must be run again.
+	rm -rf Makefile

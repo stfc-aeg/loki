@@ -16,8 +16,8 @@ AUTOCONF_HW_INTPUTS= design/Makefile.in design/design_basic_settings.sh.in
 
 # Currently SW is part of the design, and relies on the same files. These variables
 # are preserved in case software-specific autoconf-generated files are later required.
-AUTOCONF_SW_OUTPUTS= ${AUTOCONF_HW_OUTPUTS}
-AUTOCONF_SW_INPUTS= ${AUTOCONF_HW_INPUTS}
+AUTOCONF_SW_OUTPUTS= 
+AUTOCONF_SW_INPUTS= 
 
 AUTOCONF_OS_OUTPUTS= os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config
 AUTOCONF_OS_INPUTS= os/petalinux-custom/Makefile.in os/petalinux-custom/project-spec/configs/config.in
@@ -42,11 +42,7 @@ $(info $$AUTOCONF_HW_OUTPUTS are ${AUTOCONF_HW_OUTPUTS_PF})
 # the autoconf will rebuild that target file and will not rebuild the unrelated
 # outputs of the ./configure, preventing unnecessary rebuilding of other parts
 # of the project that haven't actually been reconfigured.
-${AUTOCONF_HW_OUTPUTS_PF}: ${AUTOCONF_HW_INPUTS_PF} ${AUTOCONF_INPUTS_PF}
-${AUTOCONF_SW_OUTPUTS_PF}: ${AUTOCONF_SW_INPUTS_PF} ${AUTOCONF_INPUTS_PF}
-${AUTOCONF_OS_OUTPUTS_PF}: ${AUTOCONF_OS_INPUTS_PF} ${AUTOCONF_INPUTS_PF}
-$(AUTOCONF_OUTPUTS_PF): $(AUTOCONF_INPUTS_PF)
-$(AUTOCONF_HW_OUTPUTS_PF) ${AUTOCONF_SW_OUTPUTS_PF} ${AUTOCONF_OS_OUTPUTS_PF} $(AUTOCONF_OUTPUTS_PF): $(AUTOCONF_INPUTS_PF)
+$(AUTOCONF_HW_OUTPUTS_PF) ${AUTOCONF_SW_OUTPUTS_PF} ${AUTOCONF_OS_OUTPUTS_PF} $(AUTOCONF_OUTPUTS_PF): $(AUTOCONF_HW_INPUTS_PF) ${AUTOCONF_SW_INPUTS_PF} ${AUTOCONF_OS_INPUTS_PF} $(AUTOCONF_INPUTS_PF)
 	echo "Configuring LOKI with parameters: ${AUTOCONF_PARAMS}"
 	cd ${LOKI_DIR}; ./configure --prefix=$(shell pwd)/${LOKI_DIR} \
 		${AUTOCONF_PARAMS}

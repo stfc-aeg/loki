@@ -42,6 +42,13 @@ distclean:
 	$(warning Attempting to remove any untracked files from loki)
 	rm -rf $(git ls-files -o --exclude-standard)
 
+	# Also remove files in root directory created by autoconf, including this file.
+	rm -rf config.log
+	rm -rf config.status
+	rm -rf config.cache
+	rm -rf autom4te.cache
+	rm -rf Makefile
+
 clobber:
 	# Command sub-makefiles to clobber their directories, then manually delete
 	# anything untracked.

@@ -96,7 +96,8 @@ distclean: clean
 	rm -rf ./constraints
 	rm -rf ./sw_lib
 	rm -rf ./workspace
-	rm -rf v_log
+	rm -rf ./v_log
+	rm -rf ./.platform_configured
 
 	# Actually delete this file so that the configure must be run again.
 	rm -rf Makefile
@@ -113,7 +114,8 @@ clobber: mostlyclean
 	rm -rf ./constraints
 	rm -rf ./sw_lib
 	rm -rf ./workspace
-	rm -rf v_log
+	rm -rf ./v_log
+	rm -rf ./.platform_configured
 
 	# Actually delete this file so that the configure must be run again.
 	rm -rf Makefile

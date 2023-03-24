@@ -43,10 +43,14 @@ ${VIVADO_PROJ_PATH}: .platform_configured
 	touch ${VIVADO_PROJ_PATH}
 
 # Up-to-date TCL files are exported from the existing Vivado design
-export_bd_tcl: | ${VIVADO_PROJ_PATH}
+export_bd_tcl:
 	$(info Updating TCL block design from Vivado block design)
-	LOKI_AUTO_BUILD="TCL"; \
-	source ./vivado_open_existing_project_guimode.sh
+	if test -d ${VIVADO_PROJ_PATH}; \
+		then echo found vivado directory at ${VIVADO_PROJ_PATH}, exporting to tcl; \
+		LOKI_AUTO_BUILD="TCL"; \
+		source ./vivado_open_existing_project_guimode.sh; \
+		else echo no vivado directory at ${VIVADO_PROJ_PATH}, skipping tcl export; \
+	fi
 	$(info TCL block design up to date)
 
 # Files that have been modified in the Vivado project but have not been

@@ -195,3 +195,25 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 		reg = <0>;
 	};
 };
+
+/* GPIO Naming */
+&gpio {
+    gpio-reserved-ranges = <0 77>;
+    loki-presence-gpios = <&gpio 78 0>,  /* Application Present */
+                            <&gpio 79 0>;    /* Backplane Present */
+    loki-button-gpios = <&gpio 80 0>,    /* User Button 0 */
+                            <&gpio 81 0>;    /* User Button 1 */
+    loki-temp-int-gpios = <&gpio 82 0>;
+    loki-ctrl1-gpios = <&gpio 83 0>;
+    loki-app-per-nrst-gpios = <&gpio 84 0>;
+    loki-app-nrst-gpios = <&gpio 85 0>;
+    loki-clkgen-nrst-gpios = <&gpio 86 0>;
+    loki-clkgen-ac-gpios = <&gpio 87 0>,
+                            <&gpio 88 0>,
+                            <&gpio 89 0>;
+    loki-temp-nrst-gpios = <&gpio 90 0>;
+    loki-leds-gpios = <&gpio 91 0>,
+                        <&gpio 92 0>,
+                        <&gpio 93 0>,
+                        <&gpio 94 0>;
+};

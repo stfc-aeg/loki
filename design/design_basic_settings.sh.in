@@ -41,7 +41,7 @@
 #    -SDSoC (optional used for SDSoC): $XILDIR/SDx/$VIVADO_VERSION/
 #
 # -Important Note: Check if Xilinx default install path use upper or lower case
-export XILDIR=/aeg_sw/tools/CentOS7-x86_64/xilinx/2020.1
+export XILDIR=${XILINX_VIVADO}/../..
 # -Attention: These scripts support only the predefined Vivado Version. 
 export VIVADO_VERSION=2020.1
 # --------------------

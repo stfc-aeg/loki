@@ -39,3 +39,10 @@ if ! command -v vitis &> /dev/null; then
     echo "Xilinx Vitis is required"
     exit 1
 fi
+
+if [ -z "${XILINX_VIVADO}" ]
+then
+    echo "XILINX_VIVADO must be defined (load the Xilinx Vivado tools)"
+    exit 1
+fi
+

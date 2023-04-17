@@ -296,7 +296,7 @@ CONFIG_YOCTO_NETWORK_SSTATE_FEEDS_URL="http://petalinux.xilinx.com/sswreleases/r
 #
 # User Layers
 #
-CONFIG_USER_LAYER_0="/aeg_sw/work/users/ucm28261/develop/projects/loki/software/loki-application/meta-mercury"
+CONFIG_USER_LAYER_0="@yocto_user_layer_0@"
 CONFIG_USER_LAYER_1=""
 
 

@@ -26,7 +26,7 @@ setup(
     url='https://github.com/stfc-aeg/loki',
     author='Joseph Nobes',
     author_email='joseph.nobes@stfc.ac.uk',
-    packages=["lokiadapter"],
+    packages=find_packages('.'),
     #package_dir={'': '.'},
     install_requires=install_requires,
     extras_require=extras_require,

@@ -8,9 +8,11 @@ from odin.adapters.parameter_tree import ParameterTree
 
 import logging
 import os
-# import gpiod
+import gpiod
 # import concurrent.futures as futures
 from odin_devices import gpio_bus
+
+from abc import ABC, abstractmethod
 
 '''
 Current methods to include in an application project:
@@ -38,6 +40,17 @@ Current methods to include in an application project:
         Seen LokiAdapter_MERCURY and LokiCarrier_TEBF0808_MERCURY.
 
 '''
+# If id is a string, use gpiod.find_line to get the pin, otherwise use typical gpiod.get_line.
+def get_gpiod_line_byType(line_id):
+    if line_id is None:
+        return None
+
+    try:
+        # gpiochip0 is assumed since it is the only available chip on the ZynqMP platform
+        chip = gpiod.Chip('gpiochip0')
+        return chip.get_line(int(line_id))
+    except ValueError:
+        return gpiod.find_line(line_id)
 
 class LokiAdapter(AsyncApiAdapter):
 
@@ -50,10 +63,8 @@ class LokiAdapter(AsyncApiAdapter):
         self.instantiate_carrier(carrier_type)
 
         # Start asynchronous update loops
-        slow_delay = self.options.get('slow_update_delay_s')
-        deadslow_delay = self.options.get('deadslow_update_delay_s')
-        self._slow_delay = slow_delay if slow_delay else 1.0                # Use option or 1.0s by default
-        self._deadslow_delay = deadslow_delay if deadslow_delay else 5.0    # Use option or 5.0s by default
+        self._slow_delay = self.options.get('slow_update_delay_s', 1.0)
+        self._deadslow_delay = self.options.get('deadslow_update_delay_s', 5.0)
         self.slow_update_loop()
         self.deadslow_update_loop()
 
@@ -66,6 +77,7 @@ class LokiAdapter(AsyncApiAdapter):
     def deadslow_update_loop(self):
         self._carrier.event_deadslow_update()
         IOLoop.instance.call_later(self._deadslow_delay, self.deadslow_update_loop)
+
     def instantiate_carrier(self, carrier_type):
         # Create the underlying carrier instance. If the application absolutely requires a different carrier class,
         # create a child adapter and derive a carrier from one of the existing ones, then re-implement this function.
@@ -81,7 +93,8 @@ class LokiAdapter(AsyncApiAdapter):
     # todo adapter will basically just include redirect functions for get and set, potentially the 'loops'
 
 
-class LokiCarrier():
+# todo note SOMEWHERE that when including LokiCarrier as well as extensions, it must be last for the MRO to work. It's also optional is it's auto included by the extensions anyway. Or create a custom warning somehow (the better solution).
+class LokiCarrier(ABC):
     # Generic LOKI carrier support class. Lays out the structure that should be used
     # for all child carrier definitions.
 
@@ -115,173 +128,114 @@ class LokiCarrier():
             'LED2': PinMapping(                 'LED2',                 None,       False,      False,      False   ),
             'LED3': PinMapping(                 'LED3',                 None,       False,      False,      False   ),
     }
-    _variant = 'base'
 
     # todo ideally the base class should avoid refferring to specific devices in its external interfaces.
 
-    def __init__(self, adapter_options, custom_pinmap=None, **kwargs):
+    def __init__(self, **kwargs):
+        self._supported_extensions = []
+        self.setup_control_pins2(kwargs)
+        self._paramtree = ParameterTree(self._gen_paramtree_dict())
 
         # todo use the adapter_options?
 
         # todo set up a logger
 
         # Init the pin interface etc, however do not override existing pins from set_control_pin().
-        self._pinmap = self._default_pinmap
-        self.setup_gpio_bus()
-        self.detect_control_pins(self._custom_pinmap, respect_custom=True)
+        #self._pinmap = self._default_pinmap
+        #self.setup_gpio_bus()
+        #self.detect_control_pins(self._custom_pinmap, respect_custom=True)
+        # todo
 
         # Check that other info, like bus numbers is provided by child, otherwise throw error.
         # todo
 
         # Get the current state of the enables before starting the state machines
-        self._sync_enable_states()
+        #self._sync_enable_states()
+        # todo
 
         # Create device handlers but do not init
         # todo
 
         # Set up device tree and pass to adapter(?)
         # todo
-        self._gen_paramtree()
 
         # Set up state machines and timer loops (potentially in carrier)
         # todo
 
-    def setup_gpio_bus(self):
-        # Create a bus that can reference all pins exposed to ZynqMP (including MIO), for protected carrier pins only.
-        self._gpio_bus = gpio_bus.GPIO_Bus(110, 0, 0)
-        self._gpio_bus.set_consumer_name('LOKI Carrier Control')
+    @property
+    @abstractmethod
+    def variant(self):
+        pass
 
-        # Create a duplicate bus that can claim pins on behalf of the application
-        self._gpio_bus_app = gpio_bus.GPIO_Bus(110, 0, 0)
-        self._gpio_bus_app.set_consumer_name('LOKI Application')
+    def setup_control_pins2(self, options):
+        # options  examples:     pin_id_asic_cs = 'ASIC_nRST'
+        #                       pin_id_asic_cs = 123
 
-    def setup_control_pins(self, custom_pins, respect_custom=True):
-        # Attempt to automatically detect the control pin numbers from their
-        # names propagated through the device tree. respect_custom being true
-        # will use the custom pin rather than the default.
-        # (typically because a child class has defined it already).
+        # The value can be a pin number (assumed gpiochip0) or a pin name from the devicetree
+        # Setting the pin to None will lead to it being skipped.
 
-        # The custom pinmap is only for editing the default control pins, not
-        # adding new ones. Flag any unique names in custom pins.
-        if any([x not in self._pinmap for x in custom_pins.keys()]):
-            raise Exception('Cannot alter a pin mapping for a named pin not in the following list: {}'.format(custom_pins.keys()))
+        # Create pin ID list ONLY if it does not already exist. This means derived classes can create it and alter pin defaults.
+        if not hasattr(self, '_pin_ids'):
+            self._pin_ids = {}
 
-        # If the child carrier (or application) has overridden something from
-        # the default pinmap, use the overridden version.
-        for pin_name in self._pinmap.keys():
-            # If the child carrier has overridden the pin, apply it
-            if pin_name in custom_pins.keys() and respect_custom:
-                self._pinmap[pin_name] = custom_pins[pin_name]
+        # Settings from options / hardcoded default will only be used if the key does not already exist
+        # Order of precedence (high -> low): already in _pin_ids -> found in options -> hardcoded default
+        # setdefault options:   (<storage name>,    options.get(<options key>,      <hardcoded value>))
+        self._pin_ids.setdefault('app_present',     options.get('pin_id_app_present',   'APP nPRESENT'))
+        self._pin_ids.setdefault('bkpln_present',     options.get('pin_id_bkpln_present',   'BACKPLANE nPRESENT'))
+        self._pin_ids.setdefault('app_rst',     options.get('pin_id_app_rst',   'APPLICATION nRST'))
+        self._pin_ids.setdefault('per_rst',     options.get('pin_id_per_rst',   'PERIPHERAL nRST'))
 
-        # Print out the final pinmap before pins are actually requested
-        logging.debug('Final pinmap: {}'.format(self._pinmap))
+        # todo alter this; really, any options should override everything else...
 
-        # If the pin is using a name rather than an offset number, convert it. From this
-        # point, all pins should have offset numbers.
-        for pin_name in self._pinmap.keys():
+        # todo add options for reset and enabled signals being active low / high
 
-            # If the pin is NC, no further processing needs to occur
-            if not self._pinmap[pin_name].isNC:
+        print('Control pin mappings settled: {}'.format(self._pin_ids))
 
-                # If forceNum is set, the default name should be ignored anyway
-                if not self._pinmap[pin_name].forceNum:
-                    self._pinmap[pin_name].gpiod_num = self._gpiod_name_to_num(self._pinmap[pin_name].gpiod_name)
+        # Request pins now they have been found (or not if they are set to None)
+        # Inversions should take place here
+        # todo for now, stick to control pins. LEDs and user buttons may be a separate support extension to allow for different carrier implementations (e.g. LEDs switching high or low...)
 
-                # If the pin does not have a number at this point, it is invalid
-                if self._pinmap[pin_name].gpiod_num is None:
-                    raise Exception('Pin {} could not resolve a gpiod offset number'.format(pin_name))
+        self._pin_app_present = get_gpiod_line_byType(self._pin_ids['app_present'])
+        if self._pin_app_present is not None:
+            self._pin_app_present.request(
+                    consumer='LOKI',
+                    type=gpiod.LINE_REQ_DIR_IN,
+                    flags= gpiod.LINE_REQ_FLAG_ACTIVE_LOW,
+                    default_val=0)
 
-        # Request pins from gpiod, checking first that they are not NC, or noReq.
-        if not self._pinmap['BUTTON0'].isNC:
-            self._pin_button0 = self._gpio_bus.get_pin(
-                    index=self._pinmap['BUTTON0'].gpiod_num,
-                    direction=gpio_bus.GPIO_Bus.DIR_INPUT,
-                    no_request=self._pinmap['BUTTON0'].noReq)
-        else:
-            self._pin_button0 = None
+        self._pin_bkpln_present = get_gpiod_line_byType(self._pin_ids['bkpln_present'])
+        if self._pin_bkpln_present is not None:
+            self._pin_bkpln_present.request(
+                    consumer='LOKI',
+                    type=gpiod.LINE_REQ_DIR_IN,
+                    flags= gpiod.LINE_REQ_FLAG_ACTIVE_LOW,
+                    default_val=0)
 
-        if not self._pinmap['BUTTON1'].isNC:
-            self._pin_button1 = self._gpio_bus.get_pin(
-                    index=self._pinmap['BUTTON1'].gpiod_num,
-                    direction=gpio_bus.GPIO_Bus.DIR_INPUT,
-                    no_request=self._pinmap['BUTTON1'].noReq)
-        else:
-            self._pin_button1 = None
+        self._pin_app_rst = get_gpiod_line_byType(self._pin_ids['app_rst'])
+        if self._pin_app_rst is not None:
+            self._pin_app_rst.request(
+                    consumer='LOKI',
+                    type=gpiod.LINE_REQ_DIR_OUT,
+                    flags= gpiod.LINE_REQ_FLAG_ACTIVE_LOW,
+                    default_val=0)
 
-        if not self._pinmap['APP nPRESENT'].isNC:
-            self._pin_app_npres = self._gpio_bus.get_pin(
-                    index=self._pinmap['APP nPRESENT'].gpiod_num,
-                    direction=gpio_bus.GPIO_Bus.DIR_INPUT,
-                    no_request=self._pinmap['APP nPRESENT'].noReq)
-        else:
-            self._pin_app_npres = None
+        self._pin_per_rst = get_gpiod_line_byType(self._pin_ids['per_rst'])
+        if self._pin_per_rst is not None:
+            self._pin_per_rst.request(
+                    consumer='LOKI',
+                    type=gpiod.LINE_REQ_DIR_OUT,
+                    flags= gpiod.LINE_REQ_FLAG_ACTIVE_LOW,
+                    default_val=0)
 
-        if not self._pinmap['BACKPLANE nPRESENT'].isNC:
-            self._pin_bkpln_npres = self._gpio_bus.get_pin(
-                    index=self._pinmap['BACKPLANE nPRESENT'].gpiod_num,
-                    direction=gpio_bus.GPIO_Bus.DIR_INPUT,
-                    no_request=self._pinmap['BACKPLANE nPRESENT'].noReq)
-        else:
-            self._pin_bkpln_npres = None
+        #todo add more pins
 
-        if not self._pinmap['APPLICATION nRST'].isNC:
-            self._pin_app_nrst = self._gpio_bus.get_pin(
-                    index=self._pinmap['APPLICATION nRST'].gpiod_num,
-                    direction=gpio_bus.GPIO_Bus.DIR_OUTPUT,
-                    no_request=self._pinmap['APPLICATION nRST'].noReq)
-        else:
-            self._pin_app_nrst = None
+    def _gen_paramtree_dict(self):
 
-        if not self._pinmap['PERIPHERAL nRST'].isNC:
-            self._pin_per_nrst = self._gpio_bus.get_pin(
-                    index=self._pinmap['PERIPHERAL nRST'].gpiod_num,
-                    direction=gpio_bus.GPIO_Bus.DIR_OUTPUT,
-                    no_request=self._pinmap['PERIPHERAL nRST'].noReq)
-        else:
-            self._pin_per_nrst = None
-
-        if not self._pinmap['LED0'].isNC:
-            self._pin_led0 = self._gpio_bus.get_pin(
-                    index=self._pinmap['LED0'].gpiod_num,
-                    direction=gpio_bus.GPIO_Bus.DIR_OUTPUT,
-                    no_request=self._pinmap['LED0'].noReq)
-        else:
-            self._pin_led0 = None
-
-        if not self._pinmap['LED1'].isNC:
-            self._pin_led1 = self._gpio_bus.get_pin(
-                    index=self._pinmap['LED1'].gpiod_num,
-                    direction=gpio_bus.GPIO_Bus.DIR_OUTPUT,
-                    no_request=self._pinmap['LED1'].noReq)
-        else:
-            self._pin_led1 = None
-
-        if not self._pinmap['LED2'].isNC:
-            self._pin_led2 = self._gpio_bus.get_pin(
-                    index=self._pinmap['LED2'].gpiod_num,
-                    direction=gpio_bus.GPIO_Bus.DIR_OUTPUT,
-                    no_request=self._pinmap['LED2'].noReq)
-        else:
-            self._pin_led2 = None
-
-        if not self._pinmap['LED3'].isNC:
-            self._pin_led3 = self._gpio_bus.get_pin(
-                    index=self._pinmap['LED3'].gpiod_num,
-                    direction=gpio_bus.GPIO_Bus.DIR_OUTPUT,
-                    no_request=self._pinmap['LED3'].noReq)
-        else:
-            self._pin_led3 = None
-
-    def _gpiod_name_to_num(searchname):
-        # Parse gpioinfo to get a line number from the name provided by device tree.
-        gpioinfo = os.system('gpioinfo | grep {}'.format(_gpiod_name_to_num))
-        print(gpioinfo)
-        # todo
-
-    def _gen_paramtree(self):
-        self.base_tree = ParameterTree({
+        base_tree_dict = {
             'carrier_info': {
-                'variant': (lambda: self._variant, None, {"description": "Carrier variant"}),
+                'variant': (lambda: self.variant, None, {"description": "Carrier variant"}),
+                'extensions': (self.get_avail_extensions, None, {"description": "Comma separated list of carrier's supported extensions"}),
                 },
             'control': {
                 'application_enable': (self.get_app_enabled, self.set_app_enabled, {
@@ -323,83 +277,43 @@ class LokiCarrier():
                         }),
                     },
                 },
-            'clkgen': ParameterTree(self._gen_paramtree_clk()),
-            'dac': ParameterTree(self._gen_paramtree_dac()),
-            'environment': {
-                'temperature': ParameterTree(self._gen_paramtree_temp()),
-                'humidity': ParameterTree(self._gen_paramtree_hum()),
-                },
-            })
-
-    ####################
-    # Clock Generation #
-    ####################
-
-    # Returns a dictionary to be converted to a parameter tree, meaning it can be easily extended by a child
-    # class, which can optionally use the output of this base function or use its own unique implementation.
-    def _gen_paramtree_clk(self):
-        clk_tree_dict = {
-            'clock_setting_filename': (self.get_application_clock_file, self.set_application_clock_file, {
-                "description": "Set the clock configuration file",
-                }),
-            'clock_available_settings_files': (self.get_application_available_clock_settings, None, {
-                "description": "List of available clock settings files that can be specified for clock_setting_filename",
-                }),
-            }
-
-        return clk_tree_dict
-
-    def set_application_clock_file(self, filename):
-        raise Exception('Not implemented in base carrier adapter')
-
-    def get_application_clock_file(self):
-        raise Exception('Not implemented in base carrier adapter')
-
-    def get_application_available_clock_settings(self):
-        raise Exception('Not implemented in base carrier adapter')
-
-    #######
-    # DAC #
-    #######
-
-    def _gen_paramtree_dac(self):
-        dac_tree_dict = {
-            'num_outputs': (lambda: 0, None, {
-                "description": "Number of DAC outputs available to set",
-                }),
-            'outputs': {
-                # Outputs should take form: '<number>': (lambda: self.get_dac_output(<number>), lambda voltage: self.set_dac_output(<number>, voltage), ...
+             'environment': {
+                'temperature': {
+                    'zynq_pl': (lambda: self.get_zynq_ams_temp_cached('2_pl'), None, {
+                        "description": "Zynq SoC Programmable Logic Temperature",
+                        "units": "C",
+                        }),
+                    'zynq_ps': (lambda: self.get_zynq_ams_temp_cached('0_ps'), None, {
+                        "description": "Zynq SoC Processing System Temperature",
+                        "units": "C",
+                        }),
+                    'zynq_remote': (lambda: self.get_zynq_ams_temp_cached('1_remote'), None, {
+                        "description": "Zynq SoC Remote (?) Temperature",
+                        "units": "C",
+                        }),
+                    },
+                'humidity': {},
                 },
             }
 
-        return dac_tree_dict
+        print('Base tree generated')    # todo remove or make debug
+
+        return base_tree_dict
+
+    def get_avail_extensions(self):
+        return ', '.join(self._supported_extensions)
 
     ########################################
-    # Temperature  and Humidity Monitoring #
+    # Built-in Zynq Temperature Monitoring #
     ########################################
-
-    def _gen_paramtree_temp(self):
-        temp_tree_dict = {
-            'zynq_pl': (lambda: self.get_zynq_ams_temp_cached('2_pl'), None, {
-                "description": "Zynq SoC Programmable Logic Temperature",
-                "unit": "C",
-                }),
-            'zynq_ps': (lambda: self.get_zynq_ams_temp_cached('0_ps'), None, {
-                "description": "Zynq SoC Processing System Temperature",
-                "unit": "C",
-                }),
-            'zynq_remote': (lambda: self.get_zynq_ams_temp_cached('1_remote'), None, {
-                "description": "Zynq SoC Remote (?) Temperature",
-                "unit": "C",
-                }),
-            # Add more temperatures in child carrier
-            }
-
-        return temp_tree_dict
 
     def get_zynq_ams_temp_cached(self, temp_name):
         # These AMS temperatures should by synced by the deadslow loop. Latest readings returned externally.
-        return self._zynq_ams[temp_name]
+        # todo hasattr is kind of a dirty fix
+        if hasattr(self, '_zynq_ams'):
+            return self._zynq_ams[temp_name]
+        else:
+            return None
 
     def _get_zynq_ams_temp_raw(self, temp_name):
         with open('/sys/bus/iio/devices/iio:device0/in_temp{}_temp_raw'.format(temp_name), 'r') as f:
@@ -415,24 +329,22 @@ class LokiCarrier():
 
     def _get_zynq_ams_temps_raw(self):
         # todo call this in deadslow loop
+        if not hasattr(self, '_zynq_ams'):
+            self._zynq_ams = {}
         for ams_name in ['0_ps', '1_remote', '2_pl']:
             self._zynq_ams[ams_name] = self._get_zynq_ams_temp_raw(ams_name)
-
-    def _gen_paramtree_hum(self):
-        # No default humidity readings, but reserved for adding them in future. Child can still add sensors.
-        hum_tree_dict = {}
-
-        return hum_tree_dict
 
     #############################
     # Application Control Lines #
     #############################
 
     def get_backplane_present(self):
-        return bool(self._pin_bkpln_npres.get_value() == 0)
+        # todo use a cached value
+        return bool(self._pin_bkpln_present.get_value() == 1)
 
     def get_app_present(self):
-        return bool(self._pin_app_npres.get_value() == 0)
+        # todo use a cached value
+        return bool(self._pin_app_present.get_value() == 1)
 
     def get_button_state_raw(self, button_num):
         try:
@@ -448,25 +360,30 @@ class LokiCarrier():
             else:
                 raise
 
-    def get_button_state_cached(self, button_num):
+    def get_button_state(self, button_num):
         # todo
         pass
 
     def _sync_enable_states(self):
-        self._app_enabled = bool(self._pin_app_nrst.get_value() == 0)
-        self._prehiperals_enabled = bool(self._pin_per_nrst.get_value() == 0)
+        self._app_enabled = bool(self._pin_app_rst.get_value() == 1)
+        self._peripherals_enabled = bool(self._pin_per_rst.get_value() == 1)
 
     def set_app_enabled(self, enable=True):
-        self._pin_app_nrst.set_value(not(enable))
+        self._pin_app_rst.set_value(enable)
         self._sync_enable_states()
 
     def get_app_enabled(self):
+        if not hasattr(self, '_app_enabled'):
+            self._sync_enable_states()
         return self._app_enabled
 
     def set_peripherals_enabled(self, enable=True):
-        self._pin_per_nrst.set_value(not(enable))
+        self._pin_per_rst.set_value(not(enable))
         self._sync_enable_states()
+
     def get_peripherals_enabled(self):
+        if not hasattr(self, '_peripherals_enabled'):
+            self._sync_enable_states()
         return self._peripherals_enabled
 
     def set_led(self, led_num, on=True, switchedLow=True):
@@ -492,7 +409,7 @@ class LokiCarrier():
                 raise
         raise Exception ('Not implemented in base carrier adapter')
 
-    def get_led_cached(self, led_num):
+    def get_led(self, led_num):
         # todo
         pass
 
@@ -507,9 +424,152 @@ class LokiCarrier():
         # Returns a dictionary of buses to be used by the application. At least implement 'PERIPHERAL'.
         raise Exception('Not implemented in base carrier adapter')
 
-    def get_gpio_bus(self):
-        return self.gpio_bus_app
 
+####################
+# Clock Generation #
+####################
+
+class LokiCarrierClockgen(LokiCarrier, ABC):
+    def __init__(self, **kwargs):
+        # Call next in MRO / Base Class
+        super(LokiCarrierClockgen, self).__init__(**kwargs)
+
+        self.__clkgen_default_config = kwargs.get('clkgen_default_config')
+        # todo Use this after init later on
+
+        # todo register the device with the carrier power control system
+
+        self._supported_extensions.append('clkgen')
+
+    def _gen_paramtree_dict(self):
+        base_tree = super(LokiCarrierClockgen, self)._gen_paramtree_dict()
+
+        base_tree['clkgen'] = {
+                'drivername' : (lambda: self.clkgen_drivername, None, {"description": "Name of the device providing clock generator support"}),
+                'num_outputs' : (lambda: self.clkgen_numchannels, None, {"description": "Number of output channels available"}),
+                'config_file' : (self.clkgen_get_config, self.clkgen_set_config, {"description": "Current configuration file loaded for clock config"}),
+                'confing_files_avail' : (self.clkgen_get_config_avail, None, {"description": "Available config files to choose from"}),
+                }
+
+        return base_tree
+
+    @property
+    @abstractmethod
+    def clkgen_drivername(self):
+        pass
+
+    @property
+    @abstractmethod
+    def clkgen_numchannels(self):
+        pass
+
+    @abstractmethod
+    def clkgen_set_config(self, filename):
+        pass
+
+    @abstractmethod
+    def clkgen_get_config(self):
+        pass
+
+    @abstractmethod
+    def clkgen_get_config_avail(self):
+        pass
+
+
+#######
+# DAC #
+#######
+
+class LokiCarrierDAC(LokiCarrier, ABC):
+    def __init__(self, **kwargs):
+        # Call next in MRO / Base Class
+        super(LokiCarrierDAC, self).__init__(**kwargs)
+
+        self._supported_extensions.append('dac')
+
+    def _gen_paramtree_dict(self):
+        base_tree = super(LokiCarrierDAC, self)._gen_paramtree_dict()
+
+        output_tree = {}
+        # This property is enforced as generated by the child
+        # this probably won't work, see how I did it with the firefly channels before (double lambda...)
+        for output_num in range(0, self.dac_num_outputs):
+            output_tree[str(output_num)] = (
+                    lambda: self.dac_get_output(output_num),
+                    lambda: self.dac_set_output(output_num),
+                    {"description": "Get / Set DAC output value", "units": "v"})
+
+        base_tree['dac'] = {
+                'drivername': (
+                    lambda: self.clkgen_drivername,
+                    None,
+                    {"description": "Name of the device providing clock generator support"}),
+                'num_outputs': (
+                    lambda: self.clkgen_numchannels,
+                    None,
+                    {"description": "Number of output channels available"}),
+                'outputs': output_tree,
+                }
+
+        return base_tree
+
+    @property
+    @abstractmethod
+    def dac_num_outputs(self):
+        pass
+
+    @abstractmethod
+    def dac_set_output(self, output_num, voltage):
+        pass
+
+    @abstractmethod
+    def dac_get_output(self, output_num):
+        pass
+
+########################################
+# Temperature  and Humidity Monitoring #
+########################################
+
+class LokiCarrierEnvmonitor(LokiCarrier, ABC):
+    def __init__(self, **kwargs):
+        # Call next in MRO / Base Class
+        super(LokiCarrierEnvmonitor, self).__init__(**kwargs)
+
+        self._supported_extensions.append('dac')
+
+    def _gen_paramtree_dict(self):
+        base_tree = super(LokiCarrierEnvmonitor, self)._gen_paramtree_dict()
+
+        # Expects this to be a list of (name, type, unit) tuples.
+        # Type is typically 'temperature' or 'humidity'.
+        # info is the dictionary passed to the paramtree including description, units etc.
+        additional_sensors = self.env_sensor_info
+        for (name, sType, info) in additional_sensors:
+            # Create the new key if it does not exist for the sensor type, with a blank dictionary
+            base_tree['environment'].setdefault(sType, {})
+
+            # Add the sensor entry with its specific info
+            base_tree['environment'][sType] = (lambda: self.env_get_sensor(name), None, info)
+
+        return base_tree
+
+    def _gen_paramtree_temp(self):
+        temp_tree_dict = {
+            # Add more temperatures in child carrier
+            }
+
+        return temp_tree_dict
+
+    # dict, see above
+    @property
+    @abstractmethod
+    def env_additional_sensors(self):
+        pass
+
+    # Get the (cached) version of a sensor reading that can be read as often as desired
+    @abstractmethod
+    def env_get_sensor(self, name):
+        pass
 
 class LokiCarrier_TEBF0808(LokiCarrier):
     # Special case; as a prototype with minimal support for devices alone. Should be combined with an
@@ -527,9 +587,13 @@ class LokiCarrier_TEBF0808(LokiCarrier):
             'LED2': LokiCarrier.PinMapping(     'LED2',                 None,       False,      False,      True    ),
             'LED3': LokiCarrier.PinMapping(     'LED3',                 None,       False,      False,      True    ),
     }
-    _variant = 'tebf0808'
+    # Alter LED0 to be on the on-board LED
+    variant = 'tebf0808'
 
     def __init__(self, **kwargs):
+        # Set the pin for LED0 to on-board LED, unless already overridden in settings
+        kwargs.setdefault('pin_led0', 'MIO40')
+
         super(LokiCarrier_TEBF0808, self).__init__(**kwargs)
 
     def get_interface_spi(self):
@@ -544,11 +608,45 @@ class LokiCarrier_TEBF0808(LokiCarrier):
 #############################################
 
 # First iteration of the new carrier for LOKI
-class LokiCarrier_1v0(LokiCarrier):
-    _variant = 'LOKI 1v0'
+class LokiCarrier_1v0(LokiCarrierClockgen, LokiCarrierDAC, LokiCarrier):
+    variant = 'LOKI 1v0'
+    clkgen_drivername = 'SI5345'
+    clkgen_numchannels = 10
+    dac_num_outputs = 10
 
     def __init__(self, **kwargs):
+        self.__clkgen_current_config = None
+        self.__dac_outputval = {}
+
         super(LokiCarrier_1v0, self).__init__(**kwargs)
+
+        #self.__clkgen_current_config = self.__clkgen_default_config
+
+    def clkgen_get_config(self):
+        # todo
+        return self.__clkgen_current_config
+        pass
+
+    def clkgen_set_config(self, configname):
+        print ('Setting clock configuration from {}'.format(configname))
+        self.__clkgen_current_config = configname
+        # todo actually set the config
+        pass
+
+    def clkgen_get_config_avail(self):
+        # todo
+        pass
+
+    def dac_get_output(self, output_num):
+        return self.__dac_outputval.get('output_num', 'No Data')
+        # todo
+        pass
+
+    def dac_set_output(self, output_num, voltage):
+        print ('Setting DAC output {} to {}'.format(output_num, voltage))
+        self.__dac_outputval[output_num] = voltage
+        # todo
+        pass
 
 
 #######################################################################
@@ -571,24 +669,4 @@ class LokiAdapter_MERCURY(LokiAdapter):
         else:
             super(LokiAdapter_MERCURY, self).instantiate_carrier(carrier_type)
 
-
-# This is a special case derived carrier for the control of the original prototype. This application-specific
-# hardware is out of scope for LOKI, however is still included since it shares so many similarities (the LOKI
-# carrier being based on it). Future application-specific odin instances should create a supplimentary adapter
-# for their own daughter board, using interfaces provided via the generic LOKICarrier_TEBF0808 class for access
-# to things like I2C, SPI, and GPIO specifics.
-class LokiCarrier_TEBF0808_MERCURY(LokiCarrier_TEBF0808):
-    _variant = 'tebf0808_MERCURY'
-
-    def __init__(self, **kwargs):
-        super(LokiCarrier_TEBF0808_MERCURY, self).__init__(**kwargs)
-
-        # todo request additional pins for daughter carrier-specific functionality functionality. However, leave out ASIC and application specifics. Try and keep 'generic'. This will be practice for loki 1v0...
-        # todo add device drivers and hook them to power events for application and peripherals (VREG)
-
-    def _gen_paramtree_clk(self):
-        original_tree = super(LokiCarrier_TEBF0808_MERCURY, self)
-
-        # todo this is a proof of concept that is pointless, remove it eventually. More useful for exposing functionality only available for this device, like stepping freqs etc
-        original_tree['drivername'] = 'si5344'
 

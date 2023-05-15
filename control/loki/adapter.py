@@ -7,10 +7,9 @@ from odin.adapters.async_adapter import AsyncApiAdapter
 from odin.adapters.parameter_tree import ParameterTree
 
 import logging
-import os
 import gpiod
-# import concurrent.futures as futures
-from odin_devices import gpio_bus
+import time
+import concurrent.futures as futures
 
 from abc import ABC, abstractmethod
 
@@ -40,6 +39,7 @@ Current methods to include in an application project:
         Seen LokiAdapter_MERCURY and LokiCarrier_TEBF0808_MERCURY.
 
 '''
+
 
 class LokiAdapter(AsyncApiAdapter):
 
@@ -111,14 +111,29 @@ class LokiCarrier(ABC):
         # todo
 
         # Get the current state of the enables before starting the state machines
-        #self._sync_enable_states()
         # todo
 
         # Create device handlers but do not init
         # todo
 
         # Set up state machines and timer loops (potentially in carrier)
-        # todo
+        # todo, consider moving base call into adapter for once other adapters are initialised
+        print('starting IO loops')
+        self._start_io_loops(kwargs)
+        print('IO loops started')
+
+    def _start_io_loops(self, options):
+        # This function can be extended by the extension LokiCarrier classes if they would benefit from async loops.
+        # However, make sure that super is called in each.
+        self._thread_executor = futures.ThreadPoolExecutor(max_workers=None)
+
+        self._thread_gpio = self._thread_executor.submit(self._loop_gpiosync)
+        self._thread_ams = self._thread_executor.submit(self._get_zynq_ams_temps_raw)
+
+    def _loop_gpiosync(self):
+        while True:
+            self._pin_handler.sync_pin_value_cache()
+            time.sleep(0.1)
 
     @property
     @abstractmethod
@@ -164,6 +179,16 @@ class LokiCarrier(ABC):
             pin = self.get_pin(friendly_name)
             return pin.direction() == pin.DIRECTION_INPUT
 
+        def sync_pin_value_cache(self, sync_output_pins=False):
+            # Updates the cached pin values from gpio lines directly. Works only for input pins by default,
+            # unless sync_output_pins=True is set. Should ideally be called by an asynchronous update loop.
+            for pin_name in self._pins.keys():
+                # By default, only syncs the inputs pins, unless sync_output_pins is specified
+                if self.is_pin_input(pin_name) or sync_output_pins:
+                    self._pin_states_cached.update({pin_name: self.get_pin(pin_name).get_value()}) 
+
+            print('pins updated')
+
         def get_pin_value(self, friendly_name):
             # Inputs pins should always be read, as they can change value without intervention. Outputs should
             # prioritise a cached value if available.
@@ -180,8 +205,8 @@ class LokiCarrier(ABC):
                 return self._pin_states_cached.get(friendly_name)
 
         def set_pin_value(self, friendly_name, value):
-            # If in output mode, raise an error
-            if self.is_pin_input(friendly_name):
+            # If in input mode, raise an error
+            if not self.is_pin_input(friendly_name):
                 # Set the pin and cache for later
                 self.get_pin(friendly_name).set_value(value)
                 self._pin_states_cached[friendly_name] = value
@@ -202,10 +227,10 @@ class LokiCarrier(ABC):
 
             # Request the pin with given settings
             line.request(
-                    consumer=self._consumername,
-                    type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
-                    flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0),
-                    default_val=0)
+                consumer=self._consumername,
+                type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
+                flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0),
+                default_val=0)
 
             # Store the pin by friendly name
             self._pins[friendly_name] = line
@@ -294,10 +319,10 @@ class LokiCarrier(ABC):
             options.setdefault('pin_config_active_low_' + friendly_name, active_low)
 
         # Set defaults for generic control pins, use gpiod pin names from device tree rather than numbers
-        set_pin_options('app_present',  'APP nPRESENT',             is_input=True,  active_low=True)
-        set_pin_options('bkpln_present',  'BACKPLANE nPRESENT',     is_input=True,  active_low=True)
-        set_pin_options('app_rst',  'APPLICATION nRST',             is_input=False, active_low=True)
-        set_pin_options('per_rst',  'PERIPHERAL nRST',              is_input=False, active_low=True)
+        set_pin_options('app_present',      'APP nPRESENT',         is_input=True,  active_low=True)
+        set_pin_options('bkpln_present',    'BACKPLANE nPRESENT',   is_input=True,  active_low=True)
+        set_pin_options('app_rst',          'APPLICATION nRST',     is_input=False, active_low=True)
+        set_pin_options('per_rst',          'PERIPHERAL nRST',      is_input=False, active_low=True)
 
     def _gen_paramtree_dict(self):
 
@@ -305,43 +330,43 @@ class LokiCarrier(ABC):
             'carrier_info': {
                 'variant': (lambda: self.variant, None, {"description": "Carrier variant"}),
                 'extensions': (self.get_avail_extensions, None, {"description": "Comma separated list of carrier's supported extensions"}),
-                },
+            },
             'control': {
                 'application_enable': (self.get_app_enabled, self.set_app_enabled, {
                     "description": "Enable the application",
-                    }),
+                }),
                 'peripherals_enable': (self.get_peripherals_enabled, self.set_peripherals_enabled, {
                     "description": "Enable the application",
-                    }),
+                }),
                 'presence_detection': {
                     'application': (self.get_app_present, None, {
                         "description": "True if the application is mounted",
-                        }),
+                    }),
                     'backplane': (self.get_backplane_present, None, {
                         "description": "True if the backplane is mounted",
-                        }),
-                    },
+                    }),
                 },
+            },
             'user_interaction': {
-                },
-             'environment': {
+            },
+            'environment': {
                 'temperature': {
                     'zynq_pl': (lambda: self.get_zynq_ams_temp_cached('2_pl'), None, {
                         "description": "Zynq SoC Programmable Logic Temperature",
                         "units": "C",
-                        }),
+                    }),
                     'zynq_ps': (lambda: self.get_zynq_ams_temp_cached('0_ps'), None, {
                         "description": "Zynq SoC Processing System Temperature",
                         "units": "C",
-                        }),
+                    }),
                     'zynq_remote': (lambda: self.get_zynq_ams_temp_cached('1_remote'), None, {
                         "description": "Zynq SoC Remote (?) Temperature",
                         "units": "C",
-                        }),
-                    },
-                'humidity': {},
+                    }),
                 },
-            }
+                'humidity': {},
+            },
+        }
 
         print('Base tree generated')    # todo remove or make debug
 
@@ -372,7 +397,7 @@ class LokiCarrier(ABC):
         with open('/sys/bus/iio/devices/iio:device0/in_temp{}_temp_scale'.format(temp_name), 'r') as f:
             temp_scale = float(f.read())
 
-        return round(((temp_raw+temp_offset)*temp_scale)/1000, 2)
+        return round(((temp_raw + temp_offset) * temp_scale) / 1000, 2)
 
     def _get_zynq_ams_temps_raw(self):
         # todo call this in deadslow loop
@@ -437,7 +462,7 @@ class LokiCarrierLEDs(LokiCarrier, ABC):
         for friendly_name in self.leds_namelist:
             # Assume that the ID has already been set in the carrier
             options.setdefault('pin_config_is_input_' + friendly_name, False)
-            options.setdefault('pin_config_active_low_' + friendly_name, True) # Override if necesary
+            options.setdefault('pin_config_active_low_' + friendly_name, True)  # Override if necesary
 
     def _gen_paramtree_dict(self):
         base_tree = super(LokiCarrierLEDs, self)._gen_paramtree_dict()
@@ -448,9 +473,10 @@ class LokiCarrierLEDs(LokiCarrier, ABC):
         # Add each LED with its friendly name to the parameter tree
         for friendly_name in self.leds_namelist:
             base_tree['user_interaction']['leds'][friendly_name] = (
-                    lambda: self.leds_get_led(friendly_name),
-                    lambda value: self.leds_set_led(friendly_name, bool(value)),
-                    {"description": "LED control"})
+                (lambda friendly_name_internal: lambda: self.leds_get_led(friendly_name_internal))(friendly_name),
+                (lambda friendly_name_internal: lambda value: self.leds_set_led(friendly_name_internal, bool(value)))(friendly_name),
+                {"description": "LED control"}
+            )
 
         return base_tree
 
@@ -503,9 +529,10 @@ class LokiCarrierButtons(LokiCarrier, ABC):
         # Add each button with its friendly name to the parameter tree
         for friendly_name in self.buttons_namelist:
             base_tree['user_interaction']['buttons'][friendly_name] = (
-                    lambda: self.leds_get_led(friendly_name),
-                    None,
-                    {"description": "Carrier button state"})
+                (lambda friendly_name_internal: lambda: self.leds_get_led(friendly_name_internal))(friendly_name),
+                None,
+                {"description": "Carrier button state"}
+            )
 
         return base_tree
 
@@ -542,11 +569,11 @@ class LokiCarrierClockgen(LokiCarrier, ABC):
         base_tree = super(LokiCarrierClockgen, self)._gen_paramtree_dict()
 
         base_tree['clkgen'] = {
-                'drivername': (lambda: self.clkgen_drivername, None, {"description": "Name of the device providing clock generator support"}),
-                'num_outputs': (lambda: self.clkgen_numchannels, None, {"description": "Number of output channels available"}),
-                'config_file': (self.clkgen_get_config, self.clkgen_set_config, {"description": "Current configuration file loaded for clock config"}),
-                'confing_files_avail': (self.clkgen_get_config_avail, None, {"description": "Available config files to choose from"}),
-                }
+            'drivername': (lambda: self.clkgen_drivername, None, {"description": "Name of the device providing clock generator support"}),
+            'num_outputs': (lambda: self.clkgen_numchannels, None, {"description": "Number of output channels available"}),
+            'config_file': (self.clkgen_get_config, self.clkgen_set_config, {"description": "Current configuration file loaded for clock config"}),
+            'confing_files_avail': (self.clkgen_get_config_avail, None, {"description": "Available config files to choose from"}),
+        }
 
         return base_tree
 
@@ -592,27 +619,31 @@ class LokiCarrierDAC(LokiCarrier, ABC):
         # this probably won't work, see how I did it with the firefly channels before (double lambda...)
         for output_num in range(0, self.dac_num_outputs):
             output_tree[str(output_num)] = (
-                    lambda: self.dac_get_output(output_num),
-                    lambda: self.dac_set_output(output_num),
-                    {"description": "Get / Set DAC output value", "units": "v"})
+                # Protect the scope of output_num_internal so that it does not change between loops
+                (lambda output_num_internal: lambda: self.dac_get_output(output_num_internal))(output_num),
+                (lambda output_num_internal: lambda voltage: self.dac_set_output(output_num_internal, voltage))(output_num),
+                {"description": "Get / Set DAC output value", "units": "v"}
+            )
 
         base_tree['dac'] = {
-                'drivername': (
-                    lambda: self.dac_drivername,
-                    None,
-                    {"description": "Name of the device providing clock generator support"}),
-                'num_outputs': (
-                    lambda: self.dac_num_outputs,
-                    None,
-                    {"description": "Number of output channels available"}),
-                'outputs': output_tree,
-                }
+            'drivername': (
+                lambda: self.dac_drivername,
+                None,
+                {"description": "Name of the device providing clock generator support"}
+            ),
+            'num_outputs': (
+                lambda: self.dac_num_outputs,
+                None,
+                {"description": "Number of output channels available"}
+            ),
+            'outputs': output_tree,
+        }
 
         return base_tree
 
     @property
     @abstractmethod
-    def dac_driver_name(self):
+    def dac_drivername(self):
         pass
 
     @property
@@ -651,8 +682,8 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
             # Create the new key if it does not exist for the sensor type, with a blank dictionary
             base_tree['environment'].setdefault(sType, {})
 
-            # Add the sensor entry with its specific info
-            base_tree['environment'][sType] = (lambda: self.env_get_sensor(name), None, info)
+            # Add the sensor entry with its specific info, protecting scope of name_internal
+            base_tree['environment'][sType] = ((lambda name_internal: lambda: self.env_get_sensor(name_internal))(name), None, info)
 
         return base_tree
 
@@ -748,18 +779,18 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
 # A class designed to exactly mimic the base adapter class, but provide suporrt for a custom LokiCarrier class
 # providing additional functionality present on the ASIC carrier that aligns with functionality provided by the
 # new carrier on-board.
-class LokiAdapter_MERCURY(LokiAdapter):
-
-    def __init__(self, **kwargs):
-        # Init superclass
-        super(LokiAdapter_MERCURY, self).__init__(**kwargs)
-
-    def instantiate_carrier(self, carrier_type):
-        # Add support for new carrier, otherwise default to those supported as standard
-        if carrier_type == 'tebf0808_mercury':
-            self._carrier = LokiCarrier_TEBF0808_MERCURY(self.options)
-        else:
-            super(LokiAdapter_MERCURY, self).instantiate_carrier(carrier_type)
+####class LokiAdapter_MERCURY(LokiAdapter):
+####
+####    def __init__(self, **kwargs):
+####        # Init superclass
+####        super(LokiAdapter_MERCURY, self).__init__(**kwargs)
+####
+####    def instantiate_carrier(self, carrier_type):
+####        # Add support for new carrier, otherwise default to those supported as standard
+####        if carrier_type == 'tebf0808_mercury':
+####            self._carrier = LokiCarrier_TEBF0808_MERCURY(self.options)
+####        else:
+####            super(LokiAdapter_MERCURY, self).instantiate_carrier(carrier_type)
 
 
 # This is a special case derived carrier for the control of the original prototype. This application-specific

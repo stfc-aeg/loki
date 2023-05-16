@@ -6,6 +6,8 @@ from odin.adapters.async_adapter import AsyncApiAdapter
 from odin.adapters.parameter_tree import ParameterTreeError
 from odin.adapters.parameter_tree import ParameterTree
 
+from odin_devices.max5306 import MAX5306
+
 import logging
 import gpiod
 import time
@@ -229,11 +231,14 @@ class LokiCarrier(ABC):
                     pin_id, friendly_name))
 
             # Request the pin with given settings
-            line.request(
-                consumer=self._consumername,
-                type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
-                flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0),
-                default_val=0)
+            try:
+                line.request(
+                    consumer=self._consumername,
+                    type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
+                    flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0),
+                    default_val=0)
+            except Exception as e:
+                raise RuntimeError('could not request line {}: {}'.format(line, e))
 
             # Store the pin by friendly name
             self._pins[friendly_name] = line
@@ -735,6 +740,11 @@ class LokiCarrierDAC(LokiCarrier, ABC):
                 None,
                 {"description": "Number of output channels available"}
             ),
+            'status': (
+                self.dac_get_status,
+                None,
+                {"description": "Give some feedback on the device status, errors etc"},
+            ),
             'outputs': output_tree,
         }
 
@@ -756,6 +766,10 @@ class LokiCarrierDAC(LokiCarrier, ABC):
 
     @abstractmethod
     def dac_get_output(self, output_num):
+        pass
+
+    @abstractmethod
+    def dac_get_status(self):
         pass
 
 
@@ -797,19 +811,20 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
     def env_get_sensor(self, name):
         pass
 
+# todo add power monitor class
 
-class LokiCarrier_TEBF0808(LokiCarrierLEDs, LokiCarrier):
+class LokiCarrier_TEBF0808(LokiCarrier):
     # Special case; as a prototype with minimal support for devices alone. Should be combined with an
     # application-specific adapter for the associated daughter board, which relies on interfaces provided
     # by this adapter (buses, GPIO pins). This second adapter will need to implement things like clock
     # config, etc.
 
     variant = 'tebf0808'
-    leds_namelist = ['led0']
+    #leds_namelist = ['led0']
 
     def __init__(self, **kwargs):
         # Set the pin for LED0 to on-board LED, unless already overridden in settings
-        kwargs.setdefault('pin_config_id_led0', 'MIO40')
+        #kwargs.setdefault('pin_config_id_led0', 'MIO40')
 
         super(LokiCarrier_TEBF0808, self).__init__(**kwargs)
 
@@ -853,17 +868,13 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
 
         super(LokiCarrier_1v0, self).__init__(**kwargs)
 
-        #self.__clkgen_current_config = self.__clkgen_default_config
-
     def clkgen_get_config(self):
         # todo
-        return self.__clkgen_current_config
         pass
 
     def clkgen_set_config(self, configname):
         print('Setting clock configuration from {}'.format(configname))
-        self.__clkgen_current_config = configname
-        # todo actually set the config
+        # todo
         pass
 
     def clkgen_get_config_avail(self):
@@ -908,18 +919,119 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
 # carrier being based on it). Future application-specific odin instances should create a supplimentary adapter
 # for their own daughter board, using interfaces provided via the generic LOKICarrier_TEBF0808 class for access
 # to things like I2C, SPI, and GPIO specifics.
-####class LokiCarrier_TEBF0808_MERCURY(LokiCarrier_TEBF0808):
-####    variant = 'tebf0808_MERCURY'
-####
-####    def __init__(self, **kwargs):
-####        super(LokiCarrier_TEBF0808_MERCURY, self).__init__(**kwargs)
-####
-####        # todo request additional pins for daughter carrier-specific functionality functionality. However, leave out ASIC and application specifics. Try and keep 'generic'. This will be practice for loki 1v0...
-####        # todo add device drivers and hook them to power events for application and peripherals (VREG)
-####
-####    def _gen_paramtree_clk(self):
-####        original_tree = super(LokiCarrier_TEBF0808_MERCURY, self)
-####
-####        # todo this is a proof of concept that is pointless, remove it eventually. More useful for exposing functionality only available for this device, like stepping freqs etc
-####        original_tree['drivername'] = 'si5344'
+class LokiCarrier_TEBF0808_MERCURY(LokiCarrierClockgen, LokiCarrierDAC, LokiCarrier_TEBF0808):
+    variant = 'tebf0808_MERCURY'
+    clkgen_drivername = 'SI5344'
+    clkgen_numchannels = 4
+    dac_drivername = 'MAX5306'
+    dac_num_outputs = 10
 
+    # Although these interfaces are present, the boundary of the 'application' does not really exist, since
+    # the COB devices are being considered part of the carrier itself.
+    _application_interfaces_spi = {
+    }
+    _application_interfaces_i2c = {
+    }
+
+    class DeviceHandler():
+        # To help keep track of device availability. Can also be used as a place to track state
+        # for different devices.
+        def __init__(self, device=None):
+            self.device = device
+            self.reset()
+
+        def useable(self):
+            return (self.available and self.initialised)
+
+        def reset(self):
+            # Set both available and initialised low, requires new init.
+            self.available = False
+            self.initialised = False
+            self.error = False
+            self.error_message = False
+
+    def __init__(self, **kwargs):
+        # Gather settings for MAX5306 DAC
+        self._max5306 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler()
+        self._max5306.vref = kwargs.get('max5306_reference', 2.048)
+        self._max5306.spidev = kwargs.get('max5306_spidev', (1, 1))
+
+        super(LokiCarrier_TEBF0808_MERCURY, self).__init__(**kwargs)
+
+        self.register_change_callback('peripheral_enable', self.onChange_periph_en)
+        self.register_change_callback('application_enable', self.onChange_app_en)
+
+        # todo request additional pins for daughter carrier-specific functionality functionality. However, leave out ASIC and application specifics. Try and keep 'generic'. This will be practice for loki 1v0...
+        # todo add device drivers and hook them to power events for application and peripherals (VREG)
+
+    def onChange_periph_en(self, state):
+        if state is True:
+            # Init the max5306
+            self._config_max5306()
+
+            # todo other device
+        else:
+            # on this particular carrier, having the periph en low (VREG_EN) will also disable the ASIC, so perform the same actions
+            self.onChange_app_en(False)
+
+            # For some devices, low VREG_EN simply disables contact with them (due to level shifters)
+
+            # For other devices, low VREG_EN resets the device, meaning a new init will be required.
+            self._max5306.reset()
+
+            # todo other devices
+
+    def onChange_app_en(self, state):
+        if state is True:
+            pass
+        else:
+            pass
+
+    def clkgen_get_config(self):
+        # todo could this actually just go in the clkgen class? Maybe not common enough.
+        pass
+
+    def clkgen_set_config(self, configname):
+        print('Setting clock configuration from {}'.format(configname))
+        pass
+
+    def clkgen_get_config_avail(self):
+        # todo
+        pass
+
+    def dac_get_output(self, output_num):
+        if self._max5306.useable():
+            # Return the last setting of the DAC, assuming that it is correct and unchanged
+            return self._max5306.last_setting.get(output_num, 'unset')
+        elif self._max5306.initialised:
+            return 'Not available'
+
+    def dac_set_output(self, output_num, voltage):
+        if self._max5306.useable():
+            #self._max5306.device.set_output(output_num, voltage)
+            print('Setting DAC output {} to {}'.format(output_num, voltage))
+            self._max5306.last_setting.update({output_num: voltage})
+        else:
+            raise Exception('Could not set MAX5306, not available')
+
+    def dac_get_status(self):
+        return ('Available: {}, Initialised: {}, Error: {}'.format(
+            self._max5306.available, self._max5306.initialised, self._max5306.error_message
+        ))
+
+    def _config_max5306(self):
+        # Attempt init, but on failure log error and continue
+        try:
+            max5306_bus, max5306_device = self._max5306.spidev
+            self._max5306.device = MAX5306(self._max5306.vref, bus=max5306_bus, device=max5306_device)
+
+            self._max5306.last_setting = {}
+
+            self._max5306.available = True
+            self._max5306.initialised = True
+        except Exception as e:
+            logging.error('Failed to init MAX5306: {}'.format(e))
+            self._max5306.available = False
+            self._max5306.initialised = False
+            self._max5306.error = True
+            self._max5306.error_message = e

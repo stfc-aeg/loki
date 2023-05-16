@@ -3,7 +3,7 @@ from tornado.ioloop import IOLoop
 # from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types, wants_metadata
 from odin.adapters.async_adapter import AsyncApiAdapter
 # from odin._version import get_versions
-# from odin.adapters.parameter_tree import ParameterTreeError
+from odin.adapters.parameter_tree import ParameterTreeError
 from odin.adapters.parameter_tree import ParameterTree
 
 import logging
@@ -128,12 +128,17 @@ class LokiCarrier(ABC):
         self._thread_executor = futures.ThreadPoolExecutor(max_workers=None)
 
         self._thread_gpio = self._thread_executor.submit(self._loop_gpiosync)
-        self._thread_ams = self._thread_executor.submit(self._get_zynq_ams_temps_raw)
+        self._thread_ams = self._thread_executor.submit(self._loop_ams)
 
     def _loop_gpiosync(self):
         while True:
             self._pin_handler.sync_pin_value_cache()
             time.sleep(0.1)
+
+    def _loop_ams(self):
+        while True:
+            self._get_zynq_ams_temps_raw()
+            time.sleep(5)
 
     @property
     @abstractmethod
@@ -147,7 +152,6 @@ class LokiCarrier(ABC):
         # flag for active_low. If additional functionality is required (e.g. events) implement separately.
 
         def __init__(self, consumername='LOKI'):
-            pass
             self._pins = {}
             self._pin_states_cached = {}
             self._consumername = consumername
@@ -186,8 +190,6 @@ class LokiCarrier(ABC):
                 # By default, only syncs the inputs pins, unless sync_output_pins is specified
                 if self.is_pin_input(pin_name) or sync_output_pins:
                     self._pin_states_cached.update({pin_name: self.get_pin(pin_name).get_value()}) 
-
-            print('pins updated')
 
         def get_pin_value(self, friendly_name):
             # Inputs pins should always be read, as they can change value without intervention. Outputs should
@@ -375,6 +377,20 @@ class LokiCarrier(ABC):
     def get_avail_extensions(self):
         return ', '.join(self._supported_extensions)
 
+    def get(self, path, wants_metadata=False):
+        """Main get method for the parameter tree"""
+        try:
+            return self._paramtree.get(path, wants_metadata)
+        except AttributeError:
+            raise ParameterTreeError
+
+    def set(self, path, data):
+        """Main set method for the parameter tree"""
+        try:
+            return self._paramtree.set(path, data)
+        except AttributeError:
+            raise ParameterTreeError
+
     ########################################
     # Built-in Zynq Temperature Monitoring #
     ########################################
@@ -383,7 +399,7 @@ class LokiCarrier(ABC):
         # These AMS temperatures should by synced by the deadslow loop. Latest readings returned externally.
         # todo hasattr is kind of a dirty fix
         if hasattr(self, '_zynq_ams'):
-            return self._zynq_ams[temp_name]
+            return self._zynq_ams.get(temp_name)
         else:
             return None
 
@@ -482,10 +498,10 @@ class LokiCarrierLEDs(LokiCarrier, ABC):
 
     # LED setting is just gpio interaction, therefore does not need custom implementation per carrier
     def leds_get_led(self, friendly_name):
-        self._pin_handler.get_pin_value(friendly_name)
+        return self._pin_handler.get_pin_value(friendly_name)
 
     def leds_set_led(self, friendly_name, value):
-        self._pin_handler.set_pin_value(friendly_name, value)
+        return self._pin_handler.set_pin_value(friendly_name, value)
 
     # List of present leds (friendly names).
     # Every entry should have pin_config_id_<friendly_name> set in the carrier, as well as any other options
@@ -538,7 +554,7 @@ class LokiCarrierButtons(LokiCarrier, ABC):
 
     # Button reading is just gpio interaction, therefore does not need custom implementation per carrier
     def buttons_get_button(self, friendly_name):
-        self._pin_handler.get_pin_value(friendly_name)
+        return self._pin_handler.get_pin_value(friendly_name)
 
     # List of present buttons (friendly names).
     # Every entry should have pin_config_id_<friendly_name> set in the carrier, as well as any other options
@@ -572,7 +588,7 @@ class LokiCarrierClockgen(LokiCarrier, ABC):
             'drivername': (lambda: self.clkgen_drivername, None, {"description": "Name of the device providing clock generator support"}),
             'num_outputs': (lambda: self.clkgen_numchannels, None, {"description": "Number of output channels available"}),
             'config_file': (self.clkgen_get_config, self.clkgen_set_config, {"description": "Current configuration file loaded for clock config"}),
-            'confing_files_avail': (self.clkgen_get_config_avail, None, {"description": "Available config files to choose from"}),
+            'config_files_avail': (self.clkgen_get_config_avail, None, {"description": "Available config files to choose from"}),
         }
 
         return base_tree

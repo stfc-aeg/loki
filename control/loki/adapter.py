@@ -91,6 +91,7 @@ class LokiCarrier(ABC):
 
     def __init__(self, **kwargs):
         self._supported_extensions = []
+        self._change_callbacks = {}
 
         # Set the default configuration for generic control pins
         self._config_pin_defaults(kwargs)
@@ -332,6 +333,7 @@ class LokiCarrier(ABC):
             'carrier_info': {
                 'variant': (lambda: self.variant, None, {"description": "Carrier variant"}),
                 'extensions': (self.get_avail_extensions, None, {"description": "Comma separated list of carrier's supported extensions"}),
+                'application_interfaces': self._get_paramtree_interfaces_dict(),
             },
             'control': {
                 'application_enable': (self.get_app_enabled, self.set_app_enabled, {
@@ -433,27 +435,108 @@ class LokiCarrier(ABC):
         return bool(self._pin_handler.get_pin_value('app_present'))
 
     def set_app_enabled(self, enable=True):
-        return bool(self._pin_handler.set_pin_value('app_rst', not enable))
+        previous_state = bool(self.get_app_enabled())
+        enable = bool(enable)
+        if previous_state != enable:
+            self._onChange_execute_callbacks('application_enable', enable)
+            bool(self._pin_handler.set_pin_value('app_rst', not enable))
 
     def get_app_enabled(self):
         return not bool(self._pin_handler.get_pin_value('app_rst'))
 
     def set_peripherals_enabled(self, enable=True):
-        return bool(self._pin_handler.set_pin_value('per_rst', not enable))
+        previous_state = bool(self.get_peripherals_enabled())
+        enable = bool(enable)
+        if previous_state != enable:
+            self._onChange_execute_callbacks('peripheral_enable', enable)
+            bool(self._pin_handler.set_pin_value('per_rst', not enable))
 
     def get_peripherals_enabled(self):
         return not bool(self._pin_handler.get_pin_value('per_rst'))
 
-    # Provide access to carrier-specific interfaces for application use, via inter-adapter communication
+    def register_change_callback(self, trigger, callback_function):
+        # More than one callback can be added for the same change if desired.
+        allowed_targets = ['peripheral_enable', 'application_enable']
+        if trigger in allowed_targets:
+            existing_callback_list = self._change_callbacks.get(trigger)
+            if existing_callback_list is not None:
+                self._change_callbacks[trigger].append(callback_function)
+            else:
+                self._change_callbacks[trigger] = [callback_function]
+        else:
+            raise Exception('Callback target {} not available. Try: {} '.format(
+                trigger, allowed_targets
+            ))
 
-    def get_interface_spi(self):
-        # Returns a dictionary of buses to be used by the application. At least implement 'APP' and 'PERIPHERAL'.
-        # Each key is a string name, each value is a bus number.
-        raise Exception('Not implemented in base carrier adapter')
+    def _onChange_execute_callbacks(self, trigger, state):
+        callbacks = self._change_callbacks.get(trigger)
+        if callbacks:
+            for callback in callbacks:
+                callback(state)
 
-    def get_interface_i2c(self):
-        # Returns a dictionary of buses to be used by the application. At least implement 'PERIPHERAL'.
-        raise Exception('Not implemented in base carrier adapter')
+    ###############################################
+    # Available Application Interface Definitions #
+    ###############################################
+
+    @property
+    @abstractmethod
+    def _application_interfaces_spi(self):
+        # Carrier definition class should specify any spidev buses available, with names that can match
+        # any PCB naming (or could just be numbers). These should only be for interfaces available to the
+        # user / application, rather than those used by the on-board devices. If there are no interfaces,
+        # define the dictionary but leave it empty.
+
+        # Format:
+        '''
+        _application_interfaces_spi = {
+            <interface name> : (spidev bus, spidev device),
+        }
+        '''
+        pass
+
+    @property
+    @abstractmethod
+    def _application_interfaces_i2c(self):
+        # Carrier definition class should specify any i2c buses available, with names that can match
+        # any PCB naming (or could just be numbers). These should only be for interfaces available to the
+        # user / application, rather than those used by the on-board devices. If there are no interfaces,
+        # define the dictionary but leave it empty.
+
+        # Format:
+        '''
+        _application_interfaces_i2c = {
+            <interface name> : <bus number>,
+        }
+        '''
+        pass
+
+    def _get_paramtree_interfaces_dict(self):
+        interfaces_dict = {
+            'spi': {},
+            'i2c': {},
+        }
+
+        for spidev_interface_name in self._application_interfaces_spi.keys():
+            spidev_bus, spidev_device = self._application_interfaces_spi.get(spidev_interface_name)
+            interfaces_dict['spi'].update({
+                spidev_interface_name: (
+                    (lambda spidev_bus_internal, spidev_device_internal: lambda: '({},{})'.format(spidev_bus_internal, spidev_device_internal))(spidev_bus, spidev_device),
+                    None,
+                    {'description': 'spidev (bus, device) for application interface {}'.format(spidev_interface_name)},
+                )
+            })
+
+        for i2c_interface_name in self._application_interfaces_i2c.keys():
+            i2c_bus = self._application_interfaces_i2c.get(i2c_interface_name)
+            interfaces_dict['i2c'].update({
+                i2c_interface_name: (
+                    (lambda i2c_bus_internal: lambda: '{}'.format(i2c_bus_internal))(i2c_bus),
+                    None,
+                    {'description': 'i2c bus for application interface {}'.format(i2c_interface_name)},
+                )
+            })
+
+        return interfaces_dict
 
 
 ########
@@ -744,6 +827,17 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
     dac_num_outputs = 10
     leds_namelist = ['led0', 'led1', 'led2', 'led3']
     buttons_namelist = ['button0', 'button1']
+    _application_interfaces_spi = {
+        'SS0': (1, 0),
+        'SS1': (1, 1),
+        'SS2': (1, 2),
+    }
+    _application_interfaces_i2c = {
+        'APP_EXT': 1,       # todo update this
+        'APP_EXT2': 2,      # todo update this
+        'APP_MGMT': 3,      # todo update this
+        'APP_PWR': 4,       # todo update this
+    }
 
     def __init__(self, **kwargs):
         self.__clkgen_current_config = None

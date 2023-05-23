@@ -22,11 +22,11 @@ DTB = ${OUTPUT_DIR}/system.dtb
 YOCTO_USER_LAYER_0 = @yocto_user_layer_0@
 
 # The yocto workspace contains recipes brought into the workspace under modification.
-BUILD_DEPS = $(shell find ${PL_ROOT}/components/yocto/workspace/ -type f)
+BUILD_DEPS = $(shell find -L ${PL_ROOT}/components/yocto/workspace/ -type f)
 #project-spec contains main user recipes and config.
-BUILD_DEPS := $(shell find ${PL_ROOT}/project-spec/ -type f)
+BUILD_DEPS += $(shell find -L ${PL_ROOT}/project-spec/ -type f)
 #optional user layer for recipes
-BUILD_DEPS := $(shell find ${YOCTO_USER_LAYER_0} -type f)
+BUILD_DEPS += $(shell find -L ${YOCTO_USER_LAYER_0} -type f)
 
 .PHONY: default all build package rootfs simulate clean mostlyclean distclean clobber
 

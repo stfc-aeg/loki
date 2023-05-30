@@ -7,6 +7,9 @@ from odin.adapters.parameter_tree import ParameterTreeError
 from odin.adapters.parameter_tree import ParameterTree
 
 from odin_devices.max5306 import MAX5306
+from odin_devices.ltc2986 import LTC2986
+from odin_devices.bme280 import BME280
+from odin_devices.i2c_device import I2CDevice
 
 import logging
 import gpiod
@@ -218,7 +221,7 @@ class LokiCarrier(ABC):
             else:
                 raise Exception('Cannot set an input pin')
 
-        def add_pin(self, friendly_name, pin_id, is_input, is_active_low=False):
+        def add_pin(self, friendly_name, pin_id, is_input, is_active_low=False, default_value=0):
             # Check if the name is already in use
             if self._pins.get(friendly_name) is not None:
                 raise RuntimeError('pin friendly name {} already exists for {}, cannot use again for ID {}'.format(
@@ -236,7 +239,7 @@ class LokiCarrier(ABC):
                     consumer=self._consumername,
                     type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
                     flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0),
-                    default_val=0)
+                    default_val=default_value)
             except Exception as e:
                 raise RuntimeError('could not request line {}: {}'.format(line, e))
 
@@ -256,13 +259,14 @@ class LokiCarrier(ABC):
 
             # Separate options by the pin friendly name they refer to
             config_by_pin = {}
-            allowed_settings = ['id', 'active_low', 'nc', 'is_input']
+            allowed_settings = ['id', 'active_low', 'nc', 'is_input', 'default_value']
             for key in pin_config_options.keys():
                 # Settings not in the list are ignored
                 for allowed_setting in allowed_settings:
                     if key.startswith(allowed_setting):
                         # Remove the setting prefix and the additional underscore
                         pin_name = key[len(allowed_setting) + 1:]
+                        logging.debug('key {} -> pin {}'.format(key, pin_name))
 
                         # Add the pin to the dictionary if it does not exist
                         config_by_pin.setdefault(pin_name, {})
@@ -276,6 +280,8 @@ class LokiCarrier(ABC):
             # Parse the options and extract pin configuration, separated by pin friendly name
             config_by_pin = self._sort_options_per_pin(options)
 
+            logging.debug('Parsing pin options: {}'.format(config_by_pin))
+
             # Add each pin that has configuration information
             for pin_name in config_by_pin.keys():
 
@@ -286,13 +292,20 @@ class LokiCarrier(ABC):
                     pin_active_low = pin_info.get('active_low')
                     pin_is_input = pin_info.get('is_input')
                     pin_not_connected = pin_info.get('nc', False)   # This is optional, assumed pins are connected
+                    pin_default = pin_info.get('default_value', 1 if pin_active_low else 0)   # De-assert by default
                 except KeyError as e:
                     raise KeyError('Not enough information to register pin {}: {}'.format(pin_name, e))
 
                 # If a pin is overridden to 'nc' it is assumed that it will not be used by anything.
                 # As such, it will be ignored and not added to the accessible pins.
                 if not pin_not_connected:
-                    self.add_pin(pin_name, pin_id, pin_is_input, pin_active_low)
+                    self.add_pin(
+                        friendly_name=pin_name,
+                        pin_id=pin_id,
+                        is_input=pin_is_input,
+                        is_active_low=pin_active_low,
+                        default_value=pin_default
+                    )
 
         def pinmap(self):
             # Print out the current pinmap
@@ -321,16 +334,17 @@ class LokiCarrier(ABC):
         #       Set to True if the pin should not be requested. Use to disable a pin. Optional.
 
         # Makes the listing of defaults a bit more succinct and clear
-        def set_pin_options(friendly_name, pin_id, is_input, active_low):
+        def set_pin_options(friendly_name, pin_id, is_input, active_low, default_value=False):
             options.setdefault('pin_config_id_' + friendly_name, pin_id)
             options.setdefault('pin_config_is_input_' + friendly_name, is_input)
             options.setdefault('pin_config_active_low_' + friendly_name, active_low)
+            options.setdefault('pin_config_default_value_' + friendly_name, default_value)
 
         # Set defaults for generic control pins, use gpiod pin names from device tree rather than numbers
         set_pin_options('app_present',      'APP nPRESENT',         is_input=True,  active_low=True)
         set_pin_options('bkpln_present',    'BACKPLANE nPRESENT',   is_input=True,  active_low=True)
-        set_pin_options('app_rst',          'APPLICATION nRST',     is_input=False, active_low=True)
-        set_pin_options('per_rst',          'PERIPHERAL nRST',      is_input=False, active_low=True)
+        set_pin_options('app_en',          'APPLICATION nRST',     is_input=False, active_low=True, default_value=False)
+        set_pin_options('per_en',          'PERIPHERAL nRST',      is_input=False, active_low=True, default_value=False)
 
     def _gen_paramtree_dict(self):
 
@@ -437,27 +451,33 @@ class LokiCarrier(ABC):
         return bool(self._pin_handler.get_pin_value('bkpln_present'))
 
     def get_app_present(self):
+        # Polarity is not inverted here, as it is done during the pin request
         return bool(self._pin_handler.get_pin_value('app_present'))
 
     def set_app_enabled(self, enable=True):
+        # Polarity is not inverted here, as it is done during the pin request
         previous_state = bool(self.get_app_enabled())
         enable = bool(enable)
         if previous_state != enable:
+            self._pin_handler.set_pin_value('app_en', enable)
+            time.sleep(0.5)
             self._onChange_execute_callbacks('application_enable', enable)
-            bool(self._pin_handler.set_pin_value('app_rst', not enable))
 
     def get_app_enabled(self):
-        return not bool(self._pin_handler.get_pin_value('app_rst'))
+        return not bool(self._pin_handler.get_pin_value('app_en'))
 
     def set_peripherals_enabled(self, enable=True):
+        # Polarity is not inverted here, as it is done during the pin request
         previous_state = bool(self.get_peripherals_enabled())
         enable = bool(enable)
         if previous_state != enable:
+            self._pin_handler.set_pin_value('per_en', enable)
+            time.sleep(5)
             self._onChange_execute_callbacks('peripheral_enable', enable)
-            bool(self._pin_handler.set_pin_value('per_rst', not enable))
 
     def get_peripherals_enabled(self):
-        return not bool(self._pin_handler.get_pin_value('per_rst'))
+        # Polarity is not inverted here, as it is done during the pin request
+        return bool(self._pin_handler.get_pin_value('per_en'))
 
     def register_change_callback(self, trigger, callback_function):
         # More than one callback can be added for the same change if desired.
@@ -567,6 +587,7 @@ class LokiCarrierLEDs(LokiCarrier, ABC):
             # Assume that the ID has already been set in the carrier
             options.setdefault('pin_config_is_input_' + friendly_name, False)
             options.setdefault('pin_config_active_low_' + friendly_name, True)  # Override if necesary
+            options.setdefault('pin_config_default_value_' + friendly_name, False)  # Override if necesary
 
     def _gen_paramtree_dict(self):
         base_tree = super(LokiCarrierLEDs, self)._gen_paramtree_dict()
@@ -779,6 +800,10 @@ class LokiCarrierDAC(LokiCarrier, ABC):
 
 class LokiCarrierEnvmonitor(LokiCarrier, ABC):
     def __init__(self, **kwargs):
+        self._env_cached_readings = {}
+
+        self._env_reading_sync_period_s = kwargs.get('env_reading_sync_period_s', 5)
+
         # Call next in MRO / Base Class
         super(LokiCarrierEnvmonitor, self).__init__(**kwargs)
 
@@ -796,19 +821,57 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
             base_tree['environment'].setdefault(sType, {})
 
             # Add the sensor entry with its specific info, protecting scope of name_internal
-            base_tree['environment'][sType] = ((lambda name_internal: lambda: self.env_get_sensor(name_internal))(name), None, info)
+            base_tree['environment'][sType][name] = (
+                (lambda name_internal, type_internal: lambda: self.env_get_sensor_cached(name_internal, type_internal))(name, sType),
+                None,
+                info
+            )
+
+            # Also add the sensor cache structure for each sensor type.
+            self._env_cached_readings.setdefault(sType, {})
+            self._env_cached_readings[sType].setdefault(name, None)
 
         return base_tree
 
-    # dict, see above
+    def _start_io_loops(self, options):
+        super(LokiCarrierEnvmonitor, self)._start_io_loops(options)
+        # self._thread_executor should already be defined in the super function
+
+        self._thread_env = self._thread_executor.submit(self._env_loop_readingsync)
+
+    def env_get_sensor_cached(self, name, sType):
+        return self._env_cached_readings[sType].get(name, 'No Reading')
+
+    def _env_loop_readingsync(self):
+        while True:
+            self._env_sync_reading_cache()
+            time.sleep(self._env_reading_sync_period_s)
+
+    def _env_sync_reading_cache(self):
+        for sType in self._env_cached_readings.keys():
+            for name in self._env_cached_readings[sType].keys():
+                try:
+                    self._env_cached_readings[sType][name] = self.env_get_sensor(name, sType)
+                except Exception as e:
+                    logging.error(
+                        'Could not sync sensor reading for {} ({}): {}'.format(
+                            name, sType, e
+                        )
+                    )
+
+        logging.debug('Updated environmental readings:{}'.format(self._env_cached_readings))
+
+    # list, see above
     @property
     @abstractmethod
-    def env_additional_sensors(self):
+    def env_sensor_info(self):
         pass
 
-    # Get the (cached) version of a sensor reading that can be read as often as desired
+    # Get the (cached) version of a sensor reading that can be read as often as desired.
+    # Includes an argument for sensor type because the same sensor might give more than one type of
+    # reading (e.g. BME280).
     @abstractmethod
-    def env_get_sensor(self, name):
+    def env_get_sensor(self, name, sType):
         pass
 
 # todo add power monitor class
@@ -919,12 +982,20 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
 # carrier being based on it). Future application-specific odin instances should create a supplimentary adapter
 # for their own daughter board, using interfaces provided via the generic LOKICarrier_TEBF0808 class for access
 # to things like I2C, SPI, and GPIO specifics.
-class LokiCarrier_TEBF0808_MERCURY(LokiCarrierClockgen, LokiCarrierDAC, LokiCarrier_TEBF0808):
+class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, LokiCarrierDAC, LokiCarrier_TEBF0808):
     variant = 'tebf0808_MERCURY'
     clkgen_drivername = 'SI5344'
     clkgen_numchannels = 4
     dac_drivername = 'MAX5306'
     dac_num_outputs = 10
+    env_sensor_info = [
+        # name, type, info
+        ('PT100', 'temperature', {"description": "PT100 on fly-lead", "units": "C"}),
+        ('ASIC', 'temperature', {"description": "ASIC diode temperature", "units": "C"}),
+        ('BOARD', 'temperature', {"description": "BME280 carrier board temperature", "units": "C"}),
+        ('BOARD', 'humidity', {"description": "BME280 carrier board humidity RH", "units": "%"}),
+    ]
+
 
     # Although these interfaces are present, the boundary of the 'application' does not really exist, since
     # the COB devices are being considered part of the carrier itself.
@@ -936,27 +1007,63 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierClockgen, LokiCarrierDAC, LokiCarr
     class DeviceHandler():
         # To help keep track of device availability. Can also be used as a place to track state
         # for different devices.
-        def __init__(self, device=None):
+        def __init__(self, device=None, device_type_name=None):
             self.device = device
-            self.reset()
+            self.device_type_name = device_type_name
+            self.initialised = False
+            self.available = False
+            self.error = False
+            self.error_message = False
+
+        def __repr__(self):
+            return '{} device ({}) ({}, {} ; {})'.format(
+                str(self.device_type_name),
+                type(self.device),
+                'initialised' if self.initialised else 'not initialised',
+                'available' if self.available else 'not available',
+                'useable' if self.useable() else 'not useable',
+            )
 
         def useable(self):
             return (self.available and self.initialised)
 
-        def reset(self):
-            # Set both available and initialised low, requires new init.
+        def critical_error(self, message=''):
+            # Mark the device not to be used, and record the error in log and paramtree status
             self.available = False
             self.initialised = False
-            self.error = False
-            self.error_message = False
+            self.error = True
+            self.error_message = message
+            logging.error('device error: {}'.format(message))
 
     def __init__(self, **kwargs):
+
+        self._peripherals_i2c_bus = 1
+
         # Gather settings for MAX5306 DAC
-        self._max5306 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler()
+        self._max5306 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='MAX5306')
         self._max5306.vref = kwargs.get('max5306_reference', 2.048)
         self._max5306.spidev = kwargs.get('max5306_spidev', (1, 1))
 
+        # Gather settings for LTC2986
+        self._ltc2986 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='LTC2986')
+        self._ltc2986.spidev = kwargs.get('ltc2986_spidev', (1, 0))
+        self._ltc2986.rsense_ohms = kwargs.get('ltc2986_rsense_ohms', 2000)
+        self._ltc2986.pt100_channel = 6
+        self._ltc2986.diode_channel = 2
+
+        # Define the reset pin for the ltc2986 (requested below after super init)
+        kwargs.setdefault('pin_config_id_temp_reset', 'LTC_NRST')
+        kwargs.setdefault('pin_config_active_low_temp_reset', True)
+        kwargs.setdefault('pin_config_is_input_temp_reset', False)
+        kwargs.setdefault('pin_config_default_value_temp_reset', 1)     # Since pin is active low, 1 means grounded, i.e. in reset
+
+        # Gather settings for BME280 monitoring device
+        self._bme280 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='BME280')
+        self._bme280.i2c_bus = self._peripherals_i2c_bus
+
         super(LokiCarrier_TEBF0808_MERCURY, self).__init__(**kwargs)
+
+        self._ltc2986.pin_reset = self._pin_handler.get_pin('temp_reset')
 
         self.register_change_callback('peripheral_enable', self.onChange_periph_en)
         self.register_change_callback('application_enable', self.onChange_app_en)
@@ -966,18 +1073,27 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierClockgen, LokiCarrierDAC, LokiCarr
 
     def onChange_periph_en(self, state):
         if state is True:
-            # Init the max5306
+            logging.info('peripherals enabled, re-configuring devices')
+            # Init the devices that are enabled by VREG_EN
             self._config_max5306()
+            self._config_ltc2986()
+            self._config_bme280()
 
             # todo other device
         else:
+            logging.info('peripherals disabled, disabling device contact')
+
             # on this particular carrier, having the periph en low (VREG_EN) will also disable the ASIC, so perform the same actions
             self.onChange_app_en(False)
 
             # For some devices, low VREG_EN simply disables contact with them (due to level shifters)
+            self._max5306.available = False
+            self._bme280.available = False
 
             # For other devices, low VREG_EN resets the device, meaning a new init will be required.
-            self._max5306.reset()
+            self._ltc2986.available = False
+            self._ltc2986.initialised = False
+            self._ltc2986.pin_reset.set_value(1)    # Since with shifters down reset goes low anyway
 
             # todo other devices
 
@@ -1008,7 +1124,7 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierClockgen, LokiCarrierDAC, LokiCarr
 
     def dac_set_output(self, output_num, voltage):
         if self._max5306.useable():
-            #self._max5306.device.set_output(output_num, voltage)
+            self._max5306.device.set_output(output_num, voltage)
             print('Setting DAC output {} to {}'.format(output_num, voltage))
             self._max5306.last_setting.update({output_num: voltage})
         else:
@@ -1022,6 +1138,11 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierClockgen, LokiCarrierDAC, LokiCarr
     def _config_max5306(self):
         # Attempt init, but on failure log error and continue
         try:
+            self._max5306.available = False
+            self._max5306.initialised = False
+            self._max5306.error = False
+            self._max5306.error_message = False
+
             max5306_bus, max5306_device = self._max5306.spidev
             self._max5306.device = MAX5306(self._max5306.vref, bus=max5306_bus, device=max5306_device)
 
@@ -1029,9 +1150,94 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierClockgen, LokiCarrierDAC, LokiCarr
 
             self._max5306.available = True
             self._max5306.initialised = True
+
+            logging.debug('MAX5306 init completed successfully')
         except Exception as e:
-            logging.error('Failed to init MAX5306: {}'.format(e))
-            self._max5306.available = False
-            self._max5306.initialised = False
-            self._max5306.error = True
-            self._max5306.error_message = e
+            self._max5306.critical_error('Failed to init MAX5306: {}'.format(e))
+
+    def env_get_sensor(self, name, sensor_type):
+        # This will return the raw value, cached by the LokiCarrierEnvmonitor class automatically
+        # this will need to return values for the BME280 as well as the LTC2986
+
+        #logging.debug('Reading sensor {} ({})'.format(name, sensor_type))
+
+        if name in ['PT100', 'ASIC']:
+            # These sensors are provided by the ltc2986
+            if self._ltc2986.useable():
+                if name == 'PT100' and sensor_type == 'temperature':
+                    return self._ltc2986.device.measure_channel(self._ltc2986.pt100_channel)
+                elif name == 'ASIC' and sensor_type == 'temperature':
+                    return self._ltc2986.device.measure_channel(self._ltc2986.diode_channel)
+            else:
+                return 'Device inactive'
+
+        if name in ['BOARD']:
+            # These sensors are provided by the bme280
+            if self._bme280.useable():
+                if sensor_type == 'temperature':
+                    return self._bme280.device.temperature
+                elif sensor_type == 'humidity':
+                    return self._bme280.device.humidity
+
+        raise NotImplementedError('Sensor {} ({}) not implemented'.format(name, sensor_type))
+
+    def _config_ltc2986(self):
+        # The 'generic' version of this for LokiCarrier_1v0 will likely not define sensors off-board, so will need
+        # a mechanism for the application-specific code to do so. Might just have to expose the function.
+        try:
+            self._ltc2986.available = False
+            self._ltc2986.initialised = False
+            self._ltc2986.error = False
+            self._ltc2986.error_message = False
+
+            ltc2986_bus, ltc2986_device = self._ltc2986.spidev
+            self._ltc2986.device = LTC2986(bus=ltc2986_bus, device=ltc2986_device)
+
+            # Set the reset line inactive
+            self._ltc2986.pin_reset.set_value(0)
+
+            # todo this can stay, because there will be a PT100 socket on the new carrier
+            self._ltc2986.device.add_rtd_channel(
+                LTC2986.Sensor_Type.SENSOR_TYPE_RTD_PT100,
+                LTC2986.RTD_RSense_Channel.CH4_CH3,
+                self._ltc2986.rsense_ohms,
+                LTC2986.RTD_Num_Wires.NUM_2_WIRES,
+                LTC2986.RTD_Excitation_Mode.NO_ROTATION_NO_SHARING,
+                LTC2986.RTD_Excitation_Current.CURRENT_500UA,
+                LTC2986.RTD_Curve.EUROPEAN,
+                channel_num=self._ltc2986.pt100_channel
+            )
+
+            # todo consider removing this; it is application specific
+            self._ltc2986.device.add_diode_channel(
+                endedness=LTC2986.Diode_Endedness.DIFFERENTIAL,
+                conversion_cycles=LTC2986.Diode_Conversion_Cycles.CYCLES_2,
+                average_en=LTC2986.Diode_Running_Average_En.OFF,
+                excitation_current=LTC2986.Diode_Excitation_Current.CUR_80UA_320UA_640UA,
+                diode_non_ideality=1.0,
+                channel_num=self._ltc2986.diode_channel
+            )
+            self._ltc2986.available = True
+            self._ltc2986.initialised = True
+
+            logging.debug('LTC2986 init completed successfully')
+        except Exception as e:
+            self._ltc2986.pin_reset.set_value(1)
+            self._ltc2986.critical_error('Failed to init LTC2986: {}'.format(e))
+
+    def _config_bme280(self):
+        try:
+            self._bme280.available = False
+            self._bme280.initialised = False
+            self._bme280.error = False
+            self._bme280.error_message = False
+
+            I2CDevice.enable_exceptions()
+            self._bme280.device = BME280(use_spi=False, bus=self._bme280.i2c_bus)
+
+            self._bme280.available = True
+            self._bme280.initialised = True
+
+            logging.debug('BME280 init completed successfully')
+        except Exception as e:
+            self._bme280.critical_error('Failed to init BME280: {}'.format(e))

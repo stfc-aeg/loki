@@ -9,6 +9,7 @@ from odin.adapters.parameter_tree import ParameterTree
 from odin_devices.max5306 import MAX5306
 from odin_devices.ltc2986 import LTC2986
 from odin_devices.bme280 import BME280
+from odin_devices.pac1921 import PAC1921, Measurement_Type as PAC1921_Measurement_Type
 from odin_devices.i2c_device import I2CDevice
 
 import logging
@@ -95,6 +96,8 @@ class LokiCarrier(ABC):
     # todo ideally the base class should avoid refferring to specific devices in its external interfaces.
 
     def __init__(self, **kwargs):
+        self._logger = logging.getLogger('LokiCarrier')
+
         self._supported_extensions = []
         self._change_callbacks = {}
 
@@ -105,8 +108,7 @@ class LokiCarrier(ABC):
         self._pin_handler = LokiCarrier.PinHandler(self.variant)
         self._pin_handler.add_pins_from_options(kwargs)
 
-        print('Pin mappings settled:')
-        self._pin_handler.pinmap()
+        self._logger.info('Pin mappings settled:\n{}'.format(self._pin_handler.pinmap()))
 
         # Construct the parameter tree (will call extensions automatically)
         self._paramtree = ParameterTree(self._gen_paramtree_dict())
@@ -124,17 +126,20 @@ class LokiCarrier(ABC):
 
         # Set up state machines and timer loops (potentially in carrier)
         # todo, consider moving base call into adapter for once other adapters are initialised
-        print('starting IO loops')
+        self._logger.info('starting IO loops')
         self._start_io_loops(kwargs)
-        print('IO loops started')
+        self._logger.info('IO loops started')
 
     def _start_io_loops(self, options):
         # This function can be extended by the extension LokiCarrier classes if they would benefit from async loops.
         # However, make sure that super is called in each.
         self._thread_executor = futures.ThreadPoolExecutor(max_workers=None)
 
-        self._thread_gpio = self._thread_executor.submit(self._loop_gpiosync)
-        self._thread_ams = self._thread_executor.submit(self._loop_ams)
+        # Structure to hold threads (including those created by derived classes) for monitoring
+        self._threads = {}
+
+        self._threads['gpio'] = self._thread_executor.submit(self._loop_gpiosync)
+        self._threads['ams'] = self._thread_executor.submit(self._loop_ams)
 
     def _loop_gpiosync(self):
         while True:
@@ -309,8 +314,10 @@ class LokiCarrier(ABC):
 
         def pinmap(self):
             # Print out the current pinmap
+            pm = ''
             for pin_name in self.get_pin_names():
-                print('{}: {}'.format(pin_name, self.get_pin(pin_name)))
+                pm += '{}: {}\n'.format(pin_name, self.get_pin(pin_name))
+            return pm
 
     def _config_pin_defaults(self, options):
         # todo remove super(LokiCarrier, self)._config_pin_defaults(options)
@@ -353,6 +360,7 @@ class LokiCarrier(ABC):
                 'variant': (lambda: self.variant, None, {"description": "Carrier variant"}),
                 'extensions': (self.get_avail_extensions, None, {"description": "Comma separated list of carrier's supported extensions"}),
                 'application_interfaces': self._get_paramtree_interfaces_dict(),
+                'loopstatus': (self.get_loop_status, None, {"description": "Reports on the state of the background loops"}),
             },
             'control': {
                 'application_enable': (self.get_app_enabled, self.set_app_enabled, {
@@ -389,11 +397,34 @@ class LokiCarrier(ABC):
                 },
                 'humidity': {},
             },
+            'power': {
+            },
         }
 
-        print('Base tree generated')    # todo remove or make debug
+        self._logger.debug('Base ParameterTree generated')
 
         return base_tree_dict
+
+    def get_loop_status(self):
+        try:
+            # Assume that any thread in _threads is intended to run forever
+            threadreport = {}
+            for threadname in self._threads:
+                threadreport.update(
+                    {
+                        threadname: {
+                            'running': self._threads[threadname].running(),
+                            'done': self._threads[threadname].done(),
+                            'exception': 'N/A' if not self._threads[threadname].done() else self._threads[threadname].exception(),
+                        }
+                    }
+                )
+
+            return threadreport
+
+        except Exception as e:
+            self._logger.error('Failed to get thread info: {}'.format(e))
+            return 'Failed to get thread info'
 
     def get_avail_extensions(self):
         return ', '.join(self._supported_extensions)
@@ -837,7 +868,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
         super(LokiCarrierEnvmonitor, self)._start_io_loops(options)
         # self._thread_executor should already be defined in the super function
 
-        self._thread_env = self._thread_executor.submit(self._env_loop_readingsync)
+        self._threads['env'] = self._thread_executor.submit(self._env_loop_readingsync)
 
     def env_get_sensor_cached(self, name, sType):
         return self._env_cached_readings[sType].get(name, 'No Reading')
@@ -851,15 +882,15 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
         for sType in self._env_cached_readings.keys():
             for name in self._env_cached_readings[sType].keys():
                 try:
-                    self._env_cached_readings[sType][name] = self.env_get_sensor(name, sType)
+                    self._env_cached_readings[sType][name] = self._env_get_sensor(name, sType)
                 except Exception as e:
-                    logging.error(
+                    self._logger.getChild('env').error(
                         'Could not sync sensor reading for {} ({}): {}'.format(
                             name, sType, e
                         )
                     )
 
-        logging.debug('Updated environmental readings:{}'.format(self._env_cached_readings))
+        self._logger.getChild('env').debug('Updated environmental readings:{}'.format(self._env_cached_readings))
 
     # list, see above
     @property
@@ -867,14 +898,127 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
     def env_sensor_info(self):
         pass
 
-    # Get the (cached) version of a sensor reading that can be read as often as desired.
-    # Includes an argument for sensor type because the same sensor might give more than one type of
-    # reading (e.g. BME280).
+    # Get the live version of a power sensor reading. This should not perform any caching, as the calling method
+    # will be responsible.
     @abstractmethod
-    def env_get_sensor(self, name, sType):
+    def _env_get_sensor(self, name, sType):
         pass
 
-# todo add power monitor class
+
+####################
+# Power Monitoring #
+####################
+
+class LokiCarrierPowerMonitor(LokiCarrier, ABC):
+    # Power monitors will have a set of rails with a given name, each of which will have a
+    # name tied to a readable current/voltage/power value if supported. Additionally, each
+    # rail has a pattern for being enabled/disabled. It is up to the extending carrier to
+    # determine if these are implemented and/or linked together.
+    def __init__(self, **kwargs):
+        self._psu_cached_readings = {}
+
+        self._psu_reading_sync_period_s = kwargs.get('psu_reading_sync_period_s', 5)
+
+        # Call next in MRO / Base Class
+        super(LokiCarrierPowerMonitor, self).__init__(**kwargs)
+
+        self._supported_extensions.append('powermonitor')
+
+    def _gen_paramtree_dict(self):
+        base_tree = super(LokiCarrierPowerMonitor, self)._gen_paramtree_dict()
+
+        # self.psu_rail_info is a list of tuples of the form:
+        # (name, voltageSupport (bool), currentSupport (bool), powerSupport (bool), enSupport (bool))
+        for (name, voltageSupport, currentSupport, powerSupport, enSupport) in self.psu_rail_info:
+            # Create the new key if it does not exist for the rail, with a blank dictionary
+            base_tree['power'].setdefault(name, {})
+
+            # Also add the sensor cache structure for each sensor type.
+            self._psu_cached_readings.setdefault(name, {})
+
+            # Add the sensor entry with its specific info, protecting scope of name_internal
+            if voltageSupport:
+                base_tree['power'][name]['voltage'] = (
+                    (lambda name_internal: lambda: self.psu_get_rail_cached(name_internal, 'voltage'))(name),
+                    None, {'description': 'cached voltage reading', 'units': 'V'},
+                )
+                self._psu_cached_readings[name].setdefault('voltage', {})   # Voltage is cached
+
+            if currentSupport:
+                base_tree['power'][name]['current'] = (
+                    (lambda name_internal: lambda: self.psu_get_rail_cached(name_internal, 'current'))(name),
+                    None, {'description': 'cached current reading', 'units': 'A'},
+                )
+                self._psu_cached_readings[name].setdefault('current', {})   # Current is cached
+
+            if powerSupport:
+                base_tree['power'][name]['power'] = (
+                    (lambda name_internal: lambda: self.psu_get_rail_cached(name_internal, 'power'))(name),
+                    None, {'description': 'cached power reading', 'units': 'W'},
+                )
+                self._psu_cached_readings[name].setdefault('power', {})     # Power is cached
+
+            if enSupport:
+                base_tree['power'][name]['enable'] = (
+                    (lambda name_internal: lambda: self.psu_get_rail_en(name_internal))(name),
+                    (lambda name_internal: lambda state: self.psu_set_rail_en(name_internal, state))(name),
+                    {'description': 'rail enable state'},
+                )
+
+        return base_tree
+
+    def _psu_loop_readingsync(self):
+        while True:
+            self._psu_sync_reading_cache()
+            time.sleep(self._psu_reading_sync_period_s)
+
+    def _psu_sync_reading_cache(self):
+        for name in self._psu_cached_readings.keys():
+            for reading_type in self._psu_cached_readings[name].keys():
+                try:
+                    self._psu_cached_readings[name][reading_type] = self._psu_get_rail(name, reading_type)
+                except Exception as e:
+                    self._logger.getChild('psu').error(
+                        'Could not power rail reading for {} ({}): {}'.format(
+                            name, reading_type, e
+                        )
+                    )
+
+        self._logger.getChild('psu').debug('Updated power monitor readings:{}'.format(self._psu_cached_readings))
+
+    def _start_io_loops(self, options):
+        super(LokiCarrierPowerMonitor, self)._start_io_loops(options)
+        # self._thread_executor should already be defined in the super function
+
+        self._threads['psu'] = self._thread_executor.submit(self._psu_loop_readingsync)
+
+    # Return the cached value of the rail reading specified
+    def psu_get_rail_cached(self, name, reading_type):
+        return self._psu_cached_readings[name].get(reading_type, 'No Reading')
+
+    # list, see above
+    @property
+    @abstractmethod
+    def psu_rail_info(self):
+        pass
+
+    # Get the live version of a power rail reading. This should not perform any caching, as the calling method
+    # will be responsible.
+    @abstractmethod
+    def _psu_get_rail(self, name, reading_type):
+        pass
+
+    # This is the method that will be used directly. Therefore any caching (if applicable) must be handled by the
+    # carrier instance since the implementation is likely to vary greatly.
+    @abstractmethod
+    def psu_get_rail_en(self, name):
+        pass
+
+    # This is the method that will be used directly. Therefore any caching (if applicable) must be handled by the
+    # carrier instance since the implementation is likely to vary greatly.
+    @abstractmethod
+    def psu_set_rail_en(self, name, value):
+        pass
 
 class LokiCarrier_TEBF0808(LokiCarrier):
     # Special case; as a prototype with minimal support for devices alone. Should be combined with an
@@ -936,7 +1080,7 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         pass
 
     def clkgen_set_config(self, configname):
-        print('Setting clock configuration from {}'.format(configname))
+        self._logger.getChild('clkgen').info('Setting clock configuration from {}'.format(configname))
         # todo
         pass
 
@@ -950,7 +1094,7 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         pass
 
     def dac_set_output(self, output_num, voltage):
-        print('Setting DAC output {} to {}'.format(output_num, voltage))
+        self._logger.getChild('dac').info('Setting DAC output {} to {}'.format(output_num, voltage))
         self.__dac_outputval[output_num] = voltage
         # todo
         pass
@@ -982,7 +1126,7 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
 # carrier being based on it). Future application-specific odin instances should create a supplimentary adapter
 # for their own daughter board, using interfaces provided via the generic LOKICarrier_TEBF0808 class for access
 # to things like I2C, SPI, and GPIO specifics.
-class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, LokiCarrierDAC, LokiCarrier_TEBF0808):
+class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonitor, LokiCarrierClockgen, LokiCarrierDAC, LokiCarrier_TEBF0808):
     variant = 'tebf0808_MERCURY'
     clkgen_drivername = 'SI5344'
     clkgen_numchannels = 4
@@ -995,7 +1139,13 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
         ('BOARD', 'temperature', {"description": "BME280 carrier board temperature", "units": "C"}),
         ('BOARD', 'humidity', {"description": "BME280 carrier board humidity RH", "units": "%"}),
     ]
-
+    psu_rail_info = [
+        # name, voltageSupported, currentSupported, powerSupported, enSupported
+        ('VDDD', True, True, True, True),
+        ('VDDD_CNTRL', True, True, True, True),
+        ('VDDA', True, True, True, True),
+        ('VDD3V3', True, True, True, False),
+    ]
 
     # Although these interfaces are present, the boundary of the 'application' does not really exist, since
     # the COB devices are being considered part of the carrier itself.
@@ -1007,13 +1157,24 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
     class DeviceHandler():
         # To help keep track of device availability. Can also be used as a place to track state
         # for different devices.
-        def __init__(self, device=None, device_type_name=None):
+        def __init__(self, device=None, device_type_name=None, logger=None):
             self.device = device
             self.device_type_name = device_type_name
             self.initialised = False
             self.available = False
             self.error = False
             self.error_message = False
+
+            if logger is not None:
+                # Prefer to use the supplied logger
+                self._logger = logger
+            else:
+                if self.device_type_name is not None:
+                    # Otherwise try and use the device name
+                    self._logger = logging.getLogger(self.device_type_name)
+                else:
+                    # If all else fails just use a new generic device logger
+                    self._logger = logging.getLogger('device')
 
         def __repr__(self):
             return '{} device ({}) ({}, {} ; {})'.format(
@@ -1033,7 +1194,7 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
             self.initialised = False
             self.error = True
             self.error_message = message
-            logging.error('device error: {}'.format(message))
+            self._logger.error('device error: {}'.format(message))
 
     def __init__(self, **kwargs):
 
@@ -1061,6 +1222,24 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
         self._bme280 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='BME280')
         self._bme280.i2c_bus = self._peripherals_i2c_bus
 
+        # Gather settings for the PAC1921 power monitors
+        self._pac1921_u3 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='PAC1921')
+        self._pac1921_u3.railname = 'VDDDCNTRL'
+        self._pac1921_u3.di_gain = kwargs.get('pac1921_vdddcntrl_di_gain', 1)
+        self._pac1921_u3.dv_gain = kwargs.get('pac1921_vdddcntrl_dv_gain', 8)
+
+        self._pac1921_u2 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='PAC1921')
+        self._pac1921_u2.railname = 'VDDD'
+        self._pac1921_u2.di_gain = kwargs.get('pac1921_vddd_di_gain', 1)
+        self._pac1921_u2.dv_gain = kwargs.get('pac1921_vddd_dv_gain', 1)
+
+        self._pac1921_u1 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='PAC1921')
+        self._pac1921_u1.railname = 'VDDA'
+        self._pac1921_u1.di_gain = kwargs.get('pac1921_vdda_di_gain', 1)
+        self._pac1921_u1.dv_gain = kwargs.get('pac1921_vdda_dv_gain', 1)
+
+        self._pac1921_array = [self._pac1921_u3, self._pac1921_u2, self._pac1921_u1]
+
         super(LokiCarrier_TEBF0808_MERCURY, self).__init__(**kwargs)
 
         self._ltc2986.pin_reset = self._pin_handler.get_pin('temp_reset')
@@ -1073,15 +1252,36 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
 
     def onChange_periph_en(self, state):
         if state is True:
-            logging.info('peripherals enabled, re-configuring devices')
-            # Init the devices that are enabled by VREG_EN
-            self._config_max5306()
-            self._config_ltc2986()
-            self._config_bme280()
+            self._logger.info('peripherals enabled, re-configuring devices')
 
-            # todo other device
+            # Only re-configure if it is not initialised.
+            if self._max5306.initialised:
+                self._max5306.available = True
+            else:
+                self._config_max5306()
+
+            # Only re-configure if it is not initialised.
+            if self._ltc2986.initialised:
+                self._ltc2986.available = True
+            else:
+                self._config_ltc2986()
+
+            # Only re-configure if it is not initialised.
+            if self._bme280.initialised:
+                self._bme280.available = True
+            else:
+                self._config_bme280()
+
+            # Re-configure if any of the power monitors did not initialised properly
+            if any(not(x.initialised) for x in self._pac1921_array):
+                self._config_pac1921_array()
+            else:
+                for device in self._pac1921_array:
+                    if device.initialised:
+                        device.available = True
+
         else:
-            logging.info('peripherals disabled, disabling device contact')
+            self._logger.info('peripherals disabled, disabling device contact')
 
             # on this particular carrier, having the periph en low (VREG_EN) will also disable the ASIC, so perform the same actions
             self.onChange_app_en(False)
@@ -1094,8 +1294,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
             self._ltc2986.available = False
             self._ltc2986.initialised = False
             self._ltc2986.pin_reset.set_value(1)    # Since with shifters down reset goes low anyway
-
-            # todo other devices
 
     def onChange_app_en(self, state):
         if state is True:
@@ -1113,6 +1311,47 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
 
     def clkgen_get_config_avail(self):
         # todo
+        pass
+
+    def _psu_get_rail(self, name, sensor_type):
+        # Alternate measurement types between voltage and current, calculating power.
+        # A new free-running measurement is triggered for the next reading.
+
+        # With free-run integration mode, voltage and current measurement take max 365ms.
+        # Since this function funs in its own thread, I can wait for the result.
+
+
+        for monitor in self._pac1921_array:
+            # Only read the device we are interested in
+            if monitor.railname == name:
+                if monitor.useable():
+                    # Set the desired free-running mode
+                    if sensor_type == 'current':
+                        monitor.device.set_measurement_type(PAC1921_Measurement_Type.CURRENT)
+                        monitor.device.config_freerun_integration_mode()
+                        time.sleep(0.4)
+                        return monitor.device.read()
+                    elif sensor_type == 'voltage':
+                        monitor.device.set_measurement_type(PAC1921_Measurement_Type.VBUS)
+                        monitor.device.config_freerun_integration_mode()
+                        time.sleep(0.4)
+                        return monitor.device.read()
+                    elif sensor_type == 'power':
+                        cached_current = self.psu_get_rail_cached(name, 'current')
+                        cached_voltage = self.psu_get_rail_cached(name, 'voltage')
+
+                        # Power is calculated from the most recent voltage and current readings
+                        try:
+                            return cached_voltage * cached_current
+                        except Exception as e:
+                            raise Exception('Failed to calculate power with cached voltage and current: {}'.format(e))
+                else:
+                    raise Exception('Power Monitor for {} cannot be read, not useable'.format(monitor.railname))
+
+    def psu_get_rail_en(self, name):
+        pass
+
+    def psu_set_rail_en(self, name, value):
         pass
 
     def dac_get_output(self, output_num):
@@ -1135,6 +1374,78 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
             self._max5306.available, self._max5306.initialised, self._max5306.error_message
         ))
 
+    def _config_pac1921_array(self):
+        # Use separate devices for each of the PAC1921 devices so that if the setup for one
+        # fails (or the gain is wrong for example) the other rails will operate correctly.
+
+        free_run_sample_num = 512
+
+        try:
+            self._pac1921_u3.available = False
+            self._pac1921_u3.initialised = False
+            self._pac1921_u3.error = False
+            self._pac1921_u3.error_message = False
+
+            self._pac1921_u3.device = PAC1921(
+                address_resistance=470,
+                name=self._pac1921_u3.railname,
+                r_sense=0.02,
+                measurement_type=PAC1921_Measurement_Type.VBUS
+            )
+            self._pac1921_u3.device.config_gain(di_gain=self._pac1921_u3.di_gain, dv_gain=self._pac1921_u3.dv_gain)
+            self._pac1921_u3.device.config_freerun_integration_mode(free_run_sample_num)
+
+            self._pac1921_u3.available = True
+            self._pac1921_u3.initialised = True
+        except Exception as e:
+            self._pac1921_u3.critical_error(
+                "Error initialising PAC1921 U3 ({}): {}".format(self._pac1921_u3.railname, e))
+
+        try:
+            self._pac1921_u2.available = False
+            self._pac1921_u2.initialised = False
+            self._pac1921_u2.error = False
+            self._pac1921_u2.error_message = False
+
+            self._pac1921_u2.device = PAC1921(
+                address_resistance=620,
+                name=self._pac1921_u2.railname,
+                r_sense=0.02,
+                measurement_type=PAC1921_Measurement_Type.VBUS
+            )
+            self._pac1921_u2.device.config_gain(di_gain=self._pac1921_u2.di_gain, dv_gain=self._pac1921_u2.dv_gain)
+            self._pac1921_u2.device.config_freerun_integration_mode(free_run_sample_num)
+
+            self._pac1921_u2.available = True
+            self._pac1921_u2.initialised = True
+        except Exception as e:
+            self._pac1921_u2.critical_error(
+                "Error initialising PAC1921 U2 ({}): {}".format(self._pac1921_u2.railname, e))
+
+        try:
+            self._pac1921_u1.available = False
+            self._pac1921_u1.initialised = False
+            self._pac1921_u1.error = False
+            self._pac1921_u1.error_message = False
+
+            self._pac1921_u1.device = PAC1921(
+                address_resistance=820,
+                name=self._pac1921_u1.railname,
+                r_sense=0.02,
+                measurement_type=PAC1921_Measurement_Type.VBUS
+            )
+            self._pac1921_u1.device.config_gain(di_gain=self._pac1921_u1.di_gain, dv_gain=self._pac1921_u1.dv_gain)
+            self._pac1921_u1.device.config_freerun_integration_mode(free_run_sample_num)
+
+            self._pac1921_u1.available = True
+            self._pac1921_u1.initialised = True
+        except Exception as e:
+            self._pac1921_u1.critical_error(
+                "Error initialising PAC1921 U1 ({}): {}".format(self._pac1921_u1.railname, e))
+
+        # Initially, devices will all be set in power mode.
+        #self._pac1921_array_current_measurement = pac1921.Measurement_Type.POWER
+
     def _config_max5306(self):
         # Attempt init, but on failure log error and continue
         try:
@@ -1151,15 +1462,15 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
             self._max5306.available = True
             self._max5306.initialised = True
 
-            logging.debug('MAX5306 init completed successfully')
+            self._logger.debug('MAX5306 init completed successfully')
         except Exception as e:
             self._max5306.critical_error('Failed to init MAX5306: {}'.format(e))
 
-    def env_get_sensor(self, name, sensor_type):
+    def _env_get_sensor(self, name, sensor_type):
         # This will return the raw value, cached by the LokiCarrierEnvmonitor class automatically
         # this will need to return values for the BME280 as well as the LTC2986
 
-        #logging.debug('Reading sensor {} ({})'.format(name, sensor_type))
+        #self._logger.getChild('env').debug('Reading sensor {} ({})'.format(name, sensor_type))
 
         if name in ['PT100', 'ASIC']:
             # These sensors are provided by the ltc2986
@@ -1220,7 +1531,7 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
             self._ltc2986.available = True
             self._ltc2986.initialised = True
 
-            logging.debug('LTC2986 init completed successfully')
+            self._logger.debug('LTC2986 init completed successfully')
         except Exception as e:
             self._ltc2986.pin_reset.set_value(1)
             self._ltc2986.critical_error('Failed to init LTC2986: {}'.format(e))
@@ -1238,6 +1549,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierEnvmonitor, LokiCarrierClockgen, L
             self._bme280.available = True
             self._bme280.initialised = True
 
-            logging.debug('BME280 init completed successfully')
+            self._logger.debug('BME280 init completed successfully')
         except Exception as e:
             self._bme280.critical_error('Failed to init BME280: {}'.format(e))

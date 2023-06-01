@@ -16,6 +16,8 @@ import logging
 import gpiod
 import time
 import concurrent.futures as futures
+import threading
+from contextlib import contextmanager
 
 from abc import ABC, abstractmethod
 
@@ -1181,6 +1183,7 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             self.available = False
             self.error = False
             self.error_message = False
+            self.lock = threading.RLock()
 
             if logger is not None:
                 # Prefer to use the supplied logger
@@ -1201,6 +1204,24 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
                 'available' if self.available else 'not available',
                 'useable' if self.useable() else 'not useable',
             )
+
+        # Allow the handler to expose an acquire() method to be used with 'with' to protect access
+        # with a thread-safe lock (mutex).
+        @contextmanager
+        def acquire(self, blocking=True, timeout=-1):
+            # only permit access if the device has been initialised
+            if not self.initialised:
+                raise Exception('Device was not initialised, cannot access it')
+
+            # Grab the lock with the supplied settings
+            result = self.lock.acquire(blocking=blocking, timeout=timeout)
+
+            # Allow the caller to execute their 'with'. 'result' is needed so that
+            # if the lock cannot be grabbed the user can handle it.
+            yield result
+
+            # Release the lock
+            self.lock.release()
 
         def useable(self):
             return (self.available and self.initialised)
@@ -1261,6 +1282,10 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
         self._ltc2986.pin_reset = self._pin_handler.get_pin('temp_reset')
 
+        # Initially grab device locks so that they can be freed from the peripheral enable callback.
+        # This also prevents the background threads running until the devices are enabled for the first time.
+        self._bme280.lock.acquire()
+
         self.register_change_callback('peripheral_enable', self.onChange_periph_en)
         self.register_change_callback('application_enable', self.onChange_app_en)
 
@@ -1284,10 +1309,9 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
                 self._config_ltc2986()
 
             # Only re-configure if it is not initialised.
-            if self._bme280.initialised:
-                self._bme280.available = True
-            else:
+            if not self._bme280.initialised:
                 self._config_bme280()
+            self._bme280.lock.release()        # Hard-release the lock to allow operation after power down
 
             # Re-configure if any of the power monitors did not initialised properly
             if any(not(x.initialised) for x in self._pac1921_array):
@@ -1305,7 +1329,7 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
             # For some devices, low VREG_EN simply disables contact with them (due to level shifters)
             self._max5306.available = False
-            self._bme280.available = False
+            self._bme280.lock.acquire()         # Hard-acquire the lock to prevent attempts to communicate, while preventing the pin going low until the system is ready
             self._pac1921_u3.available = False
             self._pac1921_u2.available = False
             self._pac1921_u1.available = False
@@ -1505,7 +1529,14 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
         if name in ['BOARD']:
             # These sensors are provided by the bme280
-            if self._bme280.useable():
+
+            # Attempt to acquire lock without blocking so that other sensors can be read
+            with self._bme280.acquire(blocking=False, timeout=-1) as rslt:
+
+                # Check if the acquire actuall failed but did not block
+                if not rslt:
+                    raise Exception('Could not acquire lock for sensor {} ({})'.format(name, sensor_type))
+
                 if sensor_type == 'temperature':
                     return self._bme280.device.temperature
                 elif sensor_type == 'humidity':

@@ -489,22 +489,40 @@ class LokiCarrier(ABC):
         # Polarity is not inverted here, as it is done during the pin request
         previous_state = bool(self.get_app_enabled())
         enable = bool(enable)
+
+        # Only act if the state has actually changed
         if previous_state != enable:
+            # If being disabled, the callback is called after the line is down
+            if not enable:
+                self._onChange_execute_callbacks('application_enable', False)
+
             self._pin_handler.set_pin_value('app_en', enable)
             time.sleep(0.5)
-            self._onChange_execute_callbacks('application_enable', enable)
+
+            # If being enabled, the callback is called after the line is up
+            if enable:
+                self._onChange_execute_callbacks('application_enable', True)
 
     def get_app_enabled(self):
-        return not bool(self._pin_handler.get_pin_value('app_en'))
+        return bool(self._pin_handler.get_pin_value('app_en'))
 
     def set_peripherals_enabled(self, enable=True):
         # Polarity is not inverted here, as it is done during the pin request
         previous_state = bool(self.get_peripherals_enabled())
         enable = bool(enable)
+
+        # Only act if the state has actually changed
         if previous_state != enable:
+            # If being disabled, the callback is called before the line goes down
+            if not enable:
+                self._onChange_execute_callbacks('peripheral_enable', False)
+
             self._pin_handler.set_pin_value('per_en', enable)
             time.sleep(5)
-            self._onChange_execute_callbacks('peripheral_enable', enable)
+
+            # If being enabled, the callback is called after the line is up
+            if enable:
+                self._onChange_execute_callbacks('peripheral_enable', True)
 
     def get_peripherals_enabled(self):
         # Polarity is not inverted here, as it is done during the pin request
@@ -1141,10 +1159,9 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
     ]
     psu_rail_info = [
         # name, voltageSupported, currentSupported, powerSupported, enSupported
-        ('VDDD', True, True, True, True),
-        ('VDDD_CNTRL', True, True, True, True),
-        ('VDDA', True, True, True, True),
-        ('VDD3V3', True, True, True, False),
+        ('VDDD', True, True, True, False),
+        ('VDDD_CNTRL', True, True, True, False),
+        ('VDDA', True, True, True, False),
     ]
 
     # Although these interfaces are present, the boundary of the 'application' does not really exist, since
@@ -1224,7 +1241,7 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
         # Gather settings for the PAC1921 power monitors
         self._pac1921_u3 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='PAC1921')
-        self._pac1921_u3.railname = 'VDDDCNTRL'
+        self._pac1921_u3.railname = 'VDDD_CNTRL'
         self._pac1921_u3.di_gain = kwargs.get('pac1921_vdddcntrl_di_gain', 1)
         self._pac1921_u3.dv_gain = kwargs.get('pac1921_vdddcntrl_dv_gain', 8)
 
@@ -1289,6 +1306,9 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             # For some devices, low VREG_EN simply disables contact with them (due to level shifters)
             self._max5306.available = False
             self._bme280.available = False
+            self._pac1921_u3.available = False
+            self._pac1921_u2.available = False
+            self._pac1921_u1.available = False
 
             # For other devices, low VREG_EN resets the device, meaning a new init will be required.
             self._ltc2986.available = False
@@ -1314,12 +1334,11 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         pass
 
     def _psu_get_rail(self, name, sensor_type):
-        # Alternate measurement types between voltage and current, calculating power.
-        # A new free-running measurement is triggered for the next reading.
+        # Since this is synced by a dedicated thread, the delays incurred by free running integration
+        # are not a concern. For the requested sensor type, change the mode and perform a full free
+        # running integration (with the exception of power, which is calculated).
 
         # With free-run integration mode, voltage and current measurement take max 365ms.
-        # Since this function funs in its own thread, I can wait for the result.
-
 
         for monitor in self._pac1921_array:
             # Only read the device we are interested in
@@ -1329,12 +1348,12 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
                     if sensor_type == 'current':
                         monitor.device.set_measurement_type(PAC1921_Measurement_Type.CURRENT)
                         monitor.device.config_freerun_integration_mode()
-                        time.sleep(0.4)
+                        time.sleep(0.4)     # Required to guarantee integration completes
                         return monitor.device.read()
                     elif sensor_type == 'voltage':
                         monitor.device.set_measurement_type(PAC1921_Measurement_Type.VBUS)
                         monitor.device.config_freerun_integration_mode()
-                        time.sleep(0.4)
+                        time.sleep(0.4)     # Required to guarantee integration completes
                         return monitor.device.read()
                     elif sensor_type == 'power':
                         cached_current = self.psu_get_rail_cached(name, 'current')
@@ -1349,9 +1368,11 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
                     raise Exception('Power Monitor for {} cannot be read, not useable'.format(monitor.railname))
 
     def psu_get_rail_en(self, name):
+        # ABC enforces the presence of this, but it is unused
         pass
 
     def psu_set_rail_en(self, name, value):
+        # ABC enforces the presence of this, but it is unused
         pass
 
     def dac_get_output(self, output_num):

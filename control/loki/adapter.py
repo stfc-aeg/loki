@@ -1416,9 +1416,10 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
     def dac_get_output(self, output_num):
         try:
-            with self._max5306.acquire(blocking=False) as rslt:
+            with self._max5306.acquire(blocking=True, timeout=1) as rslt:
                 if not rslt:
-                    return 'Access Failed'
+                    self._logger.warning('Could not get MAX5306 mutex, timed out')
+                    return 'N/A'
 
                 # Return the last setting of the DAC, assuming that it is correct and unchanged
                 return self._max5306.last_setting.get(output_num, 'unset')
@@ -1427,9 +1428,9 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             return 'N/A'
 
     def dac_set_output(self, output_num, voltage):
-        with self._max5306.acquire(blocking=False) as rslt:
+        with self._max5306.acquire(blocking=True, timeout=1) as rslt:
             if not rslt:
-                raise Exception('Failed to get lock for max5306')
+                raise Exception('Could not get MAX5306 mutex, timed out')
 
             self._max5306.device.set_output(output_num, voltage)
             print('Setting DAC output {} to {}'.format(output_num, voltage))
@@ -1533,11 +1534,9 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         if name in ['PT100', 'ASIC']:
             # These sensors are provided by the ltc2986
 
-            # Attempt to acquire lock without blocking so that other sensors can be read
-            with self._ltc2986.acquire(blocking=False, timeout=-1) as rslt:
-                # Check if the acquire actuall failed but did not block
+            with self._ltc2986.acquire(blocking=True, timeout=1) as rslt:
                 if not rslt:
-                    raise Exception('Could not acquire lock for sensor {} ({})'.format(name, sensor_type))
+                    raise Exception('Could not acquire lock for sensor {} ({}), timed out'.format(name, sensor_type))
 
                 if name == 'PT100' and sensor_type == 'temperature':
                     return self._ltc2986.device.measure_channel(self._ltc2986.pt100_channel)
@@ -1547,12 +1546,9 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         if name in ['BOARD']:
             # These sensors are provided by the bme280
 
-            # Attempt to acquire lock without blocking so that other sensors can be read
-            with self._bme280.acquire(blocking=False, timeout=-1) as rslt:
-
-                # Check if the acquire actuall failed but did not block
+            with self._bme280.acquire(blocking=True, timeout=1) as rslt:
                 if not rslt:
-                    raise Exception('Could not acquire lock for sensor {} ({})'.format(name, sensor_type))
+                    raise Exception('Could not acquire lock for sensor {} ({}), timed out'.format(name, sensor_type))
 
                 if sensor_type == 'temperature':
                     return self._bme280.device.temperature

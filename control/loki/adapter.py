@@ -475,6 +475,7 @@ class LokiCarrier(ABC):
             self._zynq_ams = {}
         for ams_name in ['0_ps', '1_remote', '2_pl']:
             self._zynq_ams[ams_name] = self._get_zynq_ams_temp_raw(ams_name)
+        self._logger.debug('Synced Zynq AMS temperatures: {}'.format(self._zynq_ams))
 
     #############################
     # Application Control Lines #
@@ -520,7 +521,7 @@ class LokiCarrier(ABC):
                 self._onChange_execute_callbacks('peripheral_enable', False)
 
             self._pin_handler.set_pin_value('per_en', enable)
-            time.sleep(5)
+            #time.sleep(5)
 
             # If being enabled, the callback is called after the line is up
             if enable:
@@ -904,11 +905,15 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
                 try:
                     self._env_cached_readings[sType][name] = self._env_get_sensor(name, sType)
                 except Exception as e:
-                    self._logger.getChild('env').error(
+                    self._logger.getChild('env').warning(
                         'Could not sync sensor reading for {} ({}): {}'.format(
                             name, sType, e
                         )
                     )
+
+                    # If there was no valid reading, return set cached value to None to avoid
+                    # communicating invalid information.
+                    self._env_cached_readings[sType][name] = None
 
         self._logger.getChild('env').debug('Updated environmental readings:{}'.format(self._env_cached_readings))
 
@@ -998,11 +1003,15 @@ class LokiCarrierPowerMonitor(LokiCarrier, ABC):
                 try:
                     self._psu_cached_readings[name][reading_type] = self._psu_get_rail(name, reading_type)
                 except Exception as e:
-                    self._logger.getChild('psu').error(
+                    self._logger.getChild('psu').warning(
                         'Could not power rail reading for {} ({}): {}'.format(
                             name, reading_type, e
                         )
                     )
+
+                    # If there was no valid reading, return set cached value to None to avoid
+                    # communicating invalid information.
+                    self._psu_cached_readings[name][reading_type] = None
 
         self._logger.getChild('psu').debug('Updated power monitor readings:{}'.format(self._psu_cached_readings))
 
@@ -1180,7 +1189,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             self.device = device
             self.device_type_name = device_type_name
             self.initialised = False
-            self.available = False
             self.error = False
             self.error_message = False
             self.lock = threading.RLock()
@@ -1197,12 +1205,19 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
                     self._logger = logging.getLogger('device')
 
         def __repr__(self):
-            return '{} device ({}) ({}, {} ; {})'.format(
+            # Check if the device is locked by temporarily requesting it (non-blocking)
+            # Todo : consider whether this should be cached somewhere if it is read by the paramtree
+            if self.lock.acquire(blocking=False):
+                device_unlocked = True
+                self.lock.release()
+            else:
+                device_unlocked = False
+
+            return '{} device ({}) ({}, {})'.format(
                 str(self.device_type_name),
                 type(self.device),
                 'initialised' if self.initialised else 'not initialised',
-                'available' if self.available else 'not available',
-                'useable' if self.useable() else 'not useable',
+                'unlocked' if device_unlocked else 'locked',
             )
 
         # Allow the handler to expose an acquire() method to be used with 'with' to protect access
@@ -1211,7 +1226,7 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         def acquire(self, blocking=True, timeout=-1):
             # only permit access if the device has been initialised
             if not self.initialised:
-                raise Exception('Device was not initialised, cannot access it')
+                raise RuntimeError('Device was not initialised, cannot access it')
 
             # Grab the lock with the supplied settings
             result = self.lock.acquire(blocking=blocking, timeout=timeout)
@@ -1220,15 +1235,12 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             # if the lock cannot be grabbed the user can handle it.
             yield result
 
-            # Release the lock
-            self.lock.release()
-
-        def useable(self):
-            return (self.available and self.initialised)
+            # Release the lock, if it was actually acquired
+            if result:
+                self.lock.release()
 
         def critical_error(self, message=''):
             # Mark the device not to be used, and record the error in log and paramtree status
-            self.available = False
             self.initialised = False
             self.error = True
             self.error_message = message
@@ -1285,6 +1297,11 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         # Initially grab device locks so that they can be freed from the peripheral enable callback.
         # This also prevents the background threads running until the devices are enabled for the first time.
         self._bme280.lock.acquire()
+        self._max5306.lock.acquire()
+        self._pac1921_u3.lock.acquire()
+        self._pac1921_u2.lock.acquire()
+        self._pac1921_u1.lock.acquire()
+        self._ltc2986.lock.acquire()
 
         self.register_change_callback('peripheral_enable', self.onChange_periph_en)
         self.register_change_callback('application_enable', self.onChange_app_en)
@@ -1297,16 +1314,14 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             self._logger.info('peripherals enabled, re-configuring devices')
 
             # Only re-configure if it is not initialised.
-            if self._max5306.initialised:
-                self._max5306.available = True
-            else:
+            if not self._max5306.initialised:
                 self._config_max5306()
+            self._max5306.lock.release
 
             # Only re-configure if it is not initialised.
-            if self._ltc2986.initialised:
-                self._ltc2986.available = True
-            else:
+            if not self._ltc2986.initialised:
                 self._config_ltc2986()
+            self._ltc2986.lock.release()
 
             # Only re-configure if it is not initialised.
             if not self._bme280.initialised:
@@ -1316,10 +1331,8 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             # Re-configure if any of the power monitors did not initialised properly
             if any(not(x.initialised) for x in self._pac1921_array):
                 self._config_pac1921_array()
-            else:
-                for device in self._pac1921_array:
-                    if device.initialised:
-                        device.available = True
+            for device in self._pac1921_array:
+                device.lock.release()
 
         else:
             self._logger.info('peripherals disabled, disabling device contact')
@@ -1328,14 +1341,15 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             self.onChange_app_en(False)
 
             # For some devices, low VREG_EN simply disables contact with them (due to level shifters)
-            self._max5306.available = False
-            self._bme280.lock.acquire()         # Hard-acquire the lock to prevent attempts to communicate, while preventing the pin going low until the system is ready
-            self._pac1921_u3.available = False
-            self._pac1921_u2.available = False
-            self._pac1921_u1.available = False
+            # Hard-acquire the lock to prevent attempts to communicate, while preventing the pin going low until the system is ready
+            self._max5306.lock.acquire()
+            self._bme280.lock.acquire()
+            self._pac1921_u3.lock.acquire()
+            self._pac1921_u2.lock.acquire()
+            self._pac1921_u1.lock.acquire()
 
             # For other devices, low VREG_EN resets the device, meaning a new init will be required.
-            self._ltc2986.available = False
+            self._ltc2986.lock.acquire()
             self._ltc2986.initialised = False
             self._ltc2986.pin_reset.set_value(1)    # Since with shifters down reset goes low anyway
 
@@ -1367,7 +1381,10 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         for monitor in self._pac1921_array:
             # Only read the device we are interested in
             if monitor.railname == name:
-                if monitor.useable():
+                with monitor.acquire(blocking=True, timeout=1) as rslt:
+                    if not rslt:
+                        raise Exception('Failed to get power monitoring lock, timed out')
+
                     # Set the desired free-running mode
                     if sensor_type == 'current':
                         monitor.device.set_measurement_type(PAC1921_Measurement_Type.CURRENT)
@@ -1388,8 +1405,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
                             return cached_voltage * cached_current
                         except Exception as e:
                             raise Exception('Failed to calculate power with cached voltage and current: {}'.format(e))
-                else:
-                    raise Exception('Power Monitor for {} cannot be read, not useable'.format(monitor.railname))
 
     def psu_get_rail_en(self, name):
         # ABC enforces the presence of this, but it is unused
@@ -1400,23 +1415,29 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         pass
 
     def dac_get_output(self, output_num):
-        if self._max5306.useable():
-            # Return the last setting of the DAC, assuming that it is correct and unchanged
-            return self._max5306.last_setting.get(output_num, 'unset')
-        elif self._max5306.initialised:
-            return 'Not available'
+        try:
+            with self._max5306.acquire(blocking=False) as rslt:
+                if not rslt:
+                    return 'Access Failed'
+
+                # Return the last setting of the DAC, assuming that it is correct and unchanged
+                return self._max5306.last_setting.get(output_num, 'unset')
+        except RuntimeError as e:
+            self._logger.warning('Failed to get DAC mutex: {}', e)
+            return 'N/A'
 
     def dac_set_output(self, output_num, voltage):
-        if self._max5306.useable():
+        with self._max5306.acquire(blocking=False) as rslt:
+            if not rslt:
+                raise Exception('Failed to get lock for max5306')
+
             self._max5306.device.set_output(output_num, voltage)
             print('Setting DAC output {} to {}'.format(output_num, voltage))
             self._max5306.last_setting.update({output_num: voltage})
-        else:
-            raise Exception('Could not set MAX5306, not available')
 
     def dac_get_status(self):
-        return ('Available: {}, Initialised: {}, Error: {}'.format(
-            self._max5306.available, self._max5306.initialised, self._max5306.error_message
+        return ('Initialised: {}, Error: {}'.format(
+            self._max5306.initialised, self._max5306.error_message
         ))
 
     def _config_pac1921_array(self):
@@ -1426,7 +1447,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         free_run_sample_num = 512
 
         try:
-            self._pac1921_u3.available = False
             self._pac1921_u3.initialised = False
             self._pac1921_u3.error = False
             self._pac1921_u3.error_message = False
@@ -1440,14 +1460,12 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             self._pac1921_u3.device.config_gain(di_gain=self._pac1921_u3.di_gain, dv_gain=self._pac1921_u3.dv_gain)
             self._pac1921_u3.device.config_freerun_integration_mode(free_run_sample_num)
 
-            self._pac1921_u3.available = True
             self._pac1921_u3.initialised = True
         except Exception as e:
             self._pac1921_u3.critical_error(
                 "Error initialising PAC1921 U3 ({}): {}".format(self._pac1921_u3.railname, e))
 
         try:
-            self._pac1921_u2.available = False
             self._pac1921_u2.initialised = False
             self._pac1921_u2.error = False
             self._pac1921_u2.error_message = False
@@ -1461,14 +1479,12 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             self._pac1921_u2.device.config_gain(di_gain=self._pac1921_u2.di_gain, dv_gain=self._pac1921_u2.dv_gain)
             self._pac1921_u2.device.config_freerun_integration_mode(free_run_sample_num)
 
-            self._pac1921_u2.available = True
             self._pac1921_u2.initialised = True
         except Exception as e:
             self._pac1921_u2.critical_error(
                 "Error initialising PAC1921 U2 ({}): {}".format(self._pac1921_u2.railname, e))
 
         try:
-            self._pac1921_u1.available = False
             self._pac1921_u1.initialised = False
             self._pac1921_u1.error = False
             self._pac1921_u1.error_message = False
@@ -1482,7 +1498,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             self._pac1921_u1.device.config_gain(di_gain=self._pac1921_u1.di_gain, dv_gain=self._pac1921_u1.dv_gain)
             self._pac1921_u1.device.config_freerun_integration_mode(free_run_sample_num)
 
-            self._pac1921_u1.available = True
             self._pac1921_u1.initialised = True
         except Exception as e:
             self._pac1921_u1.critical_error(
@@ -1494,7 +1509,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
     def _config_max5306(self):
         # Attempt init, but on failure log error and continue
         try:
-            self._max5306.available = False
             self._max5306.initialised = False
             self._max5306.error = False
             self._max5306.error_message = False
@@ -1504,7 +1518,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
             self._max5306.last_setting = {}
 
-            self._max5306.available = True
             self._max5306.initialised = True
 
             self._logger.debug('MAX5306 init completed successfully')
@@ -1519,13 +1532,17 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
         if name in ['PT100', 'ASIC']:
             # These sensors are provided by the ltc2986
-            if self._ltc2986.useable():
+
+            # Attempt to acquire lock without blocking so that other sensors can be read
+            with self._ltc2986.acquire(blocking=False, timeout=-1) as rslt:
+                # Check if the acquire actuall failed but did not block
+                if not rslt:
+                    raise Exception('Could not acquire lock for sensor {} ({})'.format(name, sensor_type))
+
                 if name == 'PT100' and sensor_type == 'temperature':
                     return self._ltc2986.device.measure_channel(self._ltc2986.pt100_channel)
                 elif name == 'ASIC' and sensor_type == 'temperature':
                     return self._ltc2986.device.measure_channel(self._ltc2986.diode_channel)
-            else:
-                return 'Device inactive'
 
         if name in ['BOARD']:
             # These sensors are provided by the bme280
@@ -1548,7 +1565,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         # The 'generic' version of this for LokiCarrier_1v0 will likely not define sensors off-board, so will need
         # a mechanism for the application-specific code to do so. Might just have to expose the function.
         try:
-            self._ltc2986.available = False
             self._ltc2986.initialised = False
             self._ltc2986.error = False
             self._ltc2986.error_message = False
@@ -1580,7 +1596,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
                 diode_non_ideality=1.0,
                 channel_num=self._ltc2986.diode_channel
             )
-            self._ltc2986.available = True
             self._ltc2986.initialised = True
 
             self._logger.debug('LTC2986 init completed successfully')
@@ -1590,7 +1605,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
     def _config_bme280(self):
         try:
-            self._bme280.available = False
             self._bme280.initialised = False
             self._bme280.error = False
             self._bme280.error_message = False
@@ -1598,7 +1612,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             I2CDevice.enable_exceptions()
             self._bme280.device = BME280(use_spi=False, bus=self._bme280.i2c_bus)
 
-            self._bme280.available = True
             self._bme280.initialised = True
 
             self._logger.debug('BME280 init completed successfully')

@@ -13,6 +13,11 @@ then
     yocto_tmpdir=/tmp/loki/
 fi
 
+if [ -z "$loki_version" ]
+then
+    loki_version=$(git describe)
+fi
+
 if [ -z "$platform_carrier" ]
 then
     echo "Platform carrier must be specified with platform_carrier="

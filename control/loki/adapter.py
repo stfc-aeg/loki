@@ -15,6 +15,7 @@ from odin_devices.i2c_device import I2CDevice
 import logging
 import gpiod
 import time
+import os
 import concurrent.futures as futures
 import threading
 from contextlib import contextmanager
@@ -98,6 +99,31 @@ class LokiCarrier(ABC):
     # todo ideally the base class should avoid refferring to specific devices in its external interfaces.
 
     def __init__(self, **kwargs):
+        # Get system information
+        try:
+            with open('/etc/loki/version') as info:
+                self.__lokiinfo_version = info.read()
+        except FileNotFoundError:
+            self.__lokiinfo_version = 'unknown'
+
+        try:
+            with open('/etc/loki/platform') as info:
+                self.__lokiinfo_platform = info.read()
+        except FileNotFoundError:
+            self.__lokiinfo_platform = 'unknown'
+
+        try:
+            with open('/etc/loki/application-version') as info:
+                self.__lokiinfo_application_version = info.read()
+        except FileNotFoundError:
+            self.__lokiinfo_application_version = 'unknown'
+
+        try:
+            with open('/etc/loki/application-name') as info:
+                self.__lokiinfo_application_name = info.read()
+        except FileNotFoundError:
+            self.__lokiinfo_application_name = 'unknown'
+
         self._logger = logging.getLogger('LokiCarrier')
 
         self._supported_extensions = []
@@ -359,7 +385,11 @@ class LokiCarrier(ABC):
 
         base_tree_dict = {
             'carrier_info': {
-                'variant': (lambda: self.variant, None, {"description": "Carrier variant"}),
+                'version': (lambda: self.__lokiinfo_version, None, {"description": "LOKI system image repo tag"}),
+                'application_version': (lambda: self.__lokiinfo_application_version, None, {"description": "Application version"}),
+                'application_name': (lambda: self.__lokiinfo_application_name, None, {"description": "Application name"}),
+                'platform': (lambda: self.__lokiinfo_platform, None, {"description": "Hardware platform"}),
+                'classvariant': (lambda: self._variant, None, {"description": "Carrier class variant"}),
                 'extensions': (self.get_avail_extensions, None, {"description": "Comma separated list of carrier's supported extensions"}),
                 'application_interfaces': self._get_paramtree_interfaces_dict(),
                 'loopstatus': (self.get_loop_status, None, {"description": "Reports on the state of the background loops"}),

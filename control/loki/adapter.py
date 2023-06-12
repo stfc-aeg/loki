@@ -10,6 +10,8 @@ from odin_devices.max5306 import MAX5306
 from odin_devices.ltc2986 import LTC2986
 from odin_devices.bme280 import BME280
 from odin_devices.pac1921 import PAC1921, Measurement_Type as PAC1921_Measurement_Type
+from odin_devices.si534x import SI5344
+from odin_devices.firefly import FireFly
 from odin_devices.i2c_device import I2CDevice
 
 import logging
@@ -90,6 +92,169 @@ class LokiAdapter(AsyncApiAdapter):
 
     # todo adapter will basically just include redirect functions for get and set, potentially the 'loops'
 
+class PinHandler():
+    # Class designed to separate off as much gpiod logic as possible, so that later upgrades to libgpiod2
+    # are easier. Pins in the code are accessed by friendlier names, distinct from the IDs.
+    # This driver can coexist with any other gpiod handling of pins, so is kept simple by only using the
+    # flag for active_low. If additional functionality is required (e.g. events) implement separately.
+
+    def __init__(self, consumername='LOKI'):
+        self._pins = {}
+        self._pin_states_cached = {}
+        self._consumername = consumername
+
+    # If id is a string, use gpiod.find_line to get the pin, otherwise use typical gpiod.get_line.
+    @staticmethod
+    def _gpiod_line_from_id(line_id):
+
+        if line_id is None:
+            return None
+
+        try:
+            # gpiochip0 is assumed since it is the only available chip on the ZynqMP platform
+            chip = gpiod.Chip('gpiochip0')
+            return chip.get_line(int(line_id))
+        except ValueError:
+            return gpiod.find_line(line_id)
+
+    def get_pin(self, friendly_name):
+        try:
+            return self._pins[friendly_name]
+        except KeyError:
+            raise KeyError('Could not find a requested pin with friendly name {}'.format(friendly_name))
+
+    def get_pin_names(self):
+        return self._pins.keys()
+
+    def is_pin_input(self, friendly_name):
+        pin = self.get_pin(friendly_name)
+        return pin.direction() == pin.DIRECTION_INPUT
+
+    def sync_pin_value_cache(self, sync_output_pins=False):
+        # Updates the cached pin values from gpio lines directly. Works only for input pins by default,
+        # unless sync_output_pins=True is set. Should ideally be called by an asynchronous update loop.
+        for pin_name in self._pins.keys():
+            # By default, only syncs the inputs pins, unless sync_output_pins is specified
+            if self.is_pin_input(pin_name) or sync_output_pins:
+                self._pin_states_cached.update({pin_name: self.get_pin(pin_name).get_value()}) 
+
+    def get_pin_value(self, friendly_name):
+        # Inputs pins should always be read, as they can change value without intervention. Outputs should
+        # prioritise a cached value if available.
+
+        # todo update this to make all input pins read on a loop somehow, and cached...
+
+        if self.is_pin_input(friendly_name) or self._pin_states_cached.get(friendly_name) is None:
+            # Read from the pin and cache the result for next time (ignored for input mode)
+            latest_value = self.get_pin(friendly_name).get_value()
+            self._pin_states_cached[friendly_name] = latest_value
+            return latest_value
+        else:
+            # If there is a cached value, use it without reading the pin
+            return self._pin_states_cached.get(friendly_name)
+
+    def set_pin_value(self, friendly_name, value):
+        # If in input mode, raise an error
+        if not self.is_pin_input(friendly_name):
+            # Set the pin and cache for later
+            self.get_pin(friendly_name).set_value(value)
+            self._pin_states_cached[friendly_name] = value
+        else:
+            raise Exception('Cannot set an input pin')
+
+    def add_pin(self, friendly_name, pin_id, is_input, is_active_low=False, default_value=0):
+        # Check if the name is already in use
+        if self._pins.get(friendly_name) is not None:
+            raise RuntimeError('pin friendly name {} already exists for {}, cannot use again for ID {}'.format(
+                friendly_name, self._pins[friendly_name], pin_id))
+
+        # Find the line from its id
+        line = self._gpiod_line_from_id(pin_id)
+        if line is None:
+            raise RuntimeError('could not find matching gpiod line for id {} (for pin name {})'.format(
+                pin_id, friendly_name))
+
+        # Request the pin with given settings
+        try:
+            line.request(
+                consumer=self._consumername,
+                type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
+                flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0),
+                default_val=default_value)
+        except Exception as e:
+            raise RuntimeError('could not request line {}: {}'.format(line, e))
+
+        # Store the pin by friendly name
+        self._pins[friendly_name] = line
+
+    @staticmethod
+    def _sort_options_per_pin(options):
+        # Create a dictionary of only the pin-config tags, strip prefix
+        # example keys before: pin_config_id_<friendly_name>
+        # example keys after: id_<friendly_name>
+        pin_config_prefix = 'pin_config_'
+        pin_config_options = {}
+        for key in options.keys():
+            if key.startswith(pin_config_prefix):
+                pin_config_options[key[len(pin_config_prefix):]] = options[key]
+
+        # Separate options by the pin friendly name they refer to
+        config_by_pin = {}
+        allowed_settings = ['id', 'active_low', 'nc', 'is_input', 'default_value']
+        for key in pin_config_options.keys():
+            # Settings not in the list are ignored
+            for allowed_setting in allowed_settings:
+                if key.startswith(allowed_setting):
+                    # Remove the setting prefix and the additional underscore
+                    pin_name = key[len(allowed_setting) + 1:]
+                    logging.debug('key {} -> pin {}'.format(key, pin_name))
+
+                    # Add the pin to the dictionary if it does not exist
+                    config_by_pin.setdefault(pin_name, {})
+
+                    # Add the currently found setting for this pin
+                    config_by_pin[pin_name].update({allowed_setting: pin_config_options[key]})
+
+        return config_by_pin
+
+    def add_pins_from_options(self, options):
+        # Parse the options and extract pin configuration, separated by pin friendly name
+        config_by_pin = self._sort_options_per_pin(options)
+
+        logging.debug('Parsing pin options: {}'.format(config_by_pin))
+
+        # Add each pin that has configuration information
+        for pin_name in config_by_pin.keys():
+
+            pin_info = config_by_pin[pin_name]
+
+            try:
+                pin_id = pin_info.get('id')
+                pin_active_low = pin_info.get('active_low')
+                pin_is_input = pin_info.get('is_input')
+                pin_not_connected = pin_info.get('nc', False)   # This is optional, assumed pins are connected
+                pin_default = pin_info.get('default_value', 1 if pin_active_low else 0)   # De-assert by default
+            except KeyError as e:
+                raise KeyError('Not enough information to register pin {}: {}'.format(pin_name, e))
+
+            # If a pin is overridden to 'nc' it is assumed that it will not be used by anything.
+            # As such, it will be ignored and not added to the accessible pins.
+            if not pin_not_connected:
+                self.add_pin(
+                    friendly_name=pin_name,
+                    pin_id=pin_id,
+                    is_input=pin_is_input,
+                    is_active_low=pin_active_low,
+                    default_value=pin_default
+                )
+
+    def pinmap(self):
+        # Print out the current pinmap
+        pm = ''
+        for pin_name in self.get_pin_names():
+            pm += '{}: {}\n'.format(pin_name, self.get_pin(pin_name))
+        return pm
+
 
 # todo note SOMEWHERE that when including LokiCarrier as well as extensions, it must be last for the MRO to work. It's also optional is it's auto included by the extensions anyway. Or create a custom warning somehow (the better solution).
 class LokiCarrier(ABC):
@@ -133,7 +298,7 @@ class LokiCarrier(ABC):
         self._config_pin_defaults(kwargs)
 
         # Request all pins configured for the device, including those for extension classes, using options
-        self._pin_handler = LokiCarrier.PinHandler(self.variant)
+        self._pin_handler = PinHandler(self._variant)
         self._pin_handler.add_pins_from_options(kwargs)
 
         self._logger.info('Pin mappings settled:\n{}'.format(self._pin_handler.pinmap()))
@@ -181,171 +346,9 @@ class LokiCarrier(ABC):
 
     @property
     @abstractmethod
-    def variant(self):
+    def _variant(self):
         pass
 
-    class PinHandler():
-        # Class designed to separate off as much gpiod logic as possible, so that later upgrades to libgpiod2
-        # are easier. Pins in the code are accessed by friendlier names, distinct from the IDs.
-        # This driver can coexist with any other gpiod handling of pins, so is kept simple by only using the
-        # flag for active_low. If additional functionality is required (e.g. events) implement separately.
-
-        def __init__(self, consumername='LOKI'):
-            self._pins = {}
-            self._pin_states_cached = {}
-            self._consumername = consumername
-
-        # If id is a string, use gpiod.find_line to get the pin, otherwise use typical gpiod.get_line.
-        @staticmethod
-        def _gpiod_line_from_id(line_id):
-
-            if line_id is None:
-                return None
-
-            try:
-                # gpiochip0 is assumed since it is the only available chip on the ZynqMP platform
-                chip = gpiod.Chip('gpiochip0')
-                return chip.get_line(int(line_id))
-            except ValueError:
-                return gpiod.find_line(line_id)
-
-        def get_pin(self, friendly_name):
-            try:
-                return self._pins[friendly_name]
-            except KeyError:
-                raise KeyError('Could not find a requested pin with friendly name {}'.format(friendly_name))
-
-        def get_pin_names(self):
-            return self._pins.keys()
-
-        def is_pin_input(self, friendly_name):
-            pin = self.get_pin(friendly_name)
-            return pin.direction() == pin.DIRECTION_INPUT
-
-        def sync_pin_value_cache(self, sync_output_pins=False):
-            # Updates the cached pin values from gpio lines directly. Works only for input pins by default,
-            # unless sync_output_pins=True is set. Should ideally be called by an asynchronous update loop.
-            for pin_name in self._pins.keys():
-                # By default, only syncs the inputs pins, unless sync_output_pins is specified
-                if self.is_pin_input(pin_name) or sync_output_pins:
-                    self._pin_states_cached.update({pin_name: self.get_pin(pin_name).get_value()}) 
-
-        def get_pin_value(self, friendly_name):
-            # Inputs pins should always be read, as they can change value without intervention. Outputs should
-            # prioritise a cached value if available.
-
-            # todo update this to make all input pins read on a loop somehow, and cached...
-
-            if self.is_pin_input(friendly_name) or self._pin_states_cached.get(friendly_name) is None:
-                # Read from the pin and cache the result for next time (ignored for input mode)
-                latest_value = self.get_pin(friendly_name).get_value()
-                self._pin_states_cached[friendly_name] = latest_value
-                return latest_value
-            else:
-                # If there is a cached value, use it without reading the pin
-                return self._pin_states_cached.get(friendly_name)
-
-        def set_pin_value(self, friendly_name, value):
-            # If in input mode, raise an error
-            if not self.is_pin_input(friendly_name):
-                # Set the pin and cache for later
-                self.get_pin(friendly_name).set_value(value)
-                self._pin_states_cached[friendly_name] = value
-            else:
-                raise Exception('Cannot set an input pin')
-
-        def add_pin(self, friendly_name, pin_id, is_input, is_active_low=False, default_value=0):
-            # Check if the name is already in use
-            if self._pins.get(friendly_name) is not None:
-                raise RuntimeError('pin friendly name {} already exists for {}, cannot use again for ID {}'.format(
-                    friendly_name, self._pins[friendly_name], pin_id))
-
-            # Find the line from its id
-            line = self._gpiod_line_from_id(pin_id)
-            if line is None:
-                raise RuntimeError('could not find matching gpiod line for id {} (for pin name {})'.format(
-                    pin_id, friendly_name))
-
-            # Request the pin with given settings
-            try:
-                line.request(
-                    consumer=self._consumername,
-                    type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
-                    flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0),
-                    default_val=default_value)
-            except Exception as e:
-                raise RuntimeError('could not request line {}: {}'.format(line, e))
-
-            # Store the pin by friendly name
-            self._pins[friendly_name] = line
-
-        @staticmethod
-        def _sort_options_per_pin(options):
-            # Create a dictionary of only the pin-config tags, strip prefix
-            # example keys before: pin_config_id_<friendly_name>
-            # example keys after: id_<friendly_name>
-            pin_config_prefix = 'pin_config_'
-            pin_config_options = {}
-            for key in options.keys():
-                if key.startswith(pin_config_prefix):
-                    pin_config_options[key[len(pin_config_prefix):]] = options[key]
-
-            # Separate options by the pin friendly name they refer to
-            config_by_pin = {}
-            allowed_settings = ['id', 'active_low', 'nc', 'is_input', 'default_value']
-            for key in pin_config_options.keys():
-                # Settings not in the list are ignored
-                for allowed_setting in allowed_settings:
-                    if key.startswith(allowed_setting):
-                        # Remove the setting prefix and the additional underscore
-                        pin_name = key[len(allowed_setting) + 1:]
-                        logging.debug('key {} -> pin {}'.format(key, pin_name))
-
-                        # Add the pin to the dictionary if it does not exist
-                        config_by_pin.setdefault(pin_name, {})
-
-                        # Add the currently found setting for this pin
-                        config_by_pin[pin_name].update({allowed_setting: pin_config_options[key]})
-
-            return config_by_pin
-
-        def add_pins_from_options(self, options):
-            # Parse the options and extract pin configuration, separated by pin friendly name
-            config_by_pin = self._sort_options_per_pin(options)
-
-            logging.debug('Parsing pin options: {}'.format(config_by_pin))
-
-            # Add each pin that has configuration information
-            for pin_name in config_by_pin.keys():
-
-                pin_info = config_by_pin[pin_name]
-
-                try:
-                    pin_id = pin_info.get('id')
-                    pin_active_low = pin_info.get('active_low')
-                    pin_is_input = pin_info.get('is_input')
-                    pin_not_connected = pin_info.get('nc', False)   # This is optional, assumed pins are connected
-                    pin_default = pin_info.get('default_value', 1 if pin_active_low else 0)   # De-assert by default
-                except KeyError as e:
-                    raise KeyError('Not enough information to register pin {}: {}'.format(pin_name, e))
-
-                # If a pin is overridden to 'nc' it is assumed that it will not be used by anything.
-                # As such, it will be ignored and not added to the accessible pins.
-                if not pin_not_connected:
-                    self.add_pin(
-                        friendly_name=pin_name,
-                        pin_id=pin_id,
-                        is_input=pin_is_input,
-                        is_active_low=pin_active_low,
-                        default_value=pin_default
-                    )
-
-        def pinmap(self):
-            # Print out the current pinmap
-            pm = ''
-            for pin_name in self.get_pin_names():
-                pm += '{}: {}\n'.format(pin_name, self.get_pin(pin_name))
-            return pm
 
     def _config_pin_defaults(self, options):
         # todo remove super(LokiCarrier, self)._config_pin_defaults(options)
@@ -665,7 +668,7 @@ class LokiCarrierLEDs(LokiCarrier, ABC):
         super(LokiCarrierLEDs, self)._config_pin_defaults(options)
 
         # All 'leds' will be outputs, active low (can be overridden in carrier init before super init).
-        for friendly_name in self.leds_namelist:
+        for friendly_name in self._leds_namelist:
             # Assume that the ID has already been set in the carrier
             options.setdefault('pin_config_is_input_' + friendly_name, False)
             options.setdefault('pin_config_active_low_' + friendly_name, True)  # Override if necesary
@@ -678,7 +681,7 @@ class LokiCarrierLEDs(LokiCarrier, ABC):
         base_tree['user_interaction'].setdefault('leds', {})
 
         # Add each LED with its friendly name to the parameter tree
-        for friendly_name in self.leds_namelist:
+        for friendly_name in self._leds_namelist:
             base_tree['user_interaction']['leds'][friendly_name] = (
                 (lambda friendly_name_internal: lambda: self.leds_get_led(friendly_name_internal))(friendly_name),
                 (lambda friendly_name_internal: lambda value: self.leds_set_led(friendly_name_internal, bool(value)))(friendly_name),
@@ -699,7 +702,7 @@ class LokiCarrierLEDs(LokiCarrier, ABC):
     # that are different to the LED defaults (active low, output).
     @property
     @abstractmethod
-    def leds_namelist(self):
+    def _leds_namelist(self):
         pass
 
 
@@ -722,7 +725,7 @@ class LokiCarrierButtons(LokiCarrier, ABC):
         super(LokiCarrierButtons, self)._config_pin_defaults(options)
 
         # All 'buttons' will be inputs, active low (can be overridden in carrier init before super init).
-        for friendly_name in self.buttons_namelist:
+        for friendly_name in self._buttons_namelist:
             # Assume that the ID has already been set in the carrier
             options.setdefault('pin_config_is_input_' + friendly_name, True)
             options.setdefault('pin_config_active_low_' + friendly_name, True)  # Override if necesary
@@ -734,7 +737,7 @@ class LokiCarrierButtons(LokiCarrier, ABC):
         base_tree['user_interaction'].setdefault('buttons', {})
 
         # Add each button with its friendly name to the parameter tree
-        for friendly_name in self.buttons_namelist:
+        for friendly_name in self._buttons_namelist:
             base_tree['user_interaction']['buttons'][friendly_name] = (
                 (lambda friendly_name_internal: lambda: self.leds_get_led(friendly_name_internal))(friendly_name),
                 None,
@@ -752,7 +755,7 @@ class LokiCarrierButtons(LokiCarrier, ABC):
     # that are different to the button defaults (active low, input).
     @property
     @abstractmethod
-    def buttons_namelist(self):
+    def _buttons_namelist(self):
         pass
 
 
@@ -765,10 +768,9 @@ class LokiCarrierClockgen(LokiCarrier, ABC):
         # Call next in MRO / Base Class
         super(LokiCarrierClockgen, self).__init__(**kwargs)
 
-        self.__clkgen_default_config = kwargs.get('clkgen_default_config')
-        # todo Use this after init later on
-
         # todo register the device with the carrier power control system
+
+        self._clkgen_current_config = None
 
         self._supported_extensions.append('clkgen')
 
@@ -776,30 +778,48 @@ class LokiCarrierClockgen(LokiCarrier, ABC):
         base_tree = super(LokiCarrierClockgen, self)._gen_paramtree_dict()
 
         base_tree['clkgen'] = {
-            'drivername': (lambda: self.clkgen_drivername, None, {"description": "Name of the device providing clock generator support"}),
-            'num_outputs': (lambda: self.clkgen_numchannels, None, {"description": "Number of output channels available"}),
+            'drivername': (lambda: self._clkgen_drivername, None, {"description": "Name of the device providing clock generator support"}),
+            'num_outputs': (lambda: self._clkgen_numchannels, None, {"description": "Number of output channels available"}),
             'config_file': (self.clkgen_get_config, self.clkgen_set_config, {"description": "Current configuration file loaded for clock config"}),
             'config_files_avail': (self.clkgen_get_config_avail, None, {"description": "Available config files to choose from"}),
         }
 
         return base_tree
 
-    @property
-    @abstractmethod
-    def clkgen_drivername(self):
-        pass
-
-    @property
-    @abstractmethod
-    def clkgen_numchannels(self):
-        pass
-
-    @abstractmethod
-    def clkgen_set_config(self, filename):
-        pass
-
-    @abstractmethod
     def clkgen_get_config(self):
+        try:
+            return self._clkgen_current_config
+        except AttributeError:
+            return None
+
+    def clkgen_set_config(self, configname):
+        # Used to guard the lower level function while caching the last submitted result.
+        # If an error is encountered, the setting is not cached.
+        try:
+            self._clkgen_set_config_direct(configname)
+            self._clkgen_current_config = configname
+        except Exception as e:
+            raise Exception(
+                'Failed to set clock generator settings to config {}: {}'.format(
+                    configname, e
+                )
+            )
+
+    @property
+    @abstractmethod
+    def _clkgen_drivername(self):
+        pass
+
+    @property
+    @abstractmethod
+    def _clkgen_numchannels(self):
+        pass
+
+    # Implemented for the specific clock generator by the carrier. If the operation fails
+    # for some reason, an error should be returned so that the caller does not chache the
+    # setting assuming that it has been applied.
+    @abstractmethod
+    def _clkgen_set_config_direct(self, config):
         pass
 
     @abstractmethod
@@ -824,7 +844,7 @@ class LokiCarrierDAC(LokiCarrier, ABC):
         output_tree = {}
         # This property is enforced as generated by the child
         # this probably won't work, see how I did it with the firefly channels before (double lambda...)
-        for output_num in range(0, self.dac_num_outputs):
+        for output_num in range(0, self._dac_num_outputs):
             output_tree[str(output_num)] = (
                 # Protect the scope of output_num_internal so that it does not change between loops
                 (lambda output_num_internal: lambda: self.dac_get_output(output_num_internal))(output_num),
@@ -834,12 +854,12 @@ class LokiCarrierDAC(LokiCarrier, ABC):
 
         base_tree['dac'] = {
             'drivername': (
-                lambda: self.dac_drivername,
+                lambda: self._dac_drivername,
                 None,
                 {"description": "Name of the device providing clock generator support"}
             ),
             'num_outputs': (
-                lambda: self.dac_num_outputs,
+                lambda: self._dac_num_outputs,
                 None,
                 {"description": "Number of output channels available"}
             ),
@@ -855,12 +875,12 @@ class LokiCarrierDAC(LokiCarrier, ABC):
 
     @property
     @abstractmethod
-    def dac_drivername(self):
+    def _dac_drivername(self):
         pass
 
     @property
     @abstractmethod
-    def dac_num_outputs(self):
+    def _dac_num_outputs(self):
         pass
 
     @abstractmethod
@@ -897,7 +917,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
         # Expects this to be a list of (name, type, unit) tuples.
         # Type is typically 'temperature' or 'humidity'.
         # info is the dictionary passed to the paramtree including description, units etc.
-        additional_sensors = self.env_sensor_info
+        additional_sensors = self._env_sensor_info
         for (name, sType, info) in additional_sensors:
             # Create the new key if it does not exist for the sensor type, with a blank dictionary
             base_tree['environment'].setdefault(sType, {})
@@ -950,7 +970,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
     # list, see above
     @property
     @abstractmethod
-    def env_sensor_info(self):
+    def _env_sensor_info(self):
         pass
 
     # Get the live version of a power sensor reading. This should not perform any caching, as the calling method
@@ -984,7 +1004,7 @@ class LokiCarrierPowerMonitor(LokiCarrier, ABC):
 
         # self.psu_rail_info is a list of tuples of the form:
         # (name, voltageSupport (bool), currentSupport (bool), powerSupport (bool), enSupport (bool))
-        for (name, voltageSupport, currentSupport, powerSupport, enSupport) in self.psu_rail_info:
+        for (name, voltageSupport, currentSupport, powerSupport, enSupport) in self._psu_rail_info:
             # Create the new key if it does not exist for the rail, with a blank dictionary
             base_tree['power'].setdefault(name, {})
 
@@ -1058,7 +1078,7 @@ class LokiCarrierPowerMonitor(LokiCarrier, ABC):
     # list, see above
     @property
     @abstractmethod
-    def psu_rail_info(self):
+    def _psu_rail_info(self):
         pass
 
     # Get the live version of a power rail reading. This should not perform any caching, as the calling method
@@ -1085,7 +1105,7 @@ class LokiCarrier_TEBF0808(LokiCarrier):
     # by this adapter (buses, GPIO pins). This second adapter will need to implement things like clock
     # config, etc.
 
-    variant = 'tebf0808'
+    _variant = 'tebf0808'
     #leds_namelist = ['led0']
 
     def __init__(self, **kwargs):
@@ -1101,13 +1121,13 @@ class LokiCarrier_TEBF0808(LokiCarrier):
 
 # First iteration of the new carrier for LOKI
 class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, LokiCarrierDAC, LokiCarrier):
-    variant = 'LOKI 1v0'
-    clkgen_drivername = 'SI5345'
-    clkgen_numchannels = 10
-    dac_drivername = 'MAX5306'
-    dac_num_outputs = 10
-    leds_namelist = ['led0', 'led1', 'led2', 'led3']
-    buttons_namelist = ['button0', 'button1']
+    _variant = 'LOKI 1v0'
+    _clkgen_drivername = 'SI5345'
+    _clkgen_numchannels = 10
+    _dac_drivername = 'MAX5306'
+    _dac_num_outputs = 10
+    _leds_namelist = ['led0', 'led1', 'led2', 'led3']
+    _buttons_namelist = ['button0', 'button1']
     _application_interfaces_spi = {
         'SS0': (1, 0),
         'SS1': (1, 1),
@@ -1121,7 +1141,6 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
     }
 
     def __init__(self, **kwargs):
-        self.__clkgen_current_config = None
         self.__dac_outputval = {}
 
         kwargs.setdefault('pin_config_id_led0', 'LED0')
@@ -1134,11 +1153,7 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
 
         super(LokiCarrier_1v0, self).__init__(**kwargs)
 
-    def clkgen_get_config(self):
-        # todo
-        pass
-
-    def clkgen_set_config(self, configname):
+    def _clkgen_set_config_direct(self, configname):
         self._logger.getChild('clkgen').info('Setting clock configuration from {}'.format(configname))
         # todo
         pass
@@ -1180,25 +1195,92 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
 ####            super(LokiAdapter_MERCURY, self).instantiate_carrier(carrier_type)
 
 
+class DeviceHandler():
+    # To help keep track of device availability. Can also be used as a place to track state
+    # for different devices.
+    def __init__(self, device=None, device_type_name=None, logger=None):
+        self.device = device
+        self.device_type_name = device_type_name
+        self.initialised = False
+        self.error = False
+        self.error_message = False
+        self.lock = threading.RLock()
+
+        if logger is not None:
+            # Prefer to use the supplied logger
+            self._logger = logger
+        else:
+            if self.device_type_name is not None:
+                # Otherwise try and use the device name
+                self._logger = logging.getLogger(self.device_type_name)
+            else:
+                # If all else fails just use a new generic device logger
+                self._logger = logging.getLogger('device')
+
+    def __repr__(self):
+        # Check if the device is locked by temporarily requesting it (non-blocking)
+        # Todo : consider whether this should be cached somewhere if it is read by the paramtree
+        if self.lock.acquire(blocking=False):
+            device_unlocked = True
+            self.lock.release()
+        else:
+            device_unlocked = False
+
+        return '{} device ({}) ({}, {})'.format(
+            str(self.device_type_name),
+            type(self.device),
+            'initialised' if self.initialised else 'not initialised',
+            'unlocked' if device_unlocked else 'locked',
+        )
+
+    # Allow the handler to expose an acquire() method to be used with 'with' to protect access
+    # with a thread-safe lock (mutex).
+    @contextmanager
+    def acquire(self, blocking=True, timeout=-1):
+        # only permit access if the device has been initialised
+        if not self.initialised:
+            raise RuntimeError('Device was not initialised, cannot access it')
+
+        # Grab the lock with the supplied settings
+        result = self.lock.acquire(blocking=blocking, timeout=timeout)
+
+        # Allow the caller to execute their 'with'. 'result' is needed so that
+        # if the lock cannot be grabbed the user can handle it.
+        yield result
+
+        # Release the lock, if it was actually acquired
+        if result:
+            self.lock.release()
+
+    def critical_error(self, message=''):
+        # Mark the device not to be used, and record the error in log and paramtree status
+        self.initialised = False
+        self.error = True
+        self.error_message = message
+        self._logger.error('device error: {}'.format(message))
+
+
 # This is a special case derived carrier for the control of the original prototype. This application-specific
 # hardware is out of scope for LOKI, however is still included since it shares so many similarities (the LOKI
 # carrier being based on it). Future application-specific odin instances should create a supplimentary adapter
 # for their own daughter board, using interfaces provided via the generic LOKICarrier_TEBF0808 class for access
 # to things like I2C, SPI, and GPIO specifics.
+# Most 'devices' added are added via helper templates from the ABC. There are exceptions (e.g. FireFlies), but
+# the implementation of these is still quite similar, just a bit more manual.
 class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonitor, LokiCarrierClockgen, LokiCarrierDAC, LokiCarrier_TEBF0808):
-    variant = 'tebf0808_MERCURY'
-    clkgen_drivername = 'SI5344'
-    clkgen_numchannels = 4
-    dac_drivername = 'MAX5306'
-    dac_num_outputs = 10
-    env_sensor_info = [
+    _variant = 'tebf0808_MERCURY'
+    _clkgen_drivername = 'SI5344'
+    _clkgen_numchannels = 4
+    _dac_drivername = 'MAX5306'
+    _dac_num_outputs = 10
+    _env_sensor_info = [
         # name, type, info
         ('PT100', 'temperature', {"description": "PT100 on fly-lead", "units": "C"}),
         ('ASIC', 'temperature', {"description": "ASIC diode temperature", "units": "C"}),
         ('BOARD', 'temperature', {"description": "BME280 carrier board temperature", "units": "C"}),
         ('BOARD', 'humidity', {"description": "BME280 carrier board humidity RH", "units": "%"}),
     ]
-    psu_rail_info = [
+    _psu_rail_info = [
         # name, voltageSupported, currentSupported, powerSupported, enSupported
         ('VDDD', True, True, True, False),
         ('VDDD_CNTRL', True, True, True, False),
@@ -1212,81 +1294,17 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
     _application_interfaces_i2c = {
     }
 
-    class DeviceHandler():
-        # To help keep track of device availability. Can also be used as a place to track state
-        # for different devices.
-        def __init__(self, device=None, device_type_name=None, logger=None):
-            self.device = device
-            self.device_type_name = device_type_name
-            self.initialised = False
-            self.error = False
-            self.error_message = False
-            self.lock = threading.RLock()
-
-            if logger is not None:
-                # Prefer to use the supplied logger
-                self._logger = logger
-            else:
-                if self.device_type_name is not None:
-                    # Otherwise try and use the device name
-                    self._logger = logging.getLogger(self.device_type_name)
-                else:
-                    # If all else fails just use a new generic device logger
-                    self._logger = logging.getLogger('device')
-
-        def __repr__(self):
-            # Check if the device is locked by temporarily requesting it (non-blocking)
-            # Todo : consider whether this should be cached somewhere if it is read by the paramtree
-            if self.lock.acquire(blocking=False):
-                device_unlocked = True
-                self.lock.release()
-            else:
-                device_unlocked = False
-
-            return '{} device ({}) ({}, {})'.format(
-                str(self.device_type_name),
-                type(self.device),
-                'initialised' if self.initialised else 'not initialised',
-                'unlocked' if device_unlocked else 'locked',
-            )
-
-        # Allow the handler to expose an acquire() method to be used with 'with' to protect access
-        # with a thread-safe lock (mutex).
-        @contextmanager
-        def acquire(self, blocking=True, timeout=-1):
-            # only permit access if the device has been initialised
-            if not self.initialised:
-                raise RuntimeError('Device was not initialised, cannot access it')
-
-            # Grab the lock with the supplied settings
-            result = self.lock.acquire(blocking=blocking, timeout=timeout)
-
-            # Allow the caller to execute their 'with'. 'result' is needed so that
-            # if the lock cannot be grabbed the user can handle it.
-            yield result
-
-            # Release the lock, if it was actually acquired
-            if result:
-                self.lock.release()
-
-        def critical_error(self, message=''):
-            # Mark the device not to be used, and record the error in log and paramtree status
-            self.initialised = False
-            self.error = True
-            self.error_message = message
-            self._logger.error('device error: {}'.format(message))
-
     def __init__(self, **kwargs):
 
         self._peripherals_i2c_bus = 1
 
         # Gather settings for MAX5306 DAC
-        self._max5306 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='MAX5306')
+        self._max5306 = DeviceHandler(device_type_name='MAX5306')
         self._max5306.vref = kwargs.get('max5306_reference', 2.048)
         self._max5306.spidev = kwargs.get('max5306_spidev', (1, 1))
 
         # Gather settings for LTC2986
-        self._ltc2986 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='LTC2986')
+        self._ltc2986 = DeviceHandler(device_type_name='LTC2986')
         self._ltc2986.spidev = kwargs.get('ltc2986_spidev', (1, 0))
         self._ltc2986.rsense_ohms = kwargs.get('ltc2986_rsense_ohms', 2000)
         self._ltc2986.pt100_channel = 6
@@ -1299,26 +1317,49 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         kwargs.setdefault('pin_config_default_value_temp_reset', 1)     # Since pin is active low, 1 means grounded, i.e. in reset
 
         # Gather settings for BME280 monitoring device
-        self._bme280 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='BME280')
+        self._bme280 = DeviceHandler(device_type_name='BME280')
         self._bme280.i2c_bus = self._peripherals_i2c_bus
 
         # Gather settings for the PAC1921 power monitors
-        self._pac1921_u3 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='PAC1921')
+        self._pac1921_u3 = DeviceHandler(device_type_name='PAC1921')
         self._pac1921_u3.railname = 'VDDD_CNTRL'
         self._pac1921_u3.di_gain = kwargs.get('pac1921_vdddcntrl_di_gain', 1)
         self._pac1921_u3.dv_gain = kwargs.get('pac1921_vdddcntrl_dv_gain', 8)
 
-        self._pac1921_u2 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='PAC1921')
+        self._pac1921_u2 = DeviceHandler(device_type_name='PAC1921')
         self._pac1921_u2.railname = 'VDDD'
         self._pac1921_u2.di_gain = kwargs.get('pac1921_vddd_di_gain', 1)
         self._pac1921_u2.dv_gain = kwargs.get('pac1921_vddd_dv_gain', 1)
 
-        self._pac1921_u1 = LokiCarrier_TEBF0808_MERCURY.DeviceHandler(device_type_name='PAC1921')
+        self._pac1921_u1 = DeviceHandler(device_type_name='PAC1921')
         self._pac1921_u1.railname = 'VDDA'
         self._pac1921_u1.di_gain = kwargs.get('pac1921_vdda_di_gain', 1)
         self._pac1921_u1.dv_gain = kwargs.get('pac1921_vdda_dv_gain', 1)
 
         self._pac1921_array = [self._pac1921_u3, self._pac1921_u2, self._pac1921_u1]
+
+        # Gather settings for the SI5344
+        self._si5344 = DeviceHandler(device_type_name = 'SI5344')
+        self._si5344.default_config = kwargs.get('clkgen_default_config')    # This is a requirement of this implementation
+        self._si5344.config_base_dir = kwargs.get('clkgen_base_dir')                # This is a requirement of this implementation
+        self._clkgen_sync_config_avail()           # Grab this once at startup
+
+        # Gather settings for FireFlies (implemented without helpers)
+        self._firefly_00to09 = DeviceHandler(device_type_name='FireFly')
+        self._firefly_00to09.name = '00to09'
+        self._firefly_00to09.select_pin_friendlyname = 'ff_sel_00to09'
+        self._firefly_10to19 = DeviceHandler(device_type_name='FireFly')
+        self._firefly_10to19.name = '10to19'
+        self._firefly_10to19.select_pin_friendlyname = 'ff_sel_10to19'
+        self._firefly_array = [self._firefly_00to09, self._firefly_10to19]
+
+        # Get the select line pins for the FireFlies
+        kwargs.setdefault('pin_config_id_{}'.format(self._firefly_00to09.select_pin_friendlyname), 'EMIO29')
+        kwargs.setdefault('pin_config_id_{}'.format(self._firefly_10to19.select_pin_friendlyname), 'EMIO30')
+        for friendlyname in [self._firefly_10to19.select_pin_friendlyname, self._firefly_00to09.select_pin_friendlyname]:
+            kwargs.setdefault('pin_config_active_low_{}'.format(friendlyname), False)   # FF driver expects active high
+            kwargs.setdefault('pin_config_is_input_{}'.format(friendlyname), False)
+            kwargs.setdefault('pin_config_default_value_{}'.format(friendlyname), True) # Defaults to disable the device
 
         super(LokiCarrier_TEBF0808_MERCURY, self).__init__(**kwargs)
 
@@ -1332,14 +1373,17 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         self._pac1921_u2.lock.acquire()
         self._pac1921_u1.lock.acquire()
         self._ltc2986.lock.acquire()
+        self._si5344.lock.acquire()
+        self._firefly_00to09.lock.acquire()
+        self._firefly_10to19.lock.acquire()
 
-        self.register_change_callback('peripheral_enable', self.onChange_periph_en)
-        self.register_change_callback('application_enable', self.onChange_app_en)
+        self.register_change_callback('peripheral_enable', self._onChange_periph_en)
+        self.register_change_callback('application_enable', self._onChange_app_en)
 
         # todo request additional pins for daughter carrier-specific functionality functionality. However, leave out ASIC and application specifics. Try and keep 'generic'. This will be practice for loki 1v0...
         # todo add device drivers and hook them to power events for application and peripherals (VREG)
 
-    def onChange_periph_en(self, state):
+    def _onChange_periph_en(self, state):
         if state is True:
             self._logger.info('peripherals enabled, re-configuring devices')
 
@@ -1364,11 +1408,22 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             for device in self._pac1921_array:
                 device.lock.release()
 
+            # Re-configure if any of the fireflies did not initialised properly
+            if any(not(x.initialised) for x in self._firefly_array):
+                self._config_firefly_array()
+            for device in self._firefly_array:
+                device.lock.release()
+
+            # Only re-configure if it is not initialised.
+            if not self._si5344.initialised:
+                self._config_si5344()
+            self._si5344.lock.release()
+
         else:
             self._logger.info('peripherals disabled, disabling device contact')
 
             # on this particular carrier, having the periph en low (VREG_EN) will also disable the ASIC, so perform the same actions
-            self.onChange_app_en(False)
+            self._onChange_app_en(False)
 
             # For some devices, low VREG_EN simply disables contact with them (due to level shifters)
             # Hard-acquire the lock to prevent attempts to communicate, while preventing the pin going low until the system is ready
@@ -1377,29 +1432,49 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             self._pac1921_u3.lock.acquire()
             self._pac1921_u2.lock.acquire()
             self._pac1921_u1.lock.acquire()
+            self._si5344.lock.acquire()
+            self._firefly_00to09.lock.acquire()
+            self._firefly_10to19.lock.acquire()
 
             # For other devices, low VREG_EN resets the device, meaning a new init will be required.
             self._ltc2986.lock.acquire()
             self._ltc2986.initialised = False
             self._ltc2986.pin_reset.set_value(1)    # Since with shifters down reset goes low anyway
 
-    def onChange_app_en(self, state):
+    def _onChange_app_en(self, state):
         if state is True:
             pass
         else:
             pass
 
-    def clkgen_get_config(self):
-        # todo could this actually just go in the clkgen class? Maybe not common enough.
-        pass
+    def _clkgen_set_config_direct(self, configname):
+        with self._si5344.acquire(blocking=True, timeout=1) as rslt:
+            if not rslt:
+                raise Exception('Failed to get clock generator lock, timed out')
 
-    def clkgen_set_config(self, configname):
-        print('Setting clock configuration from {}'.format(configname))
-        pass
+            print('Setting clock configuration from {}'.format(configname))
+            self._si5344.device.apply_register_map(self._si5344.config_base_dir + configname, verify=True)
+
+    def _clkgen_sync_config_avail(self):
+        configlist = []
+        for configfile in os.listdir(self._si5344.config_base_dir):
+            if configfile.endswith('.txt'):
+                configlist.append(configfile)
+        self._si5344.config_list = configlist
 
     def clkgen_get_config_avail(self):
-        # todo
-        pass
+        return self._si5344.config_list
+
+    def clkgen_step_clk(self, clock_num, direction_upwards):
+        # This function is specific to the implementation (device), therefore additional to the helpers.
+
+        with self._si5344.acquire(blocking=True, timeout=1) as rslt:
+            if not rslt:
+                raise Exception('Failed to get clock generator lock, timed out')
+            if direction_upwards:
+                self._si5344.device.increment_channel_frequency(clock_num)
+            else:
+                self._si5344.device.decrement_channel_frequency(clock_num)
 
     def _psu_get_rail(self, name, sensor_type):
         # Since this is synced by a dedicated thread, the delays incurred by free running integration
@@ -1643,3 +1718,51 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             self._logger.debug('BME280 init completed successfully')
         except Exception as e:
             self._bme280.critical_error('Failed to init BME280: {}'.format(e))
+
+    def _config_si5344(self):
+        try:
+            self._si5344.initialised = False
+            self._si5344.error = False
+            self._si5344.error_message = False
+
+            I2CDevice.enable_exceptions()
+            self._si5344.device = SI5344(i2c_address=0x68)
+
+            # As soon as init is complete, set the default clock settings
+            self.clkgen_set_config(self._si5344.default_config)
+
+            self._si5344.initialised = True
+
+            self._logger.debug('SI5344 init completed successfully')
+        except Exception as e:
+            self._si5344.critical_error('Failed to init SI5344: {}'.format(e))
+
+    # FireFlies are pretty application specific, and therefore will not use built-in templates
+    # They do however need to add custom additions to the parameter tree, which will be 'generic'.
+    # The application parameter tree will later use these access functions directly.
+    def _config_firefly_array(self):
+        for fireflyDevice in self._firefly_array:
+            try:
+                fireflyDevice.initialised = False
+                fireflyDevice.error = False
+                fireflyDevice.error_message = False
+
+                I2CDevice.enable_exceptions()
+                fireflyDevice.device = FireFly(
+                    base_address=0x50,
+                    select_line=self._pin_handler.get_pin(fireflyDevice.select_pin_friendlyname)
+                )
+
+                # Initially turn off the FireFly channels
+                fireflyDevice.device.disable_tx_channels(FireFly.CHANNEL_ALL)
+
+                fireflyDevice.initialised = True
+
+                self._logger.debug(
+                    'FireFly {} init completed successfully'.format(fireflyDevice.name)
+                )
+            except Exception as e:
+                fireflyDevice.critical_error(
+                    'Failed to init FireFly {}: {}'.format(fireflyDevice.name, e)
+                )
+

@@ -4,3 +4,5 @@
 /design/design_basic_settings.sh
 /autom4te.cache
 /config.cache
+/docs/build
+/docs/source/generated

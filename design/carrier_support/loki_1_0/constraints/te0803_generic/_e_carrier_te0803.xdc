@@ -50,7 +50,7 @@ set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdin ]
 set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdout ]
 
 # SPI and I2C will now be exposed through MIO, not EMIO
-#
+
 # Application Present Input (EMIO GPIO 0)
 # Does not exist on this carrier, routed out on FMC
 # These can be overridded in application-specific constraints

@@ -583,6 +583,9 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+loki_version
+loki_application_version
+loki_application_name
 yocto_tmpdir
 yocto_user_layer_0
 platform_carrier
@@ -640,7 +643,10 @@ os_path
 platform_module_shortname
 platform_carrier
 yocto_user_layer_0
-yocto_tmpdir'
+yocto_tmpdir
+loki_application_name
+loki_application_version
+loki_version'
 
 
 # Initialize some variables set by options.
@@ -1278,6 +1284,15 @@ Some influential environment variables:
   yocto_tmpdir
               Optional, but recommended: Absolute TMPDIR location for Yocto
               build, not on NTFS. Required.
+  loki_application_name
+              Optional: specify an application name retrievable at runtime by
+              loki module
+  loki_application_version
+              Optional: specify an application version string retrievable at
+              runtime by loki module
+  loki_version
+              Optional, discouraged: by default this will be grabbed from the
+              current LOKI repo tag
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -1724,7 +1739,12 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-ac_config_files="$ac_config_files Makefile design/Makefile design/design_basic_settings.sh os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config"
+# These are used to install application information into /etc/loki for reference
+
+
+
+
+ac_config_files="$ac_config_files Makefile design/Makefile design/design_basic_settings.sh os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/application-version os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/application-name os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/platform os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/version"
 
 
 cat >confcache <<\_ACEOF
@@ -2437,6 +2457,10 @@ do
     "design/design_basic_settings.sh") CONFIG_FILES="$CONFIG_FILES design/design_basic_settings.sh" ;;
     "os/petalinux-custom/Makefile") CONFIG_FILES="$CONFIG_FILES os/petalinux-custom/Makefile" ;;
     "os/petalinux-custom/project-spec/configs/config") CONFIG_FILES="$CONFIG_FILES os/petalinux-custom/project-spec/configs/config" ;;
+    "os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/application-version") CONFIG_FILES="$CONFIG_FILES os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/application-version" ;;
+    "os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/application-name") CONFIG_FILES="$CONFIG_FILES os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/application-name" ;;
+    "os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/platform") CONFIG_FILES="$CONFIG_FILES os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/platform" ;;
+    "os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/version") CONFIG_FILES="$CONFIG_FILES os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/version" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

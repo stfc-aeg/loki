@@ -48,3 +48,122 @@ set_property IOSTANDARD LVCMOS18 [get_ports I2S_lrclk ]
 set_property IOSTANDARD LVCMOS18 [get_ports I2S_bclk ]
 set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdin ]
 set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdout ]
+
+# SPI and I2C will now be exposed through MIO, not EMIO
+#
+# Application Present Input (EMIO GPIO 0)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN E12 [get_ports APP_PRESENT_lc0 ]
+set_property IOSTANDARD LVCMOS18 [get_ports APP_PRESENT_lc0 ]
+
+# Backplane Present Input (EMIO GPIO 1)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN D11 [get_ports BKPLN_PRESENT_lc1 ]
+set_property IOSTANDARD LVCMOS18 [get_ports BKPLN_PRESENT_lc1 ]
+
+# User Button Inputs (EMIO GPIO 2&3)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN D10 [get_ports USER_BTN_0_lc2 ]
+set_property IOSTANDARD LVCMOS18 [get_ports USER_BTN_0_lc2 ]
+set_property PACKAGE_PIN E10 [get_ports USER_BTN_1_lc3 ]
+set_property IOSTANDARD LVCMOS18 [get_ports USER_BTN_1_lc3 ]
+
+# Temperature IC (LTC2986) Interrupt (EMIO GPIO 4)
+set_property PACKAGE_PIN C12 [get_ports TEMP_INT_lc4 ]
+set_property IOSTANDARD LVCMOS18 [get_ports TEMP_INT_lc4 ]
+
+# CTRL1 (unassigned) Output (EMIO GPIO 5)
+# Does not exist on this carrier, routed to SoM NC Pin
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN D2 [get_ports CTRL1_lc5 ]
+set_property IOSTANDARD LVCMOS18 [get_ports CTRL1_lc5 ]
+
+# Application Peripherals nRST Output (EMIO GPIO 6)
+set_property PACKAGE_PIN E7 [get_ports APP_PER_NRST_lc6 ]
+set_property IOSTANDARD LVCMOS18 [get_ports APP_PER_NRST_lc6 ]
+
+# Application (ASIC) nRST Output (EMIO GPIO 7)
+set_property PACKAGE_PIN G4 [get_ports APP_NRST_lc7 ]
+set_property IOSTANDARD LVCMOS18 [get_ports APP_NRST_lc7 ]
+
+# Clock Generator nRST Output (EMIO GPIO 8)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN B10 [get_ports CLKGEN_NRST_lc8 ]
+set_property IOSTANDARD LVCMOS18 [get_ports CLKGEN_NRST_lc8 ]
+
+# Clock Generator AC Output (EMIO GPIO 9-11)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN C11 [get_ports {CLKGEN_AC_lc9_11[0]} ]
+set_property PACKAGE_PIN C12 [get_ports {CLKGEN_AC_lc9_11[1]} ]
+set_property PACKAGE_PIN D12 [get_ports {CLKGEN_AC_lc9_11[2]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {CLKGEN_AC_lc9_11[0]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {CLKGEN_AC_lc9_11[1]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {CLKGEN_AC_lc9_11[2]} ]
+
+# Temperature IC (LTC2986) nRST (EMIO GPIO 12)
+set_property PACKAGE_PIN D12 [get_ports TEMP_NRST_lc12 ]
+set_property IOSTANDARD LVCMOS18 [get_ports TEMP_NRST_lc12 ]
+
+# User LEDs (EMIO GPIO 13-16)
+# Does not exist on this carrier, routed out on FMC
+# These can be overridded in application-specific constraints
+set_property PACKAGE_PIN F10 [get_ports {ULED_lc13_16[0]} ]
+set_property PACKAGE_PIN A11 [get_ports {ULED_lc13_16[1]} ]
+set_property PACKAGE_PIN G11 [get_ports {ULED_lc13_16[2]} ]
+set_property PACKAGE_PIN A12 [get_ports {ULED_lc13_16[3]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[0]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[1]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[2]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[3]} ]
+
+# Application-specific GPIO (always built, EMIO GPIO 21-31)
+# On this carrier have been routed to P2 PMOD (dir pins also)
+# The last three pins are NC on SoM
+set_property PACKAGE_PIN F8 [get_ports {GPIO_APP_21_31[0]} ]
+set_property PACKAGE_PIN E8 [get_ports {GPIO_APP_21_31[1]} ]
+set_property PACKAGE_PIN H11 [get_ports {GPIO_APP_21_31[2]} ]
+set_property PACKAGE_PIN G10 [get_ports {GPIO_APP_21_31[3]} ]
+set_property PACKAGE_PIN AG8 [get_ports {GPIO_APP_21_31[4]} ]
+set_property PACKAGE_PIN AF8 [get_ports {GPIO_APP_21_31[5]} ]
+set_property PACKAGE_PIN E3 [get_ports {GPIO_APP_21_31[6]} ]
+set_property PACKAGE_PIN E4 [get_ports {GPIO_APP_21_31[7]} ]
+set_property PACKAGE_PIN K2 [get_ports {GPIO_APP_21_31[8]} ]
+set_property PACKAGE_PIN J2 [get_ports {GPIO_APP_21_31[9]} ]
+set_property PACKAGE_PIN C7 [get_ports {GPIO_APP_21_31[10]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[0]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[1]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[2]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[3]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[4]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[5]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[6]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[7]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[8]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[9]} ]
+set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[10]} ]
+
+# Application-specific LVDS IO (always built, EMIO GPIO 17-20)
+set_property PACKAGE_PIN F2 [get_ports {GPIO_LVDS_P_17_20[0]} ]
+set_property PACKAGE_PIN E2 [get_ports {GPIO_LVDS_N_17_20[0]} ]
+set_property IOSTANDARD LVDS [get_ports {GPIO_LVDS_P_17_20[0]} ]
+set_property IOSTANDARD LVDS [get_ports {GPIO_LVDS_N_17_20[0]} ]
+
+set_property PACKAGE_PIN K4 [get_ports {GPIO_LVDS_P_17_20[1]} ]
+set_property PACKAGE_PIN K3 [get_ports {GPIO_LVDS_N_17_20[1]} ]
+set_property IOSTANDARD LVDS [get_ports {GPIO_LVDS_P_17_20[1]} ]
+set_property IOSTANDARD LVDS [get_ports {GPIO_LVDS_N_17_20[1]} ]
+
+set_property PACKAGE_PIN E5 [get_ports {GPIO_LVDS_P_17_20[2]} ]
+set_property PACKAGE_PIN D5 [get_ports {GPIO_LVDS_N_17_20[2]} ]
+set_property IOSTANDARD LVDS [get_ports {GPIO_LVDS_P_17_20[2]} ]
+set_property IOSTANDARD LVDS [get_ports {GPIO_LVDS_N_17_20[2]} ]
+
+set_property PACKAGE_PIN D7 [get_ports {GPIO_LVDS_P_17_20[3]} ]
+set_property PACKAGE_PIN D6 [get_ports {GPIO_LVDS_N_17_20[3]} ]
+set_property IOSTANDARD LVDS [get_ports {GPIO_LVDS_P_17_20[3]} ]
+set_property IOSTANDARD LVDS [get_ports {GPIO_LVDS_N_17_20[3]} ]

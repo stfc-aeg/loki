@@ -72,7 +72,7 @@ set_property PACKAGE_PIN E10 [get_ports USER_BTN_1_lc3 ]
 set_property IOSTANDARD LVCMOS18 [get_ports USER_BTN_1_lc3 ]
 
 # Temperature IC (LTC2986) Interrupt (EMIO GPIO 4)
-set_property PACKAGE_PIN C12 [get_ports TEMP_INT_lc4 ]
+set_property PACKAGE_PIN K12 [get_ports TEMP_INT_lc4 ]
 set_property IOSTANDARD LVCMOS18 [get_ports TEMP_INT_lc4 ]
 
 # CTRL1 (unassigned) Output (EMIO GPIO 5)
@@ -106,7 +106,7 @@ set_property IOSTANDARD LVCMOS18 [get_ports {CLKGEN_AC_lc9_11[1]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {CLKGEN_AC_lc9_11[2]} ]
 
 # Temperature IC (LTC2986) nRST (EMIO GPIO 12)
-set_property PACKAGE_PIN D12 [get_ports TEMP_NRST_lc12 ]
+set_property PACKAGE_PIN K13 [get_ports TEMP_NRST_lc12 ]
 set_property IOSTANDARD LVCMOS18 [get_ports TEMP_NRST_lc12 ]
 
 # User LEDs (EMIO GPIO 13-16)

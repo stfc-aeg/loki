@@ -1,4 +1,4 @@
-catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4cg_1e_tebf0808:part0:2.0, FPGA: xczu4cg-sfvc784-1-e at 2023-07-31T14:47:37."}
+catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4cg_1e_tebf0808:part0:2.0, FPGA: xczu4cg-sfvc784-1-e at 2023-07-31T15:16:00."}
 
 if { ![info exist TE::VERSION_CONTROL] } {
     set TE::VERSION_CONTROL true
@@ -841,8 +841,6 @@ proc create_root_design { parentCell } {
 
   set I2S [ create_bd_intf_port -mode Slave -vlnv trenz.biz:user:I2S_rtl:1.0 I2S ]
 
-  set IIC_1_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:iic_rtl:1.0 IIC_1_0 ]
-
 
   # Create ports
   set APP_NRST_lc7 [ create_bd_port -dir O -from 0 -to 0 APP_NRST_lc7 ]
@@ -860,15 +858,6 @@ proc create_root_design { parentCell } {
   set ULED_lc13_16 [ create_bd_port -dir O -from 3 -to 0 ULED_lc13_16 ]
   set USER_BTN_0_lc2 [ create_bd_port -dir I -from 0 -to 0 USER_BTN_0_lc2 ]
   set USER_BTN_1_lc3 [ create_bd_port -dir I -from 0 -to 0 USER_BTN_1_lc3 ]
-  set emio_spi0_m_i_0 [ create_bd_port -dir I emio_spi0_m_i_0 ]
-  set emio_spi0_m_o_0 [ create_bd_port -dir O emio_spi0_m_o_0 ]
-  set emio_spi0_sclk_o_0 [ create_bd_port -dir O emio_spi0_sclk_o_0 ]
-  set emio_spi0_ss1_o_n_0 [ create_bd_port -dir O emio_spi0_ss1_o_n_0 ]
-  set emio_spi0_ss_o_n_0 [ create_bd_port -dir O emio_spi0_ss_o_n_0 ]
-  set emio_spi1_m_i_0 [ create_bd_port -dir I emio_spi1_m_i_0 ]
-  set emio_spi1_m_o_0 [ create_bd_port -dir O emio_spi1_m_o_0 ]
-  set emio_spi1_sclk_o_0 [ create_bd_port -dir O emio_spi1_sclk_o_0 ]
-  set emio_spi1_ss_o_n_0 [ create_bd_port -dir O emio_spi1_ss_o_n_0 ]
 
   # Create instance: GPIO_Tree
   create_hier_cell_GPIO_Tree [current_bd_instance .] GPIO_Tree

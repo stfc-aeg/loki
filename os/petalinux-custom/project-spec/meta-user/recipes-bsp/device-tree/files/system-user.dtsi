@@ -185,6 +185,11 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 		spi-max-frequency = <1000000>;
 		reg = <1>;
 	};
+	spidev@2 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <2>;
+	};
 };
 
 /* SPI1 (ASIC) */
@@ -193,6 +198,16 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 		compatible = "spidev";
 		spi-max-frequency = <1000000>;
 		reg = <0>;
+	};
+	spidev@1 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <1>;
+	};
+	spidev@2 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <2>;
 	};
 };
 

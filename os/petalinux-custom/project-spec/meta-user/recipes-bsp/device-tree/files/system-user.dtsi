@@ -40,7 +40,7 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 	phy-handle = <&phy0>;
 	phy0: phy0@1 {
 		device_type = "ethernet-phy";
-		reg = <1>;
+		reg = <0>;
 	};
 };
 

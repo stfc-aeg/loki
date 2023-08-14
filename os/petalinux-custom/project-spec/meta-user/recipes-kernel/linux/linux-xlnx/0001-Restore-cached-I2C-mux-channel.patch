@@ -1,0 +1,30 @@
+From cdd1a0ce07d8cbe72c7960e4d8d7deb167c5fd19 Mon Sep 17 00:00:00 2001
+From: Joseph Nobes <joseph.nobes@stfc.ac.uk>
+Date: Mon, 14 Aug 2023 13:35:27 +0100
+Subject: [PATCH] Restore cached I2C mux channel
+
+This is invalid for multi-master systems, but prevents bus noise that stops some picky devices from operating
+---
+ drivers/i2c/muxes/i2c-mux-pca954x.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/i2c/muxes/i2c-mux-pca954x.c b/drivers/i2c/muxes/i2c-mux-pca954x.c
+index 48c82027e3ef..8a29a2b3dc62 100644
+--- a/drivers/i2c/muxes/i2c-mux-pca954x.c
++++ b/drivers/i2c/muxes/i2c-mux-pca954x.c
+@@ -243,8 +243,13 @@ static int pca954x_select_chan(struct i2c_mux_core *muxc, u32 chan)
+ 	else
+ 		regval = 1 << chan;
+ 
+-	ret = pca954x_reg_write(muxc->parent, client, regval);
+-	data->last_chan = ret < 0 ? 0 : regval;
++    /* Only select the channel if it's different from the last channel. Note that this
++     * cached value will not be valid in multi-master systems.
++     */
++    if (data->last_chan != regval) {
++        ret = pca954x_reg_write(muxc->parent, client, regval);
++        data->last_chan = ret < 0 ? 0 : regval;
++    }
+ 
+ 	return ret;
+ }

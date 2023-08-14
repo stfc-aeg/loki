@@ -67,6 +67,7 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
         #size-cells = <0>;
         reg = <0x73>;
         i2c-mux-idle-disconnect;
+        idle-state = -1;
         i2c@0 { // MCLK TEBF0808 SI5338A, 570FBB000290DG_unassembled
             #address-cells = <1>;
             #size-cells = <0>;

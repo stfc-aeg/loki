@@ -178,19 +178,6 @@ u32 TE_XFsbl_HookBeforeFallback_Custom(void)
   }
   
   // ------------------------------------------------------
-  // release PCI and USB reset
-  /* Set MIO30 to HIGH */
-  dataVal = XFsbl_In32(GPIO_DATA_1) | GPIO_MIO30_MASK;
-  XFsbl_Out32(GPIO_DATA_1, dataVal);
-  xil_printf("USB Reset Complete \r\n");
-  
-
-  /* Set MIO31 to HIGH */
-  dataVal = XFsbl_In32(GPIO_DATA_1) | GPIO_MIO31_MASK;
-  XFsbl_Out32(GPIO_DATA_1, dataVal);
-  xil_printf("PCIe Reset Complete\r\n");
-
-  // ------------------------------------------------------
   xil_printf("\r\n--------------------------------------------------------------------------------\r\n");
   /* wait after initialization*/
   (void)usleep(DELAY_5_US);

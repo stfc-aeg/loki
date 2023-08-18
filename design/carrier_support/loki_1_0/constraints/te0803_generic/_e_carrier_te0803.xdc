@@ -124,16 +124,27 @@ set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[3]} ]
 # Application-specific GPIO (always built, EMIO GPIO 21-31)
 # On this carrier have been routed to P2 PMOD (dir pins also)
 # The last three pins are NC on SoM
-set_property PACKAGE_PIN F8 [get_ports {GPIO_APP_21_31[0]} ]
-set_property PACKAGE_PIN E8 [get_ports {GPIO_APP_21_31[1]} ]
-set_property PACKAGE_PIN H11 [get_ports {GPIO_APP_21_31[2]} ]
-set_property PACKAGE_PIN G10 [get_ports {GPIO_APP_21_31[3]} ]
-set_property PACKAGE_PIN AG8 [get_ports {GPIO_APP_21_31[4]} ]
-set_property PACKAGE_PIN AF8 [get_ports {GPIO_APP_21_31[5]} ]
-set_property PACKAGE_PIN E3 [get_ports {GPIO_APP_21_31[6]} ]
-set_property PACKAGE_PIN E4 [get_ports {GPIO_APP_21_31[7]} ]
+# EMIO21 - PL3: 1
+set_property PACKAGE_PIN G10 [get_ports {GPIO_APP_21_31[0]} ]
+# EMIO22 - PL3: 2
+set_property PACKAGE_PIN H11 [get_ports {GPIO_APP_21_31[1]} ]
+# EMIO23 - PL3: 3
+set_property PACKAGE_PIN H12 [get_ports {GPIO_APP_21_31[2]} ]
+# EMIO24 - PL3: 4
+set_property PACKAGE_PIN J12 [get_ports {GPIO_APP_21_31[3]} ]
+# EMIO25 - PL3: 5
+set_property PACKAGE_PIN F11 [get_ports {GPIO_APP_21_31[4]} ]
+# EMIO26 - PL3: 6
+set_property PACKAGE_PIN F12 [get_ports {GPIO_APP_21_31[5]} ]
+# EMIO27 - PL3: 7
+set_property PACKAGE_PIN A10 [get_ports {GPIO_APP_21_31[6]} ]
+# EMIO28 - PL3: 8
+set_property PACKAGE_PIN B11 [get_ports {GPIO_APP_21_31[7]} ]
+# EMIO29 - NC
 set_property PACKAGE_PIN K2 [get_ports {GPIO_APP_21_31[8]} ]
+# EMIO30 - NC
 set_property PACKAGE_PIN J2 [get_ports {GPIO_APP_21_31[9]} ]
+# EMIO31 - NC
 set_property PACKAGE_PIN C7 [get_ports {GPIO_APP_21_31[10]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[0]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {GPIO_APP_21_31[1]} ]

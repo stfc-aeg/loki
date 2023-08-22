@@ -151,10 +151,10 @@ u32 TE_XFsbl_HookBeforeFallback_Custom(void)
      goto END;
   }
   // change I2C switch to get access to SI5345
-  xil_printf("Configure Carrier I2C Switch 0x77\r\n");
-  Status = iic_write8(0x77, 0x00,  0x10);    // Configure I2C Switch
+  xil_printf("Configure Carrier I2C Switch 0x74\r\n");
+  Status = iic_write8(0x74, 0x00,  0x10);    // Configure I2C Switch
   if (Status != XFSBL_SUCCESS) {
-     xil_printf("Error: Configure TEBF0808 I2C Switch 0x77 for TE0803 SI5338 access\r\n");
+     xil_printf("Error: Configure TEBF0808 I2C Switch 0x74 for TE0803 SI5338 access\r\n");
      goto END;
   }
   

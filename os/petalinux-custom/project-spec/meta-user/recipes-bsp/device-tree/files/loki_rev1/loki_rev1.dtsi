@@ -1,0 +1,33 @@
+&amba {
+    /* Add another SPI bus, this time using the bitbang driver build into Linux */
+    /* GPIO numbers are EMIO + 77 */
+    spi3 { 
+        compatible = "spi-gpio";
+        #address-cells = <0x01>;
+        #size-cells = <0x00>;
+        ranges;
+
+        miso-gpios = <&gpio 101 0>;
+        mosi-gpios = <&gpio 102 0>;
+        sck-gpios = <&gpio 103 0>;
+        cs-gpios = <&gpio 104 0>, <&gpio 105 0>;
+
+        num-chipselects = <2>;
+        status = "ok";
+
+        /* MAX */
+        spidev@0 {
+            compatible = "spidev";
+            spi-max-frequency = <100000>;
+            reg = <0>;
+        };
+
+        /* LTC */
+        spidev@1 {
+            compatible = "spidev";
+            spi-max-frequency = <100000>;
+            reg = <1>;
+        };
+    };
+
+};

@@ -44,7 +44,7 @@ do_install_append() {
     echo -e 'KERNEL=="spidev*", GROUP="spiuser", MODE="0660"' >> '${D}${base_prefix}/etc/udev/rules.d/10-spidev.rules'
 
     # Allow loki to operate all smbus (i2c) devices
-    echo -e 'KERNEL=="i2c-[1]*", GROUP="smbususer", MODE="0660"' >> '${D}${base_prefix}/etc/udev/rules.d/10-smbus.rules'
+    echo -e 'KERNEL=="i2c-*", GROUP="smbususer", MODE="0660"' >> '${D}${base_prefix}/etc/udev/rules.d/10-smbus.rules'
 
     # Install a new 'loki' directory in /etc/ that will contain information about the installation for introspection
     # Applications should .bbappend this to install additional information into the directory

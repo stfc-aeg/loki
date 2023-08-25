@@ -16,6 +16,7 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 &sdhci1 {
 	// disable-wp;
 	no-1-8-v;
+    broken-cd;
 
 };
 
@@ -55,6 +56,7 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
         reg = <0x0>;
         #address-cells = <1>;
         #size-cells = <1>;
+        spi-tx-bus-width = <0x01>;
     };
 };
 
@@ -111,11 +113,11 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
             reg = <7>;
         };
     };
-    i2cswitch@77 { // u
+    i2cswitch@72 { // u
         compatible = "nxp,pca9548";
         #address-cells = <1>;
         #size-cells = <0>;
-        reg = <0x77>;
+        reg = <0x72>;
         i2c-mux-idle-disconnect;
         i2c@0 { // TEBF0808 PMOD P1
             #address-cells = <1>;

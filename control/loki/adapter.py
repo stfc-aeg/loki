@@ -13,6 +13,7 @@ from odin_devices.pac1921 import PAC1921, Measurement_Type as PAC1921_Measuremen
 from odin_devices.si534x import SI5344
 from odin_devices.firefly import FireFly
 from odin_devices.i2c_device import I2CDevice
+from odin_devices.zlx import ZL30266
 
 import logging
 import gpiod
@@ -434,11 +435,24 @@ class LokiCarrier(ABC):
             },
             'power': {
             },
+            'application': self._gen_app_paramtree(),
         }
+
+        if len(base_tree_dict['application'].keys()) > 0:
+            self._logger.debug('Application-specific parameter tree: {}'.format(
+                base_tree_dict['application']))
+        else:
+            self._logger.debug('No application-specific parameter tree was supplied')
 
         self._logger.debug('Base ParameterTree generated')
 
         return base_tree_dict
+
+    @abstractmethod
+    def _gen_app_paramtree(self):
+        # This method should be overridden by the application-specific adapter, no need to
+        # call this variant.
+        return {}
 
     def get_loop_status(self):
         try:
@@ -1120,9 +1134,9 @@ class LokiCarrier_TEBF0808(LokiCarrier):
 #############################################
 
 # First iteration of the new carrier for LOKI
-class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, LokiCarrierDAC, LokiCarrier):
+class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, LokiCarrierDAC, LokiCarrierEnvmonitor, LokiCarrier):
     _variant = 'LOKI 1v0'
-    _clkgen_drivername = 'SI5345'
+    _clkgen_drivername = 'ZL30266'
     _clkgen_numchannels = 10
     _dac_drivername = 'MAX5306'
     _dac_num_outputs = 10
@@ -1134,11 +1148,23 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         'SS2': (1, 2),
     }
     _application_interfaces_i2c = {
-        'APP_EXT': 1,       # todo update this
-        'APP_EXT2': 2,      # todo update this
-        'APP_MGMT': 3,      # todo update this
-        'APP_PWR': 4,       # todo update this
+        'APP_EXT': 10,
+        'APP_EXT2': 11,
+        'APP_MGMT': 12,
+        'APP_PWR': 3,
+        'DBG1': 15,
+        'DBG2': 16,
     }
+    _private_interfaces_i2c = {
+        'APP_SUPPORT': 2,
+        'PRM': 7,
+        'SOM_LOOP': 14,
+    }
+    _env_sensor_info = [
+        # name, type, info
+        ('BOARD', 'temperature', {"description": "BME280 carrier board temperature", "units": "C"}),
+        ('BOARD', 'humidity', {"description": "BME280 carrier board humidity RH", "units": "%"}),
+    ]
 
     def __init__(self, **kwargs):
         self.__dac_outputval = {}
@@ -1151,27 +1177,169 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         kwargs.setdefault('pin_config_id_button0', 'BUTTON0')
         kwargs.setdefault('pin_config_id_button1', 'BUTTON1')
 
+        # Gather settings for MAX5306 DAC, init immediately
+        self._max5306 = DeviceHandler(device_type_name='MAX5306')
+        self._max5306.vref = 2.048
+        self._max5306.spidev = (1, 0)
+        self._max5306.lock.acquire()
+        self._config_max5306()
+        if self._max5306.initialised:
+            self._max5306.lock.release()
+
+        # Gather settings for LTC2986
+        self._ltc2986 = DeviceHandler(device_type_name='LTC2986')
+        self._ltc2986.spidev = (1, 1)
+        self._ltc2986.rsense_ohms = 2000
+        self._ltc2986.pt100_channel = 2
+
+        # Define the reset pin for the ltc2986 (requested below after super init)
+        kwargs.setdefault('pin_config_id_temp_reset', 'LTC_NRST')
+        kwargs.setdefault('pin_config_active_low_temp_reset', True)
+        kwargs.setdefault('pin_config_is_input_temp_reset', False)
+        kwargs.setdefault('pin_config_default_value_temp_reset', 1)     # Since pin is active low, 1 means grounded, i.e. in reset
+
+        # Gather settings for BME280 monitoring device, init immediately (always on)
+        self._bme280 = DeviceHandler(device_type_name='BME280')
+        self._bme280.i2c_bus = self._private_interfaces_i2c['APP_SUPPORT']
+        self._bme280.lock.acquire()
+        self._config_bme280()
+        if self._bme280.initialised:
+            self._bme280.lock.release()
+
+        # Gather settings for the ZL30266 clock generator
+        self._zl30266 = DeviceHandler(device_type_name = 'ZL30266')
+        self._zl30266.config_base_dir = kwargs.get('clkgen_base_dir')                # This is a requirement of this implementation
+        self._zl30266.i2c_bus = self._private_interfaces_i2c['APP_SUPPORT']
+        self._zl30266.i2c_addr = 0x74
+        self._clkgen_sync_config_avail()           # Grab this once at startup
+        self._zl30266.lock.acquire()
+        self._config_zl30266()
+        if self._zl30266.initialised:
+            self._zl30266.lock.release()
+
         super(LokiCarrier_1v0, self).__init__(**kwargs)
 
-    def _clkgen_set_config_direct(self, configname):
-        self._logger.getChild('clkgen').info('Setting clock configuration from {}'.format(configname))
-        # todo
+    def _config_bme280(self):
+        try:
+            self._bme280.initialised = False
+            self._bme280.error = False
+            self._bme280.error_message = False
+
+            I2CDevice.enable_exceptions()
+            self._bme280.device = BME280(use_spi=False, bus=self._bme280.i2c_bus)
+
+            self._bme280.initialised = True
+
+            self._logger.debug('BME280 init completed successfully')
+        except Exception as e:
+            self._bme280.critical_error('Failed to init BME280: {}'.format(e))
+
+    def _config_max5306(self):
+        # Attempt init, but on failure log error and continue
+        try:
+            self._max5306.initialised = False
+            self._max5306.error = False
+            self._max5306.error_message = False
+
+            max5306_bus, max5306_device = self._max5306.spidev
+            self._max5306.device = MAX5306(self._max5306.vref, bus=max5306_bus, device=max5306_device)
+
+            self._max5306.last_setting = {}
+
+            self._max5306.initialised = True
+
+            self._logger.debug('MAX5306 init completed successfully')
+        except Exception as e:
+            self._max5306.critical_error('Failed to init MAX5306: {}'.format(e))
+
+    def _config_zl30266(self):
+        try:
+            self._zl30266.initialised = False
+            self._zl30266.error = False
+            self._zl30266.error_message = False
+
+            I2CDevice.enable_exceptions()
+            self._zl30266.device = ZL30266(use_i2c=True, bus=self._zl30266.i2c_bus, device=self._zl30266.i2c_addr)
+            zl_id = self._zl30266.read_register(0x30, False)
+
+            if zl_id == 255:
+                raise Exception('Failed to read ZL ID register (got {})'.format(zl_id))
+            else:
+                print('ZL ID {}'.format(hex(zl_id)))
+
+            self._zl30266.initialised = True
+
+            self._logger.debug('ZL30266 init completed successfully')
+        except Exception as e:
+            self._zl30266.critical_error('Failed to init ZL30266: {}'.format(e))
+
+    @abstractmethod
+    def _config_ltc2986(self):
+        # The actual uses of ltc2986 will be application defined and off-board, so the application
+        # class should define this.
         pass
+
+    def _clkgen_set_config_direct(self, configname):
+        with self._zl30266.acquire(blocking=True, timeout=1) as rslt:
+            if not rslt:
+                raise Exception('Failed to get clock generator lock, timed out')
+
+            print('Setting clock configuration from {}'.format(configname))
+            self._zl30266.device.write_config_mfg(self._si5344.config_base_dir + configname)
+
+    def _clkgen_sync_config_avail(self):
+        configlist = []
+        for configfile in os.listdir(self._zl30266.config_base_dir):
+            if configfile.endswith('.mfg'):
+                configlist.append(configfile)
+        self._zl30266.config_list = configlist
 
     def clkgen_get_config_avail(self):
-        # todo
-        pass
+        return self._zl30266.config_list
 
     def dac_get_output(self, output_num):
-        return self.__dac_outputval.get('output_num', 'No Data')
-        # todo
-        pass
+        try:
+            with self._max5306.acquire(blocking=True, timeout=1) as rslt:
+                if not rslt:
+                    self._logger.warning('Could not get MAX5306 mutex, timed out')
+                    return 'N/A'
+
+                # Return the last setting of the DAC, assuming that it is correct and unchanged
+                return self._max5306.last_setting.get(output_num, 'unset')
+        except RuntimeError as e:
+            self._logger.warning('Failed to get DAC mutex: {}', e)
+            return 'N/A'
 
     def dac_set_output(self, output_num, voltage):
-        self._logger.getChild('dac').info('Setting DAC output {} to {}'.format(output_num, voltage))
-        self.__dac_outputval[output_num] = voltage
-        # todo
-        pass
+        with self._max5306.acquire(blocking=True, timeout=1) as rslt:
+            if not rslt:
+                raise Exception('Could not get MAX5306 mutex, timed out')
+
+            self._max5306.device.set_output(output_num, voltage)
+            print('Setting DAC output {} to {}'.format(output_num, voltage))
+            self._max5306.last_setting.update({output_num: voltage})
+
+    def dac_get_status(self):
+        return ('Initialised: {}, Error: {}'.format(
+            self._max5306.initialised, self._max5306.error_message
+        ))
+
+    def _env_get_sensor(self, name, sensor_type):
+        # This will return the raw value, cached by the LokiCarrierEnvmonitor class automatically
+
+        if name in ['BOARD']:
+            # These sensors are provided by the bme280
+
+            with self._bme280.acquire(blocking=True, timeout=1) as rslt:
+                if not rslt:
+                    raise Exception('Could not acquire lock for sensor {} ({}), timed out'.format(name, sensor_type))
+
+                if sensor_type == 'temperature':
+                    return self._bme280.device.temperature
+                elif sensor_type == 'humidity':
+                    return self._bme280.device.humidity
+
+        raise NotImplementedError('Sensor {} ({}) not implemented'.format(name, sensor_type))
 
 
 #######################################################################
@@ -1239,18 +1407,20 @@ class DeviceHandler():
     def acquire(self, blocking=True, timeout=-1):
         # only permit access if the device has been initialised
         if not self.initialised:
-            raise RuntimeError('Device was not initialised, cannot access it')
+            self._logger.error('Device was not initialised, cannot access it, failing mutex request')
+            yield False
 
-        # Grab the lock with the supplied settings
-        result = self.lock.acquire(blocking=blocking, timeout=timeout)
+        else:
+            # Grab the lock with the supplied settings
+            result = self.lock.acquire(blocking=blocking, timeout=timeout)
 
-        # Allow the caller to execute their 'with'. 'result' is needed so that
-        # if the lock cannot be grabbed the user can handle it.
-        yield result
+            # Allow the caller to execute their 'with'. 'result' is needed so that
+            # if the lock cannot be grabbed the user can handle it.
+            yield result
 
-        # Release the lock, if it was actually acquired
-        if result:
-            self.lock.release()
+            # Release the lock, if it was actually acquired
+            if result:
+                self.lock.release()
 
     def critical_error(self, message=''):
         # Mark the device not to be used, and record the error in log and paramtree status
@@ -1308,7 +1478,6 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         self._ltc2986.spidev = kwargs.get('ltc2986_spidev', (1, 0))
         self._ltc2986.rsense_ohms = kwargs.get('ltc2986_rsense_ohms', 2000)
         self._ltc2986.pt100_channel = 6
-        self._ltc2986.diode_channel = 2
 
         # Define the reset pin for the ltc2986 (requested below after super init)
         kwargs.setdefault('pin_config_id_temp_reset', 'LTC_NRST')

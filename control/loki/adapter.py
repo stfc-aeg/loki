@@ -840,6 +840,11 @@ class LokiCarrierClockgen(LokiCarrier, ABC):
     def clkgen_get_config_avail(self):
         pass
 
+    @abstractmethod
+    def clkgen_reset(self):
+        # Should cycle a reset for the device in question, with whatever delay is necesary.
+        # If cannot be implemented (no pin), just implement with 'pass' or a message.
+        pass
 
 #######
 # DAC #
@@ -1175,7 +1180,9 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         kwargs.setdefault('pin_config_id_led3', 'LED3')
 
         kwargs.setdefault('pin_config_id_button0', 'BUTTON0')
+        kwargs.setdefault('pin_config_active_low_button0', False)   # These buttons are active high
         kwargs.setdefault('pin_config_id_button1', 'BUTTON1')
+        kwargs.setdefault('pin_config_active_low_button1', False)   # These buttons are active high
 
         # Gather settings for MAX5306 DAC, init immediately
         self._max5306 = DeviceHandler(device_type_name='MAX5306')
@@ -1212,12 +1219,23 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         self._zl30266.i2c_bus = self._private_interfaces_i2c['APP_SUPPORT']
         self._zl30266.i2c_addr = 0x74
         self._clkgen_sync_config_avail()           # Grab this once at startup
+
+        # Define the reset pin for the zl30266 (requested below after super init)
+        kwargs.setdefault('pin_config_id_clkgen_reset', 'CLKGEN nRST')
+        kwargs.setdefault('pin_config_active_low_clkgen_reset', True)
+        kwargs.setdefault('pin_config_is_input_clkgen_reset', False)
+        kwargs.setdefault('pin_config_default_value_clkgen_reset', 1)     # Since pin is active low, 1 means grounded, i.e. in reset
+
+        super(LokiCarrier_1v0, self).__init__(**kwargs)
+
+        self._ltc2986.pin_reset = self._pin_handler.get_pin('temp_reset')
+
+        # Pins only available after super init, therefore zl30266 init can only take place now
+        self._zl30266.pin_reset = self._pin_handler.get_pin('clkgen_reset')
         self._zl30266.lock.acquire()
         self._config_zl30266()
         if self._zl30266.initialised:
             self._zl30266.lock.release()
-
-        super(LokiCarrier_1v0, self).__init__(**kwargs)
 
     def _config_bme280(self):
         try:
@@ -1258,9 +1276,24 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
             self._zl30266.error = False
             self._zl30266.error_message = False
 
+            # Check that the base directory has been setup
+            if self._zl30266.config_base_dir is None:
+                raise Exception('Could not init ZL30266, base config directory has not been specified')
+
+            # Bring the device out of reset
+            self._zl30266.pin_reset.set_value(1)
+            time.sleep(0.5)
+            self._zl30266.pin_reset.set_value(0)    # Active low accounted for, so 1 means reset active
+
+            # Wait 500ms for the device to come up
+            time.sleep(0.5)
+            self._zl30266.pin_reset.set_value(1)
+
+            self.clkgen_reset()
+
             I2CDevice.enable_exceptions()
             self._zl30266.device = ZL30266(use_i2c=True, bus=self._zl30266.i2c_bus, device=self._zl30266.i2c_addr)
-            zl_id = self._zl30266.read_register(0x30, False)
+            zl_id = self._zl30266.device.read_register(0x30, False)
 
             if zl_id == 255:
                 raise Exception('Failed to read ZL ID register (got {})'.format(zl_id))
@@ -1285,7 +1318,7 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
                 raise Exception('Failed to get clock generator lock, timed out')
 
             print('Setting clock configuration from {}'.format(configname))
-            self._zl30266.device.write_config_mfg(self._si5344.config_base_dir + configname)
+            self._zl30266.device.write_config_mfg(self._zl30266.config_base_dir + configname)
 
     def _clkgen_sync_config_avail(self):
         configlist = []
@@ -1293,6 +1326,17 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
             if configfile.endswith('.mfg'):
                 configlist.append(configfile)
         self._zl30266.config_list = configlist
+
+    def clkgen_reset(self):
+        # Bring the device out of reset
+
+        self._zl30266.pin_reset.set_value(1)
+        time.sleep(0.5)
+        self._zl30266.pin_reset.set_value(0)    # Active low accounted for, so 1 means reset active
+
+        # Wait 500ms for the device to come up
+        time.sleep(0.5)
+        self._zl30266.pin_reset.set_value(1)
 
     def clkgen_get_config_avail(self):
         return self._zl30266.config_list
@@ -1407,7 +1451,7 @@ class DeviceHandler():
     def acquire(self, blocking=True, timeout=-1):
         # only permit access if the device has been initialised
         if not self.initialised:
-            self._logger.error('Device was not initialised, cannot access it, failing mutex request')
+            self._logger.debug('Device was not initialised, cannot access it, failing mutex request')
             yield False
 
         else:
@@ -1644,6 +1688,9 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
                 self._si5344.device.increment_channel_frequency(clock_num)
             else:
                 self._si5344.device.decrement_channel_frequency(clock_num)
+
+    def clkgen_reset(self):
+        pass
 
     def _psu_get_rail(self, name, sensor_type):
         # Since this is synced by a dedicated thread, the delays incurred by free running integration

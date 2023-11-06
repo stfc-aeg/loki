@@ -13,7 +13,7 @@ from odin_devices.pac1921 import PAC1921, Measurement_Type as PAC1921_Measuremen
 from odin_devices.si534x import SI5344
 from odin_devices.firefly import FireFly
 from odin_devices.i2c_device import I2CDevice
-from odin_devices.zlx import ZL30266
+from odin_devices.zlx import ZL30266, ZLFlaggedChannelException
 
 import logging
 import gpiod
@@ -22,6 +22,7 @@ import os
 import concurrent.futures as futures
 import threading
 from contextlib import contextmanager
+import atexit
 
 from abc import ABC, abstractmethod
 
@@ -92,6 +93,7 @@ class LokiAdapter(AsyncApiAdapter):
             raise Exception('Unsupported carrier_type {}'.format(carrier_type))
 
     # todo adapter will basically just include redirect functions for get and set, potentially the 'loops'
+
 
 class PinHandler():
     # Class designed to separate off as much gpiod logic as possible, so that later upgrades to libgpiod2
@@ -302,6 +304,12 @@ class LokiCarrier(ABC):
         self._pin_handler = PinHandler(self._variant)
         self._pin_handler.add_pins_from_options(kwargs)
 
+        # Map pinhandler functions to class functions for easier external use
+        self.get_pin = self._pin_handler.get_pin
+        self.get_pin_names = self._pin_handler.get_pin_names
+        self.get_pin_value = self._pin_handler.get_pin_value
+        self.set_pin_value = self._pin_handler.set_pin_value
+
         self._logger.info('Pin mappings settled:\n{}'.format(self._pin_handler.pinmap()))
 
         # Construct the parameter tree (will call extensions automatically)
@@ -318,13 +326,35 @@ class LokiCarrier(ABC):
         # Create device handlers but do not init
         # todo
 
-        # Set up state machines and timer loops (potentially in carrier)
+        # Set up state machines and timer lroops (potentially in carrier)
         # todo, consider moving base call into adapter for once other adapters are initialised
         self._logger.info('starting IO loops')
         self._start_io_loops(kwargs)
         self._logger.info('IO loops started')
 
+    def _terminate_loops(self):
+        # This is required to force down any threads on interpreter exit to prevent it hanging on Ctrl-C.
+        # atexit functions are executed in the reverse order or registering, therefore any additional threads
+        # that require nicer termination actions should register them on thread creation, meaning that their
+        # personal cleanup will at least be attempted before the hard termination.
+
+        # There may be a better way to do this, but for now all threads must exit when the following flag is set
+        # to true, which means they cannot be allowed to block forever.
+        self.TERMINATE_THREADS = True
+
+        # TODO this doesn't actually work without the above boolean to stop the threads processing in the background
+        # for threadname in self._threads:
+        #    if self._threads[threadname].running():
+        #        self._logger.critical('Thread {} still executing, forcing termination...'.format(threadname))
+        #        try:
+        #            self._threads[threadname].set_result(Exception('Forced termination'))
+        #        except Exception as e:
+        #            self._logger.critical('FAILED TO KILL THREAD {}: {}'.format(threadname, e))
+
     def _start_io_loops(self, options):
+
+        self.TERMINATE_THREADS = False
+
         # This function can be extended by the extension LokiCarrier classes if they would benefit from async loops.
         # However, make sure that super is called in each.
         self._thread_executor = futures.ThreadPoolExecutor(max_workers=None)
@@ -335,13 +365,15 @@ class LokiCarrier(ABC):
         self._threads['gpio'] = self._thread_executor.submit(self._loop_gpiosync)
         self._threads['ams'] = self._thread_executor.submit(self._loop_ams)
 
+        atexit.register(self._terminate_loops)
+
     def _loop_gpiosync(self):
-        while True:
+        while not self.TERMINATE_THREADS:
             self._pin_handler.sync_pin_value_cache()
             time.sleep(0.1)
 
     def _loop_ams(self):
-        while True:
+        while not self.TERMINATE_THREADS:
             self._get_zynq_ams_temps_raw()
             time.sleep(5)
 
@@ -349,7 +381,6 @@ class LokiCarrier(ABC):
     @abstractmethod
     def _variant(self):
         pass
-
 
     def _config_pin_defaults(self, options):
         # todo remove super(LokiCarrier, self)._config_pin_defaults(options)
@@ -464,7 +495,7 @@ class LokiCarrier(ABC):
                         threadname: {
                             'running': self._threads[threadname].running(),
                             'done': self._threads[threadname].done(),
-                            'exception': 'N/A' if not self._threads[threadname].done() else self._threads[threadname].exception(),
+                            'exception': 'N/A' if not self._threads[threadname].done() else str(self._threads[threadname].exception()),
                         }
                     }
                 )
@@ -529,11 +560,11 @@ class LokiCarrier(ABC):
     #############################
 
     def get_backplane_present(self):
-        return bool(self._pin_handler.get_pin_value('bkpln_present'))
+        return bool(self.get_pin_value('bkpln_present'))
 
     def get_app_present(self):
         # Polarity is not inverted here, as it is done during the pin request
-        return bool(self._pin_handler.get_pin_value('app_present'))
+        return bool(self.get_pin_value('app_present'))
 
     def set_app_enabled(self, enable=True):
         # Polarity is not inverted here, as it is done during the pin request
@@ -546,7 +577,7 @@ class LokiCarrier(ABC):
             if not enable:
                 self._onChange_execute_callbacks('application_enable', False)
 
-            self._pin_handler.set_pin_value('app_en', enable)
+            self.set_pin_value('app_en', enable)
             time.sleep(0.5)
 
             # If being enabled, the callback is called after the line is up
@@ -554,7 +585,7 @@ class LokiCarrier(ABC):
                 self._onChange_execute_callbacks('application_enable', True)
 
     def get_app_enabled(self):
-        return bool(self._pin_handler.get_pin_value('app_en'))
+        return bool(self.get_pin_value('app_en'))
 
     def set_peripherals_enabled(self, enable=True):
         # Polarity is not inverted here, as it is done during the pin request
@@ -567,7 +598,7 @@ class LokiCarrier(ABC):
             if not enable:
                 self._onChange_execute_callbacks('peripheral_enable', False)
 
-            self._pin_handler.set_pin_value('per_en', enable)
+            self.set_pin_value('per_en', enable)
             #time.sleep(5)
 
             # If being enabled, the callback is called after the line is up
@@ -576,7 +607,7 @@ class LokiCarrier(ABC):
 
     def get_peripherals_enabled(self):
         # Polarity is not inverted here, as it is done during the pin request
-        return bool(self._pin_handler.get_pin_value('per_en'))
+        return bool(self.get_pin_value('per_en'))
 
     def register_change_callback(self, trigger, callback_function):
         # More than one callback can be added for the same change if desired.
@@ -706,10 +737,10 @@ class LokiCarrierLEDs(LokiCarrier, ABC):
 
     # LED setting is just gpio interaction, therefore does not need custom implementation per carrier
     def leds_get_led(self, friendly_name):
-        return self._pin_handler.get_pin_value(friendly_name)
+        return self.get_pin_value(friendly_name)
 
     def leds_set_led(self, friendly_name, value):
-        return self._pin_handler.set_pin_value(friendly_name, value)
+        return self.set_pin_value(friendly_name, value)
 
     # List of present leds (friendly names).
     # Every entry should have pin_config_id_<friendly_name> set in the carrier, as well as any other options
@@ -762,7 +793,7 @@ class LokiCarrierButtons(LokiCarrier, ABC):
 
     # Button reading is just gpio interaction, therefore does not need custom implementation per carrier
     def buttons_get_button(self, friendly_name):
-        return self._pin_handler.get_pin_value(friendly_name)
+        return self.get_pin_value(friendly_name)
 
     # List of present buttons (friendly names).
     # Every entry should have pin_config_id_<friendly_name> set in the carrier, as well as any other options
@@ -964,7 +995,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
         return self._env_cached_readings[sType].get(name, 'No Reading')
 
     def _env_loop_readingsync(self):
-        while True:
+        while not self.TERMINATE_THREADS:
             self._env_sync_reading_cache()
             time.sleep(self._env_reading_sync_period_s)
 
@@ -1178,6 +1209,10 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         kwargs.setdefault('pin_config_id_led1', 'LED1')
         kwargs.setdefault('pin_config_id_led2', 'LED2')
         kwargs.setdefault('pin_config_id_led3', 'LED3')
+        kwargs.setdefault('pin_config_active_low_led0', False)      # User LEDs on this board are active high
+        kwargs.setdefault('pin_config_active_low_led1', False)      # User LEDs on this board are active high
+        kwargs.setdefault('pin_config_active_low_led2', False)      # User LEDs on this board are active high
+        kwargs.setdefault('pin_config_active_low_led3', False)      # User LEDs on this board are active high
 
         kwargs.setdefault('pin_config_id_button0', 'BUTTON0')
         kwargs.setdefault('pin_config_active_low_button0', False)   # These buttons are active high
@@ -1214,10 +1249,12 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
             self._bme280.lock.release()
 
         # Gather settings for the ZL30266 clock generator
-        self._zl30266 = DeviceHandler(device_type_name = 'ZL30266')
+        self._zl30266 = DeviceHandler(device_type_name='ZL30266')
         self._zl30266.config_base_dir = kwargs.get('clkgen_base_dir')                # This is a requirement of this implementation
         self._zl30266.i2c_bus = self._private_interfaces_i2c['APP_SUPPORT']
         self._zl30266.i2c_addr = 0x74
+        self._zl30266.flag_channels = [9, 10]   # Connected to the Zynq PL, therefore turn on with care
+        self._zl30266.flag_zynq_channels = kwargs.get('flag_zynq_channels', True)   # Warning can be ignored
         self._clkgen_sync_config_avail()           # Grab this once at startup
 
         # Define the reset pin for the zl30266 (requested below after super init)
@@ -1228,10 +1265,10 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
 
         super(LokiCarrier_1v0, self).__init__(**kwargs)
 
-        self._ltc2986.pin_reset = self._pin_handler.get_pin('temp_reset')
+        self._ltc2986.pin_reset = self.get_pin('temp_reset')
 
         # Pins only available after super init, therefore zl30266 init can only take place now
-        self._zl30266.pin_reset = self._pin_handler.get_pin('clkgen_reset')
+        self._zl30266.pin_reset = self.get_pin('clkgen_reset')
         self._zl30266.lock.acquire()
         self._config_zl30266()
         if self._zl30266.initialised:
@@ -1280,15 +1317,6 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
             if self._zl30266.config_base_dir is None:
                 raise Exception('Could not init ZL30266, base config directory has not been specified')
 
-            # Bring the device out of reset
-            self._zl30266.pin_reset.set_value(1)
-            time.sleep(0.5)
-            self._zl30266.pin_reset.set_value(0)    # Active low accounted for, so 1 means reset active
-
-            # Wait 500ms for the device to come up
-            time.sleep(0.5)
-            self._zl30266.pin_reset.set_value(1)
-
             self.clkgen_reset()
 
             I2CDevice.enable_exceptions()
@@ -1318,7 +1346,17 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
                 raise Exception('Failed to get clock generator lock, timed out')
 
             print('Setting clock configuration from {}'.format(configname))
-            self._zl30266.device.write_config_mfg(self._zl30266.config_base_dir + configname)
+            try:
+                self._zl30266.device.write_config_mfg(
+                    self._zl30266.config_base_dir + configname,
+                    flag_channels=self._zl30266.flag_channels,
+                )
+            except ZLFlaggedChannelException as e:
+                if self._zl30266.flag_zynq_channels:
+                    raise Exception('Attempted to program a channel directed into the level-sensitive Zynq IO: {}. MAKE SURE YOU KNOW WHAT YOU ARE DOING. If certain, set flag flag_zynq_channels to False in the odin config file.')
+                else:
+                    self._logger.warning('This .mfg programs a channel directed into the Zynq. Exception has been silenced.')
+
 
     def _clkgen_sync_config_avail(self):
         configlist = []
@@ -1336,7 +1374,6 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
 
         # Wait 500ms for the device to come up
         time.sleep(0.5)
-        self._zl30266.pin_reset.set_value(1)
 
     def clkgen_get_config_avail(self):
         return self._zl30266.config_list
@@ -1576,7 +1613,7 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
         super(LokiCarrier_TEBF0808_MERCURY, self).__init__(**kwargs)
 
-        self._ltc2986.pin_reset = self._pin_handler.get_pin('temp_reset')
+        self._ltc2986.pin_reset = self.get_pin('temp_reset')
 
         # Initially grab device locks so that they can be freed from the peripheral enable callback.
         # This also prevents the background threads running until the devices are enabled for the first time.
@@ -1966,7 +2003,7 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
                 I2CDevice.enable_exceptions()
                 fireflyDevice.device = FireFly(
                     base_address=0x50,
-                    select_line=self._pin_handler.get_pin(fireflyDevice.select_pin_friendlyname)
+                    select_line=self.get_pin(fireflyDevice.select_pin_friendlyname)
                 )
 
                 # Initially turn off the FireFly channels

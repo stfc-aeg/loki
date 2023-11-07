@@ -55,8 +55,9 @@ copy_resource_protected() {
     #  copy_resource_protected <repository_source_path> <install directory root>
     #  Note that all installation will be into subdirectories of ${LOKI_INSTALL_PATH}
     #  Will be read-only by loki user by default (see loki_rw)
-	bbplain "Copying repo resource $1 to LOKI resource store subdirectory: $2"
+	bbplain "Copying repo resource $1 to LOKI resource store subdirectory: $2 (${S}/${1} -> ${D}${base_prefix}/${LOKI_RESOURCES_INSTALL_PATH}/${2})"
     cp -R "${S}/${1}" "${D}${base_prefix}/${LOKI_RESOURCES_INSTALL_PATH}/${2}"
+    bbplain "workdir ${WORKDIR}"
 }
 
 loki_chown() {
@@ -99,8 +100,3 @@ do_install_append() {
     # functions above to install / configure additional directories within LOKI's
     # resource path.
 }
-
-# include the rootfs build directory locations in the yocto rootfs on exit
-FILES_${PN} += "${base_prefix}${LOKI_RESOURCES_INSTALL_PATH}/*"
-FILES_${PN} += "${base_prefix}/etc/init.d/*"
-FILES_${PN} += "${base_prefix}${sysconfdir}/*"

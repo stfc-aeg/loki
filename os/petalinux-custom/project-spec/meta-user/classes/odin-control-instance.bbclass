@@ -8,6 +8,7 @@ RDEPENDS_${PN} += "python3-matplotlib"
 RDEPENDS_${PN} += "python3-pillow"
 RDEPENDS_${PN} += "loki-config"
 RDEPENDS_${PN} += "loki-user"
+RDEPENDS_${PN} += "python-loki-adapter"
 DEPENDS += "loki-user"
 
 

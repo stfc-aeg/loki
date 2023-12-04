@@ -534,7 +534,7 @@ CONFIG_can-utils=y
 #
 # nfs-utils 
 #
-# CONFIG_nfs-utils is not set
+CONFIG_nfs-utils=y
 # CONFIG_nfs-utils-stats is not set
 # CONFIG_nfs-utils-dbg is not set
 # CONFIG_nfs-utils-dev is not set
@@ -1055,7 +1055,7 @@ CONFIG_pciutils=y
 #
 # make 
 #
-# CONFIG_make is not set
+CONFIG_make=y
 # CONFIG_make-dev is not set
 # CONFIG_make-dbg is not set
 
@@ -2746,9 +2746,9 @@ CONFIG_packagegroup-core-boot=y
 #
 # packagegroup-core-buildessential 
 #
-# CONFIG_packagegroup-core-buildessential is not set
+CONFIG_packagegroup-core-buildessential=y
 # CONFIG_packagegroup-core-buildessential-dbg is not set
-# CONFIG_packagegroup-core-buildessential-dev is not set
+CONFIG_packagegroup-core-buildessential-dev=y
 
 #
 # packagegroup-core-sdk 
@@ -4236,6 +4236,7 @@ CONFIG_python3-pyzmq=y
 CONFIG_python3-requests=y
 CONFIG_python3-smbus=y
 CONFIG_python3-spidev=y
+# CONFIG_start-stop-daemon is not set
 
 #
 # PetaLinux RootFS Settings

@@ -1055,7 +1055,7 @@ CONFIG_pciutils=y
 #
 # make 
 #
-# CONFIG_make is not set
+CONFIG_make=y
 # CONFIG_make-dev is not set
 # CONFIG_make-dbg is not set
 
@@ -4236,6 +4236,7 @@ CONFIG_python3-pyzmq=y
 CONFIG_python3-requests=y
 CONFIG_python3-smbus=y
 CONFIG_python3-spidev=y
+# CONFIG_start-stop-daemon is not set
 
 #
 # PetaLinux RootFS Settings

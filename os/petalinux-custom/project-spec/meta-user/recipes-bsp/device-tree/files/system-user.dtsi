@@ -1,0 +1,239 @@
+/include/ "system-conf.dtsi"
+/ {
+  chosen {
+    xlnx,eeprom = &eeprom;
+  };
+};
+
+/* notes:
+serdes: // PHY TYP see: dt-bindings/phy/phy.h
+*/
+
+/* default */
+
+/* SD */
+
+&sdhci1 {
+	// disable-wp;
+	no-1-8-v;
+    broken-cd;
+
+};
+
+
+/* USB  */
+
+
+&dwc3_0 {
+    status = "okay";
+    dr_mode = "host";
+    snps,usb3_lpm_capable;
+    snps,dis_u3_susphy_quirk;
+    snps,dis_u2_susphy_quirk;
+    phy-names = "usb2-phy","usb3-phy";
+    phys = <&lane1 4 0 2 100000000>;
+    maximum-speed = "super-speed";
+};
+
+/* ETH PHY */
+
+&gem3 {
+	phy-handle = <&phy0>;
+	phy0: phy0@1 {
+		device_type = "ethernet-phy";
+		reg = <0>;
+	};
+};
+
+/* QSPI */
+
+&qspi {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    status = "okay";
+    flash0: flash@0 {
+        compatible = "jedec,spi-nor";
+        reg = <0x0>;
+        #address-cells = <1>;
+        #size-cells = <1>;
+        spi-tx-bus-width = <0x01>;
+    };
+};
+
+/* I2C */
+
+&i2c0 {
+    i2cswitch@73 { // u
+        compatible = "nxp,pca9548";
+        #address-cells = <1>;
+        #size-cells = <0>;
+        reg = <0x73>;
+        i2c@0 { // MCLK TEBF0808 SI5338A, 570FBB000290DG_unassembled
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <0>;
+        };
+        i2c@1 { // SFP TEBF0808 PCF8574DWR
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <1>;
+        };
+        i2c@2 { // PCIe
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <2>;
+        };
+        i2c@3 { // SFP1 TEBF0808
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <3>;
+        };
+        i2c@4 {// SFP2 TEBF0808
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <4>;
+        };
+        i2c@5 { // TEBF0808 EEPROM
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <5>;
+            eeprom: eeprom@50 {
+	            compatible = "atmel,24c08";
+	            reg = <0x50>;
+	          };
+        };
+        i2c@6 { // TEBF0808 FMC  
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <6>;
+        };
+        i2c@7 { // TEBF0808 USB HUB
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <7>;
+        };
+    };
+    i2cswitch@72 { // u
+        compatible = "nxp,pca9548";
+        #address-cells = <1>;
+        #size-cells = <0>;
+        reg = <0x72>;
+        i2c-mux-idle-disconnect;
+        i2c@0 { // TEBF0808 PMOD P1
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <0>;
+        };
+        i2c@1 { // i2c Audio Codec
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <1>;
+			/*
+            adau1761: adau1761@38 {
+                compatible = "adi,adau1761";
+                reg = <0x38>;
+            };
+			*/
+        };
+        i2c@2 { // TEBF0808 Firefly A
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <2>;
+        };
+        i2c@3 { // TEBF0808 Firefly B
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <3>;
+        };
+        i2c@4 { //Module PLL Si5338 or SI5345
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <4>;
+        };
+        i2c@5 { //TEBF0808 CPLD
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <5>;
+        };
+        i2c@6 { //TEBF0808 Firefly PCF8574DWR
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <6>;
+        };
+        i2c@7 { // TEBF0808 PMOD P3
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <7>;
+        };
+    };
+};
+
+/* Additional changes for external interfaces */
+/* I2C */
+&i2c1 {
+	clock-frequency = <100000>;
+};
+
+/* SPI (general devices) */
+&spi0 {
+	spidev@0 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <0>;
+	};
+	spidev@1 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <1>;
+	};
+	spidev@2 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <2>;
+	};
+};
+
+/* SPI1 (ASIC) */
+&spi1 {
+	spidev@0 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <0>;
+	};
+	spidev@1 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <1>;
+	};
+	spidev@2 {
+		compatible = "spidev";
+		spi-max-frequency = <1000000>;
+		reg = <2>;
+	};
+};
+
+/* GPIO Naming */
+&gpio {
+    gpio-reserved-ranges = <0 77>;
+    gpio-line-names = "MIO0\0MIO1\0MIO2\0MIO3\0MIO4\0MIO5\0MIO6\0MIO7\0MIO8\0MIO9\0MIO10\0MIO11\0MIO12\0MIO13\0MIO14\0MIO15\0MIO16\0MIO17\0MIO18\0MIO19\0MIO20\0MIO21\0MIO22\0MIO23\0MIO24\0MIO25\0MIO26\0MIO27\0MIO28\0MIO29\0MIO30\0MIO31\0MIO32\0MIO33\0MIO34\0MIO35\0MIO36\0MIO37\0MIO38\0MIO39\0MIO40\0MIO41\0MIO42\0MIO43\0MIO44\0MIO45\0MIO46\0MIO47\0MIO48\0MIO49\0MIO50\0MIO51\0MIO52\0MIO53\0MIO54\0MIO55\0MIO56\0MIO57\0MIO58\0MIO59\0MIO60\0MIO61\0MIO62\0MIO63\0MIO64\0MIO65\0MIO66\0MIO67\0MIO68\0MIO69\0MIO70\0MIO71\0MIO72\0MIO73\0MIO74\0MIO75\0MIO76\0MIO77\0APP nPRESENT\0BACKPLANE nPRESENT\0BUTTON0\0BUTTON1\0LTC_INT\0CTRL1\0PERIPHERAL nRST\0APPLICATION nRST\0CLKGEN nRST\0CLKGEN AC0\0CLKGEN AC1\0CLKGEN AC2\0LTC_NRST\0LED0\0LED1\0LED2\0LED3\0EMIO17 LVDS\0EMIO18 LVDS\0EMIO19 LVDS\0EMIO20 LVDS\0PL3:1\0PL3:2\0PL3:3\0PL3:4\0PL3:5\0PL3:6\0PL3:7\0PL3:8\0EMIO29\0EMIO30\0EMIO31\0EMIO32\0EMIO33\0EMIO34\0EMIO35\0EMIO36\0EMIO37\0EMIO38\0EMIO39\0EMIO40\0EMIO41\0EMIO42\0EMIO43\0EMIO44\0EMIO45\0EMIO46\0EMIO47\0EMIO48\0EMIO49\0EMIO50\0EMIO51\0EMIO52\0EMIO53\0EMIO54\0EMIO55\0EMIO56\0EMIO57\0EMIO58\0EMIO59\0EMIO60\0EMIO61\0EMIO62\0EMIO63\0EMIO64\0EMIO65\0EMIO66\0EMIO67\0EMIO68\0EMIO69\0EMIO70\0EMIO71\0EMIO72\0EMIO73\0EMIO74\0EMIO75\0EMIO76\0EMIO77\0EMIO78\0EMIO79\0EMIO80\0EMIO81\0EMIO82\0EMIO83\0EMIO84\0EMIO85\0EMIO86\0EMIO87\0EMIO88\0EMIO89\0EMIO90\0EMIO91\0EMIO92\0EMIO93\0EMIO94\0EMIO95\0";
+};
+&amba {
+    loki-presence-gpios = <&gpio 78 0>,  /* Application Present */
+                            <&gpio 79 0>;    /* Backplane Present */
+    loki-button-gpios = <&gpio 80 0>,    /* User Button 0 */
+                            <&gpio 81 0>;    /* User Button 1 */
+    loki-temp-int-gpios = <&gpio 82 0>;
+    loki-ctrl1-gpios = <&gpio 83 0>;
+    loki-app-per-nrst-gpios = <&gpio 84 0>;
+    loki-app-nrst-gpios = <&gpio 85 0>;
+    loki-clkgen-nrst-gpios = <&gpio 86 0>;
+    loki-clkgen-ac-gpios = <&gpio 87 0>,
+                            <&gpio 88 0>,
+                            <&gpio 89 0>;
+    loki-temp-nrst-gpios = <&gpio 90 0>;
+    loki-leds-gpios = <&gpio 91 0>,
+                        <&gpio 92 0>,
+                        <&gpio 93 0>,
+                        <&gpio 94 0>;
+
+};

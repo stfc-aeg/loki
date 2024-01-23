@@ -1,0 +1,105 @@
+SHELL := /bin/bash
+
+.PHONY: hardware software all os mostlyclean clean distclean clobber export_bd_tcl platform_configure
+
+VIVADO_PROJ_PATH = vivado
+
+LOKI_ROOT_ABS = @abs_top_builddir@
+PLATFORM=@platform_module_shortname@
+CARRIER=@platform_carrier@
+BLOCKDESIGN_OVERRIDE_DIR=@blockdesign_override_dir@
+
+HARDWARE_OUTPUT = prebuilt/hardware/${PLATFORM}/design_${PLATFORM}.xsa
+SOFTWARE_OUTPUT = prebuilt/software/${PLATFORM}/fsbl.elf prebuilt/software/${PLATFORM}/pmufw.elf
+
+# Depends on this file because the autoconf will modify it with platform specification
+.platform_configured: Makefile
+	$(info carrier_select modified build dependencies: $?)
+	$(info Configuring LOKI project to use carrier ${CARRIER})
+ifdef (${BLOCKDESIGN_OVERRIDE_DIR})
+	$(info linking custom application block design)
+	ln -sfT ${BLOCKDESIGN_OVERRIDE_DIR} block_design
+else
+	$(info linking default block design for ${CARRIER} carrier)
+	ln -sfT ./carrier_support/${CARRIER}/block_design block_design
+endif
+
+	$(info linking constraints for ${CARRIER} carrier)
+	ln -sfT ./carrier_support/${CARRIER}/constraints constraints
+
+	$(info linking low-level software for ${CARRIER} carrier module ${PLATFORM})
+	ln -sfT ./carrier_support/${CARRIER}/sw_lib/${PLATFORM} sw_lib
+
+	touch .platform_configured
+
+${VIVADO_PROJ_PATH}: .platform_configured
+	$(info Vivado Project Directory modified build dependencies: $?)
+	$(warning Vivado project does not exist, attempting to create it...)
+	LOKI_AUTO_CREATE="1"; \
+	source ./vivado_create_project_guimode.sh
+	$(info Finished creating new project...)
+
+	# Update timestamp
+	touch ${VIVADO_PROJ_PATH}
+
+# Up-to-date TCL files are exported from the existing Vivado design
+export_bd_tcl:
+	$(info Updating TCL block design from Vivado block design)
+	if test -d ${VIVADO_PROJ_PATH}; \
+		then echo found vivado directory at ${VIVADO_PROJ_PATH}, exporting to tcl; \
+		LOKI_AUTO_BUILD="TCL"; \
+		source ./vivado_open_existing_project_guimode.sh; \
+		else echo no vivado directory at ${VIVADO_PROJ_PATH}, skipping tcl export; \
+	fi
+	$(info TCL block design up to date)
+
+# Files that have been modified in the Vivado project but have not been
+# exported to the TCL scripts yet.
+VIVADO_LIVE_DESIGN = $(shell find ${VIVADO_PROJ_PATH}/design.srcs/ -type f)
+${VIVADO_LIVE_DESIGN}: | ${VIVADO_PROJ_PATH}
+
+# Build hardware if TCL design changes or if intermiediate block design
+# has been updated. However, block design should be extracted so that
+# changes can be committed with 'export_tcl'
+HARDWARE_DEPS = $(shell find ./block_design/)
+HARDWARE_DEPS := $(shell find ./constraints/)
+HARDWARE_DEPS := ${VIVADO_LIVE_DESIGN}
+${HARDWARE_OUTPUT}: ${HARDWARE_DEPS} | ${VIVADO_PROJ_PATH}
+	$(info Modified hardware synth dependencies: $?)
+	LOKI_AUTO_BUILD="HW"; \
+	source ./vivado_open_existing_project_guimode.sh
+	$(info finished building hardware)
+hardware: ${HARDWARE_OUTPUT} ;
+
+SOFTWARRE_DEPS = $(shell find ../../sw_lib/sw_apps/)
+${SOFTWARE_OUTPUT}: ${HARDWARE_OUTPUT} ${SOFTWARE_DEPS}
+	$(info Modified software dependencies: $?)
+	LOKI_AUTO_BUILD="SW"; \
+	source ./vivado_open_existing_project_guimode.sh
+	$(info finished building FSBL and PMUFW)
+software: ${SOFTWARE_OUTPUT} ;
+
+mostlyclean:
+	# Delete built hardware and software
+	$(info cleaning prebuilt hardware and software)
+	rm -rf prebuilt/hardware/*
+	rm -rf prebuilt/software/*
+
+clean: mostlyclean export_bd_tcl
+	# Same as mostlyclean but make sure that current design is exported to TCL
+	# for revision control, and then delete vivado project.
+	rm -rf ./vivado
+
+distclean: export_bd_tcl
+	# clean, respecting the export of tcl script, but also remove anything that will
+	# not form part of the final repo, for example the symlinks created for block design,
+	# constraints and sw_lib (these should be created as part of the build).
+	# Essentially, attempt to restore the directory to a state as close as possible to the
+	# cloned state.
+	git clean -x --force --exclude pre-built .
+
+clobber:
+	# Remove build artifacts from SW and HW. Additionally delete the vivado
+	# project WITHOUT exporting current edits to TCL. If changes have not been
+	# exported to TCL, they WILL be lost.
+	git clean -x --force --exclude pre-built .

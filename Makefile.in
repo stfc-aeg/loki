@@ -1,0 +1,54 @@
+# Generated with autoconf from @configure_input@
+
+SHELL := /bin/bash
+
+.PHONY: all mostlyclean clean hardware software os
+
+LOKI_ROOT_ABS = @abs_top_builddir@
+HWSW_PATH=${LOKI_ROOT_ABS}/design/
+OS_PATH=@os_path@
+
+all: os
+
+hardware:
+	$(MAKE) -C ${HWSW_PATH} hardware
+
+software: hardware
+	$(MAKE) -C ${HWSW_PATH} software
+
+os: hardware software
+	$(MAKE) -C ${OS_PATH} all
+
+mostlyclean:
+	$(info mostlycleaning HW/SW files)
+	$(MAKE) -C ${HWSW_PATH} mostlyclean
+	$(info mostlycleaning OS image files)
+	$(MAKE) -C ${OS_PATH} mostlyclean
+
+clean:
+	$(info cleaning HW/SW files)
+	$(MAKE) -C ${HWSW_PATH} clean
+	$(info cleaning OS image files)
+	$(MAKE) -C ${OS_PATH} clean
+
+distclean:
+	# Allow sub-makefiles the chance to cleanly delete things (potentially exporting
+	# changes to other places), then manually delete anything untracked
+	$(info distcleaning HW/SW files)
+	$(MAKE) -C ${HWSW_PATH} distclean
+	$(info distcleaning OS image files)
+	$(MAKE) -C ${OS_PATH} distclean
+
+	$(warning Attempting to remove any untracked files from loki)
+	git clean -x --force --exclude pre-built .
+
+clobber:
+	# Command sub-makefiles to clobber their directories, then manually delete
+	# anything untracked.
+	$(info clobbering HW/SW files)
+	$(MAKE) -C ${HWSW_PATH} clobber
+	$(info clobbering OS image files)
+	$(MAKE) -C ${OS_PATH} clobber
+
+	$(warning Attempting to remove any untracked files from loki)
+	git clean -x --force --exclude pre-built .

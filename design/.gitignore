@@ -1,5 +1,11 @@
 v_log/
-prebuilt/
+/prebuilt
+/block_design
+/constraints
+/sw_lib
 doc/
 vivado/
 workspace/
+file_location.txt
+/Makefile
+/.platform_configured

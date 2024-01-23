@@ -1,0 +1,53 @@
+# Set defaults for ./configure variables
+# There should only be defaults where the user is not usually
+# expected to provide a value, otherwise check for nonzero and
+# thrown an error.
+
+if [ -z "$os_path" ]
+then
+    os_path=./os/petalinux-custom
+fi
+
+if [ -z "$yocto_tmpdir" ]
+then
+    yocto_tmpdir=/tmp/loki/
+fi
+
+if [ -z "$loki_version" ]
+then
+    loki_version=$(git describe)
+fi
+
+if [ -z "$platform_carrier" ]
+then
+    echo "Platform carrier must be specified with platform_carrier="
+    exit 1
+fi
+
+if [ -z "$platform_module_shortname" ]
+then
+    echo "Platform module shortname must be specified with platform_module_shortname="
+    exit 1
+fi
+
+if ! command -v petalinux-config  &> /dev/null; then
+    echo "Petalinux toolchain is required"
+    exit 1
+fi
+
+if ! command -v vivado &> /dev/null; then
+    echo "Xilinx Vivado is required"
+    exit 1
+fi
+
+if ! command -v vitis &> /dev/null; then
+    echo "Xilinx Vitis is required"
+    exit 1
+fi
+
+if [ -z "${XILINX_VIVADO}" ]
+then
+    echo "XILINX_VIVADO must be defined (load the Xilinx Vivado tools)"
+    exit 1
+fi
+

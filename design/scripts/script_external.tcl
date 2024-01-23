@@ -234,8 +234,7 @@ namespace eval ::TE {
 
         #note todo fsbl generation creates error first time bit it generates all files --try catch will be ignored in xsct todo find out why
         if { [catch {eval $command} result ]  } {
-          # TE::UTILS::te_msg TE_EXT-15 ERROR "Command results from SDK \"$command\": \n \
-          TE::UTILS::te_msg TE_EXT-9 INFO "Command results from SDK \"$command\": \n \
+          TE::UTILS::te_msg TE_EXT-15 ERROR "Command results from SDK \"$command\": \n \
             $result \n \
           ------"
         } else {

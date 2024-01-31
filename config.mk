@@ -49,6 +49,8 @@ $(AUTOCONF_HW_OUTPUTS_PF) ${AUTOCONF_SW_OUTPUTS_PF} ${AUTOCONF_OS_OUTPUTS_PF} $(
 
 # Call from other (application ) makefiles without knowing the files autoconf depends on
 loki-configure-hw: ${AUTOCONF_HW_OUTPUTS_PF} ${AUTOCONF_OUTPUTS_PF}
+	# Also force-create the symlinks that external Makefiles may rely on.
+	$(MAKE) -C ${LOKI_DIR}/design/ .platform_configured
 
 loki-configure-sw: ${AUTOCONF_SW_OUTPUTS_PF} ${AUTOCONF_OUTPUTS_PF}
 

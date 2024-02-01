@@ -652,16 +652,16 @@ class LokiCarrier(ABC):
         try:
             rawtimes = psutil.cpu_times_percent()
             self._zynq_perf_cpu_times = {}
-            self._zynq_perf_cpu_times['user']: rawtimes.user
-            self._zynq_perf_cpu_times['nice']: rawtimes.nice
-            self._zynq_perf_cpu_times['system']: rawtimes.system
-            self._zynq_perf_cpu_times['idle']: rawtimes.idle
-            self._zynq_perf_cpu_times['iowait']: rawtimes.iowait
-            self._zynq_perf_cpu_times['irq']: rawtimes.irq
-            self._zynq_perf_cpu_times['softirq']: rawtimes.softirq
-            self._zynq_perf_cpu_times['steal']: rawtimes.steal
-            self._zynq_perf_cpu_times['guest']: rawtimes.guest
-            self._zynq_perf_cpu_times['guest_nice']: rawtimes.guest_nice
+            self._zynq_perf_cpu_times['user']= rawtimes.user
+            self._zynq_perf_cpu_times['nice']= rawtimes.nice
+            self._zynq_perf_cpu_times['system']= rawtimes.system
+            self._zynq_perf_cpu_times['idle']= rawtimes.idle
+            self._zynq_perf_cpu_times['iowait']= rawtimes.iowait
+            self._zynq_perf_cpu_times['irq']= rawtimes.irq
+            self._zynq_perf_cpu_times['softirq']= rawtimes.softirq
+            self._zynq_perf_cpu_times['steal']= rawtimes.steal
+            self._zynq_perf_cpu_times['guest']= rawtimes.guest
+            self._zynq_perf_cpu_times['guest_nice']= rawtimes.guest_nice
         except Exception as e:
             self._zynq_perf_cpu_times = None
             self._logger.error('Failed to get CPU times info from psutil: {}'.format(e))

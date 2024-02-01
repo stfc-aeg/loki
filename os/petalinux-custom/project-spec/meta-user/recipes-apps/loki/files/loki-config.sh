@@ -206,11 +206,22 @@ function service_start {
 function service_stop {
     echo "Stopping LOKI detector"
 
-    start-stop-daemon -K \
-        -p $PIDFILE  && \
-    rm -rf $PIDFILE
+	if [ -f $PIDFILE ]; then
 
-    echo "Service stopped"
+        start-stop-daemon -K \
+            -p $PIDFILE
+
+        while [ -d /proc/$(cat $PIDFILE) ]; do
+            sleep 1
+            echo "waiting..."
+        done
+
+        rm -rf $PIDFILE
+
+        echo "Service stopped"
+    else
+        echo "Service was not running"
+    fi
 }
 
 echo "Called with run argument ${1}"

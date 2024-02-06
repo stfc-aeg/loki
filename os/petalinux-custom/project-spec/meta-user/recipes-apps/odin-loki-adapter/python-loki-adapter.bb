@@ -8,13 +8,9 @@ RDEPENDS_${PN} += "odin-devices (>=1.1.0)"
 
 SRC_URI = "file://setup.py \
     file://loki/__init__.py \
-    file://loki/adapter.py"
+    file://loki/adapter.py \
+    file://loki/register_controller.py"
 
 S = "${WORKDIR}"
 
 inherit setuptools3
-
-#do_install_append () {
-#    install -d ${D}${bindir}
-#    install -m 0755 lokiadapter/loki-adapter.py ${D}${bindir}
-#}

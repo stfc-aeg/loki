@@ -18,6 +18,8 @@ from odin_devices.zlx import ZL30266, ZLFlaggedChannelException
 import logging
 import gpiod
 import time
+import datetime
+import psutil
 import os
 import concurrent.futures as futures
 import threading
@@ -268,6 +270,8 @@ class LokiCarrier(ABC):
 
     def __init__(self, **kwargs):
         # Get system information
+        self._logger = logging.getLogger('LokiCarrier')
+
         try:
             with open('/etc/loki/version') as info:
                 self.__lokiinfo_version = info.read()
@@ -292,7 +296,11 @@ class LokiCarrier(ABC):
         except FileNotFoundError:
             self.__lokiinfo_application_name = 'unknown'
 
-        self._logger = logging.getLogger('LokiCarrier')
+        try:
+            self.__lokiinfo_odin_version = os.popen('odin_control --version').read().split('\n')[0]
+        except Exception as e:
+            self.__lokiinfo_odin_version = 'unknown'
+            self._logger.error('Failed to get odin server version: {}'.format(e))
 
         self._supported_extensions = []
         self._change_callbacks = {}
@@ -364,6 +372,7 @@ class LokiCarrier(ABC):
 
         self._threads['gpio'] = self._thread_executor.submit(self._loop_gpiosync)
         self._threads['ams'] = self._thread_executor.submit(self._loop_ams)
+        self._threads['perf'] = self._thread_executor.submit(self._loop_performance, options)
 
         atexit.register(self._terminate_loops)
 
@@ -418,8 +427,18 @@ class LokiCarrier(ABC):
 
     def _gen_paramtree_dict(self):
 
+        self._zynq_perf_mem_cached = {}
+        self._zynq_perf_uptime_str = ""
+        self._zynq_perf_net_addr = ""
+        self._zynq_perf_net_speed = ""
+        self._zynq_disk_usage = {}
+        self._zynq_perf_cpu_load = (None,None,None)
+        self._zynq_perf_cpu_perc = ""
+        self._zynq_perf_cpu_times = {}
+
         base_tree_dict = {
             'carrier_info': {
+                'odin_control_version': (lambda: self.__lokiinfo_odin_version, None, {"description": "odin-control version"}),
                 'version': (lambda: self.__lokiinfo_version, None, {"description": "LOKI system image repo tag"}),
                 'application_version': (lambda: self.__lokiinfo_application_version, None, {"description": "Application version"}),
                 'application_name': (lambda: self.__lokiinfo_application_name, None, {"description": "Application name"}),
@@ -428,6 +447,25 @@ class LokiCarrier(ABC):
                 'extensions': (self.get_avail_extensions, None, {"description": "Comma separated list of carrier's supported extensions"}),
                 'application_interfaces': self._get_paramtree_interfaces_dict(),
                 'loopstatus': (self.get_loop_status, None, {"description": "Reports on the state of the background loops"}),
+                'performance': {
+                    'mem': {
+                        'free': (lambda: self._zynq_perf_mem_cached.get('free'), None),
+                        'avail': (lambda: self._zynq_perf_mem_cached.get('avail'), None),
+                        'total': (lambda: self._zynq_perf_mem_cached.get('total'), None),
+                        'cached': (lambda: self._zynq_perf_mem_cached.get('cached'), None),
+                    },
+                    'uptime': (lambda: self._zynq_perf_uptime_str, None),
+                    'net': {
+                        'address': (lambda: self._zynq_perf_net_addr, None),
+                        'speed': (lambda: self._zynq_perf_net_speed, None),
+                    },
+                    'disk_used_perc': (lambda: self._zynq_disk_usage, None),
+                    'cpu': {
+                        'load': (lambda: self._zynq_perf_cpu_load, None),
+                        'percent': (lambda: self._zynq_perf_cpu_perc, None),
+                        'times': (lambda: self._zynq_perf_cpu_times, None),
+                    },
+                },
             },
             'control': {
                 'application_enable': (self.get_app_enabled, self.set_app_enabled, {
@@ -522,6 +560,111 @@ class LokiCarrier(ABC):
             return self._paramtree.set(path, data)
         except AttributeError:
             raise ParameterTreeError
+
+    ########################################
+    # Built-in Zynq Performance Monitoring #
+    ########################################
+
+    def _loop_performance(self, options):
+
+        disk_info_directories = options.get('disk_info_directories', None)
+        if disk_info_directories is None:
+            # Use default list
+            disk_info_directories = [
+                '/mnt/flashmtd1',
+                '/mnt/sd-mmcblk1p1',
+                '/opt/loki-detector/exports',
+            ]
+        else:
+            # Of overrides provided, convert to list
+            disk_info_directories = [x.strip() for x in disk_info_directories.split(',')]
+
+        while not self.TERMINATE_THREADS:
+            time.sleep(5)
+
+            self._sync_performance_meminfo()
+            self._sync_performance_uptime()
+            self._sync_performance_netinfo()
+            self._sync_performance_diskinfo(disk_info_directories)
+            self._sync_performance_cpuinfo()
+
+    def _sync_performance_meminfo(self):
+        # Update cached memory-related performance values
+        try:
+            meminfo = psutil.virtual_memory()
+            self._zynq_perf_mem_cached['free'] = meminfo.free
+            self._zynq_perf_mem_cached['avail'] = meminfo.available
+            self._zynq_perf_mem_cached['total'] = meminfo.total
+            self._zynq_perf_mem_cached['cached'] = meminfo.cached
+        except Exception as e:
+            self._zynq_perf_mem_cached['free'] = None
+            self._zynq_perf_mem_cached['avail'] = None
+            self._zynq_perf_mem_cached['total'] = None
+            self._zynq_perf_mem_cached['cached'] = None
+            self._logger.error('Failed to retrieve memory performance values from psutil: {}'.format(e))
+
+
+    def _sync_performance_uptime(self):
+        # Update cached uptime value
+        try:
+            self._zynq_perf_uptime_str = str(datetime.timedelta(seconds=int(time.time() - psutil.boot_time())))
+        except Exception as e:
+            self._zynq_perf_uptime_str = None
+            self._logger.error('Failed to retrieve uptime value from psutil: {}'.format(e))
+
+    def _sync_performance_netinfo(self):
+        # Update cached network-related performance values
+        try:
+            self._zynq_perf_net_addr = psutil.net_if_addrs()['eth0'][0].address
+        except Exception as e:
+            self._zynq_perf_net_addr = None
+            self._logger.error('Failed to retrieve network address from psutil: {}'.format(e))
+
+        try:
+            self._zynq_perf_net_speed = psutil.net_if_stats()['eth0'].speed
+        except Exception as e:
+            self._zynq_perf_net_speed = None
+            self._logger.error('Failed to retrieve network speed from psutil: {}'.format(e))
+
+    def _sync_performance_diskinfo(self, directories):
+        # Update cached disk-related performance values
+        for directory in directories:
+            try:
+                self._zynq_disk_usage[directory] = psutil.disk_usage(directory).percent
+            except Exception as e:
+                self._zynq_disk_usage[directory] = None
+                self._logger.error('Failed to get disk usage for directory {}: {}'.format(directory, e))
+
+    def _sync_performance_cpuinfo(self):
+        # Update cached cpu-related performance values
+        try:
+            self._zynq_perf_cpu_load = psutil.getloadavg()
+        except Exception as e:
+            self._zynq_perf_cpu_load = None
+            self._logger.error('Failed to get CPU load info from psutil: {}'.format(e))
+
+        try:
+            self._zynq_perf_cpu_perc = psutil.cpu_percent()
+        except Exception as e:
+            self._zynq_perf_cpu_perc = None
+            self._logger.error('Failed to get CPU percent info from psutil: {}'.format(e))
+
+        try:
+            rawtimes = psutil.cpu_times_percent()
+            self._zynq_perf_cpu_times = {}
+            self._zynq_perf_cpu_times['user']= rawtimes.user
+            self._zynq_perf_cpu_times['nice']= rawtimes.nice
+            self._zynq_perf_cpu_times['system']= rawtimes.system
+            self._zynq_perf_cpu_times['idle']= rawtimes.idle
+            self._zynq_perf_cpu_times['iowait']= rawtimes.iowait
+            self._zynq_perf_cpu_times['irq']= rawtimes.irq
+            self._zynq_perf_cpu_times['softirq']= rawtimes.softirq
+            self._zynq_perf_cpu_times['steal']= rawtimes.steal
+            self._zynq_perf_cpu_times['guest']= rawtimes.guest
+            self._zynq_perf_cpu_times['guest_nice']= rawtimes.guest_nice
+        except Exception as e:
+            self._zynq_perf_cpu_times = None
+            self._logger.error('Failed to get CPU times info from psutil: {}'.format(e))
 
     ########################################
     # Built-in Zynq Temperature Monitoring #

@@ -1,4 +1,4 @@
-catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4cg_1e_tebf0808:part0:2.0, FPGA: xczu4cg-sfvc784-1-e at 2023-11-27T12:16:33."}
+catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4cg_1e_tebf0808:part0:2.0, FPGA: xczu4cg-sfvc784-1-e at 2024-02-15T10:50:38."}
 
 if { ![info exist TE::VERSION_CONTROL] } {
     set TE::VERSION_CONTROL true
@@ -838,8 +838,6 @@ proc create_root_design { parentCell } {
 
   # Create interface ports
   set BASE [ create_bd_intf_port -mode Master -vlnv xilinx.com:user:SC0808BF_bus_rtl:1.0 BASE ]
-
-  set I2S [ create_bd_intf_port -mode Slave -vlnv trenz.biz:user:I2S_rtl:1.0 I2S ]
 
 
   # Create ports
@@ -2421,7 +2419,6 @@ proc create_root_design { parentCell } {
  ] $zynq_ultra_ps_e_0
 
   # Create interface connections
-  connect_bd_intf_net -intf_net I2S_0_1 [get_bd_intf_ports I2S] [get_bd_intf_pins axis_live_audio_0/I2S]
   connect_bd_intf_net -intf_net RGPIO_Master_CPLD_RGPIO_M_EXT [get_bd_intf_pins RGPIO/RGPIO_M_EXT] [get_bd_intf_pins SC0808BF_0/RGPIO_MASTER_CPLD]
   connect_bd_intf_net -intf_net RGPIO_Slave_CPLD_RGPIO_M_EXT [get_bd_intf_pins RGPIO/RGPIO_M_EXT1] [get_bd_intf_pins SC0808BF_0/RGPIO_SLAVE_CPLD]
   connect_bd_intf_net -intf_net SC0808BF_0_BASE [get_bd_intf_ports BASE] [get_bd_intf_pins SC0808BF_0/BASE]

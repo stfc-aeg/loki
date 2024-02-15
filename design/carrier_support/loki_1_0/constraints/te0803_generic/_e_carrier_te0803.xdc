@@ -35,20 +35,6 @@ set_property IOSTANDARD LVCMOS18 [get_ports BASE_sc17]
 set_property IOSTANDARD LVCMOS18 [get_ports BASE_sc18]
 set_property IOSTANDARD LVCMOS18 [get_ports BASE_sc19]
 
-# Audio Codec
-#LRCLK		  J3:49 
-#BCLK		    J3:51 
-#DAC_SDATA	J3:53 
-#ADC_SDATA	J3:55 
-set_property PACKAGE_PIN L13 [get_ports I2S_lrclk ]
-set_property PACKAGE_PIN L14 [get_ports I2S_bclk ]
-set_property PACKAGE_PIN E15 [get_ports I2S_sdin ]
-set_property PACKAGE_PIN F15 [get_ports I2S_sdout ]
-set_property IOSTANDARD LVCMOS18 [get_ports I2S_lrclk ]
-set_property IOSTANDARD LVCMOS18 [get_ports I2S_bclk ]
-set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdin ]
-set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdout ]
-
 # SPI and I2C will now be exposed through MIO, not EMIO
 
 # Application Present Input (EMIO GPIO 0)

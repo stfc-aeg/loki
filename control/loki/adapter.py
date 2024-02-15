@@ -633,7 +633,9 @@ class LokiCarrier(ABC):
                 self._zynq_disk_usage[directory] = psutil.disk_usage(directory).percent
             except Exception as e:
                 self._zynq_disk_usage[directory] = None
-                self._logger.error('Failed to get disk usage for directory {}: {}'.format(directory, e))
+
+                # Do not report as error since directory could feasibly just not exist
+                self._logger.debug('Failed to get disk usage for directory {}: {}'.format(directory, e))
 
     def _sync_performance_cpuinfo(self):
         # Update cached cpu-related performance values

@@ -1395,6 +1395,10 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         kwargs.setdefault('pin_config_is_input_temp_reset', False)
         kwargs.setdefault('pin_config_default_value_temp_reset', 1)     # Since pin is active low, 1 means grounded, i.e. in reset
 
+        kwargs.setdefault('pin_config_id_temp_int', 'LTC_INT')
+        kwargs.setdefault('pin_config_active_low_temp_int', False)
+        kwargs.setdefault('pin_config_is_input_temp_int', True)
+
         # Gather settings for BME280 monitoring device, init immediately (always on)
         self._bme280 = DeviceHandler(device_type_name='BME280')
         self._bme280.i2c_bus = self._private_interfaces_i2c['APP_SUPPORT']
@@ -1421,6 +1425,10 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         super(LokiCarrier_1v0, self).__init__(**kwargs)
 
         self._ltc2986.pin_reset = self.get_pin('temp_reset')
+        self._ltc2986.lock.acquire()
+        self._config_ltc2986()
+        if self._ltc2986.initialised:
+            self._ltc2986.lock.release()
 
         # Pins only available after super init, therefore zl30266 init can only take place now
         self._zl30266.pin_reset = self.get_pin('clkgen_reset')
@@ -1489,11 +1497,94 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         except Exception as e:
             self._zl30266.critical_error('Failed to init ZL30266: {}'.format(e))
 
-    @abstractmethod
     def _config_ltc2986(self):
-        # The actual uses of ltc2986 will be application defined and off-board, so the application
-        # class should define this.
-        pass
+        # Bare-minimum config to create the device. Actual setup of this device, much
+        # like the ZL30266, will be performed by the user, who will have to add sensors
+        # depending on the application.
+        try:
+            self._ltc2986.initialised = False
+            self._ltc2986.error = False
+            self._ltc2986.error_message = False
+
+            # Reset the device
+            self._ltc2986.pin_reset.set_value(1)
+            time.sleep(1)
+            self._ltc2986.pin_reset.set_value(0)
+
+            # Create the SPIDev device
+            (spi_bus, spi_device) = self._ltc2986.spidev
+            self._ltc2986.device = LTC2986(bus=spi_bus, device=spi_device)
+
+            self._ltc2986.loki_pt100_enabled = False
+
+            self._ltc2986.initialised = True
+
+            self._logger.debug('LTC2986 init completed successfully')
+        except Exception as e:
+            self._ltc2986.critical_error('Failed to init LTC2986: {}'.format(e))
+
+    def ltc_get_device(self):
+        # Allow the user to get the device handler, so that they can add their own
+        # configurations as desired.
+        return self._ltc2986
+
+    def ltc_get_interrupt_direct(self):
+        # Directly return the current state of interrupt line. Note that although this
+        # is mutex protected, it is not rate limited.
+        return self._ltc2986.pin_int.get_value()
+
+    def ltc_enable_loki_pt100(self):
+        # There is a socket for a PT100 (PL1) already on-board, that if populated, can
+        # be enabled. Once enabled the user can use 'ltc_read_loki_pt100_direct' however
+        # they like, but it is suggested that it is added as an environment sensor under
+        # an application-specific name.
+        self._ltc2986.loki_pt100_enabled = False
+
+        if self._ltc2986.initialised:
+            with self._ltc2986.acquire(blocking=True, timeout=1) as rslt:
+                if not rslt:
+                    raise Exception('Failed to get LTC lock, timed out')
+
+                    self._ltc2986.device.add_rtd_channel(
+                        LTC2986.Sensor_Type.SENSOR_TYPE_RTD_PT100,
+                        LTC2986.RTD_RSense_Channel.CH4_CH3,
+                        self._ltc2986.rsense_ohms,
+                        LTC2986.RTD_Num_Wires.NUM_2_WIRES,
+                        #LTC2986.RTD_Excitation_Mode.NO_ROTATION_SHARING,
+                        LTC2986.RTD_Excitation_Mode.NO_ROTATION_NO_SHARING,
+                        LTC2986.RTD_Excitation_Current.CURRENT_500UA,
+                        LTC2986.RTD_Curve.EUROPEAN,
+                        self._ltc2986.pt100_channel
+                    )
+
+                    self._logger.info('Enabled on-LOKI-carrier PT100 channel')
+
+                self._ltc2986.loki_pt100_enabled = True
+        else:
+            raise Exception('Cannot enable PT100 when LTC has not been configured')
+
+    def ltc_read_channel_direct(self, channel_number):
+        # This is made external so that the user can pass it into threads, but note
+        # that it is not rate limited. Channels that have had sensors added can be
+        # read with this.
+        if self._ltc2986.initialised:
+            with self._ltc2986.acquire(blocking=True, timeout=1) as rslt:
+                if not rslt:
+                    raise Exception('Failed to get LTC lock, timed out')
+
+                return self._ltc2986.device.measure_channel(channel_number)
+
+        else:
+            return None
+
+    def ltc_read_loki_pt100_direct(self):
+        # Directly return the current on-LOKI-carrier PT100 temperature reading. Meant
+        # to be used by the user in a rate limited way, ideally added to the environment
+        # monitor sensor list under a sensible application-specific name.
+        if self._ltc2986.loki_pt100_enabled:
+            return self.ltc_read_channel_direct(self._ltc2986.pt100_channel)
+        else:
+            return None
 
     def _clkgen_set_config_direct(self, configname):
         with self._zl30266.acquire(blocking=True, timeout=1) as rslt:

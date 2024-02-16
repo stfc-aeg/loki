@@ -135,6 +135,10 @@ class PinHandler():
         pin = self.get_pin(friendly_name)
         return pin.direction() == pin.DIRECTION_INPUT
 
+    def is_pin_active_high(self, friendly_name):
+        pin = self.get_pin(friendly_name)
+        return pin.active_state() == pin.ACTIVE_HIGH
+
     def sync_pin_value_cache(self, sync_output_pins=False):
         # Updates the cached pin values from gpio lines directly. Works only for input pins by default,
         # unless sync_output_pins=True is set. Should ideally be called by an asynchronous update loop.
@@ -257,7 +261,13 @@ class PinHandler():
         # Print out the current pinmap
         pm = ''
         for pin_name in self.get_pin_names():
-            pm += '{}: {}\n'.format(pin_name, self.get_pin(pin_name))
+            pin = self.get_pin(pin_name)
+            pm += '{}: {}, {} {}\n'.format(
+                pin_name,
+                pin,
+                '(input)' if self.is_pin_input(pin_name) else '(output)',
+                '(active high)' if self.is_pin_active_high(pin_name) else '(active low)',
+            )
         return pm
 
 

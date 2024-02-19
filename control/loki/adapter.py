@@ -1629,6 +1629,12 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         return self._zl30266.config_list
 
     def dac_get_output(self, output_num):
+        # Output numbers correspond to the LOKI board, and are counted starting at 0, no
+        # matter which device is in use.
+
+        # MAP LOKI channels (starting at 0) to MAX5306 channels (starting at 1):
+        output_num = output_num + 1
+
         try:
             with self._max5306.acquire(blocking=True, timeout=1) as rslt:
                 if not rslt:
@@ -1642,6 +1648,12 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
             return 'N/A'
 
     def dac_set_output(self, output_num, voltage):
+        # Output numbers correspond to the LOKI board, and are counted starting at 0, no
+        # matter which device is in use.
+
+        # MAP LOKI channels (starting at 0) to MAX5306 channels (starting at 1):
+        output_num = output_num + 1
+
         with self._max5306.acquire(blocking=True, timeout=1) as rslt:
             if not rslt:
                 raise Exception('Could not get MAX5306 mutex, timed out')

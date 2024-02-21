@@ -407,12 +407,19 @@ class RegisterController (object):
         # Record a register read operation that used the cached value
         self._stats_cached += 1
 
+    def _stats_record_failread(self):
+        self._stats_failed += 1
+
     def stats_reset(self):
         self._stats_direct = 0
         self._stats_cached = 0
+        self._stats_failed = 0
 
     def stats_cached_direct(self):
         return (self._stats_cached, self._stats_direct)
+
+    def stats_failed(self):
+        return self._stats_failed
 
     def _get_field(self, name):
         return self._fields[name]

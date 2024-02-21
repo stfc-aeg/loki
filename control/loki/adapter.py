@@ -330,6 +330,8 @@ class LokiCarrier(ABC):
 
         self._logger.info('Pin mappings settled:\n{}'.format(self._pin_handler.pinmap()))
 
+        self._io_loops_started = False
+
         # Construct the parameter tree (will call extensions automatically)
         self._paramtree = ParameterTree(self._gen_paramtree_dict())
 
@@ -347,6 +349,10 @@ class LokiCarrier(ABC):
         # Set up state machines and timer lroops (potentially in carrier)
         # todo, consider moving base call into adapter for once other adapters are initialised
         self._logger.info('starting IO loops')
+        self._threads = {}              # Holds all threads for general state monitoring
+        self._watchdog_threads = {}     # Holds threads that will be checked for watchdog kicks
+        self._watchdog_kicks = {}       # Stores the latest kicks
+        self._thread_ids = {}           # Store thread names relative to actual thread ids
         self._start_io_loops(kwargs)
         self._logger.info('IO loops started')
 
@@ -369,6 +375,20 @@ class LokiCarrier(ABC):
         #        except Exception as e:
         #            self._logger.critical('FAILED TO KILL THREAD {}: {}'.format(threadname, e))
 
+    def add_thread(self, thread_name, thread_function, *args, **kwargs):
+        logging.debug('Creating new thread {} with target function {} and args {} /kwargs {}'.format(thread_name, thread_function, args, kwargs))
+
+        # This function will run in the created thread before anything else, reporting the thread ID.
+        def thread_function_wrapper(self, thread_name, thread_function, *args, **kwargs):
+            thread_id = threading.current_thread().ident
+            logging.debug('Storing thread id {} for thread name {}'.format(thread_id, thread_name))
+            self._thread_ids[thread_id] = thread_name
+
+            thread_function(*args, **kwargs)
+
+        # Create new thread, pointing to a lambda wrapping the actual target call
+        self._threads[thread_name] = self._thread_executor.submit(lambda: thread_function_wrapper(self, thread_name, thread_function, *args, **kwargs))
+
     def _start_io_loops(self, options):
 
         self.TERMINATE_THREADS = False
@@ -377,22 +397,28 @@ class LokiCarrier(ABC):
         # However, make sure that super is called in each.
         self._thread_executor = futures.ThreadPoolExecutor(max_workers=None)
 
-        # Structure to hold threads (including those created by derived classes) for monitoring
-        self._threads = {}
-
-        self._threads['gpio'] = self._thread_executor.submit(self._loop_gpiosync)
-        self._threads['ams'] = self._thread_executor.submit(self._loop_ams)
-        self._threads['perf'] = self._thread_executor.submit(self._loop_performance, options)
+        # Add common system threads, also to watchdog
+        self.add_thread('gpio', self._loop_gpiosync)
+        self.watchdog_add_thread('gpio', 10)
+        self.add_thread('ams', self._loop_ams)
+        self.watchdog_add_thread('ams', 10)
+        self.add_thread('perf', self._loop_performance, options)
+        self.watchdog_add_thread('perf', 10)
+        self.add_thread('watchdog', self._loop_watchdog)
 
         atexit.register(self._terminate_loops)
 
+        self._io_loops_started = True
+
     def _loop_gpiosync(self):
         while not self.TERMINATE_THREADS:
+            self.watchdog_kick()
             self._pin_handler.sync_pin_value_cache()
             time.sleep(0.1)
 
     def _loop_ams(self):
         while not self.TERMINATE_THREADS:
+            self.watchdog_kick()
             self._get_zynq_ams_temps_raw()
             time.sleep(5)
 
@@ -533,26 +559,132 @@ class LokiCarrier(ABC):
         # call this variant.
         return {}
 
-    def get_loop_status(self):
-        try:
-            # Assume that any thread in _threads is intended to run forever
-            threadreport = {}
-            for threadname in self._threads:
-                threadreport.update(
-                    {
-                        threadname: {
-                            'running': self._threads[threadname].running(),
-                            'done': self._threads[threadname].done(),
-                            'exception': 'N/A' if not self._threads[threadname].done() else str(self._threads[threadname].exception()),
+    def _loop_watchdog(self):
+        # The loop watchdog will repeatedly check the state of all running threads, updating
+        # the loop status dictionary. In addition, any monitored threads with a timeout will
+        # have the time checked since their last kick. If a kick is missed, an error will be
+        # printed out in the log, and an optional callback will be called.
+
+        self._threadreport = {}
+
+        logging.info('Watchdog waiting for threads to start')
+
+        while not self._io_loops_started:
+            time.sleep(1)
+
+        logging.info('Watchdog starting, watching threads: {}'.format(self._watchdog_threads.keys()))
+
+        while not self.TERMINATE_THREADS:
+            # Note that altering this will add to the time since last kick. If a checking interval
+            # for a thread is shorter than this, the check will still fail.
+            time.sleep(1)
+
+            try:
+
+                # Loop through every thread
+                for threadname in self._threads.keys():
+
+                    # If the thread is monitored, check it has kicked the watchdog recently enough
+                    watchdog_status = 'N/A'
+                    if threadname in self._watchdog_threads.keys():
+                        interval_s, callback = self._watchdog_threads[threadname]
+                        checktime = time.time()
+                        lastkick = self._watchdog_kicks[threadname]
+                        if (checktime - lastkick) < interval_s or checktime < lastkick:
+                            # Check passed
+                            watchdog_status = 'OK'
+                            logging.debug('Watchdog received kick in time for thread {}: kick {} was within {} seconds'.format(
+                                threadname, (checktime - lastkick), interval_s
+                            ))
+                        else:
+                            # Watchdog triggered
+                            watchdog_status = 'Triggered'
+
+                            # Report to console
+                            logging.error('Watchdog did not receive kick from thread {} within {}s (last kick {}s ago)'.format(
+                                threadname, interval_s, (checktime - lastkick)
+                            ))
+
+                            # Record in loop status
+
+                            # If there has been a registered callback, execute it
+                            if callback:
+                                logging.error('Watchdog calling callback for thread {}: {}'.format(threadname, callback))
+                                try:
+                                    callback()
+                                except Exception as e:
+                                    raise Exception('Error during watchdog callback for thread {}: {}'.format(threadname, e))
+
+                    # Update the thread information for any thread running, regardless of whether
+                    # it kicks the watchdog
+                    self._threadreport.update(
+                        {
+                            threadname: {
+                                'running': self._threads[threadname].running(),
+                                'done': self._threads[threadname].done(),
+                                'exception': 'N/A' if not self._threads[threadname].done() else str(self._threads[threadname].exception()),
+                                'wd_state': watchdog_status, 
+                            }
                         }
-                    }
-                )
+                    )
 
-            return threadreport
+            except Exception as e:
+                logging.error("ERROR IN WATCHDOG!!!!!! Ignoring...: {}".format(e))
 
-        except Exception as e:
-            self._logger.error('Failed to get thread info: {}'.format(e))
-            return 'Failed to get thread info'
+
+
+    def watchdog_add_thread(self, threadname, max_interval_s, callback_function=None):
+        # Add an already-created thread to the watchdog, with a given max interval for received kicks.
+
+        # Ensure that it does not immediately fail
+        self.watchdog_kick(thread_name=threadname)
+
+        # Add the thread name to the monitored threads
+        self._watchdog_threads.update({threadname: (max_interval_s, callback_function)})
+
+    def watchdog_pause_thread(self, threadname=None):
+        # Stop reporting if the given thread does not meet watchdog requirements. This can be used
+        # to avoid errors if there is a one-time process known to take a long time. Either use a
+        # supplied thread name, or the thread the function is called from.
+        #TODO
+        pass
+
+    def watchdog_resume_thread(self, threadname=None):
+        # Resume reporting if the given thread does not meet watchdog requirements. Either use a
+        # supplied thread name, or the thread the function is called from.
+        #TODO
+        pass
+
+    def watchdog_remove_thread(self, threadname):
+        # Stop monitoring this thread
+        self._watchdog_threads.pop(threadname)
+        self._watchdog_kicks.pop(threadname)
+
+    def get_thread_name(self):
+        # Get the thread name of the thread calling this function...
+        current_thread_id = threading.currentThread().ident
+
+        current_thread_name = self._thread_ids.get(current_thread_id, None)
+
+        return current_thread_name
+
+    def watchdog_kick(self, thread_name=None):
+        # Kick the watchdog from the current thread. Will return an error if the thread is not one that
+        # is currently being watched.
+
+        # If a thread name is not supplied, get the current thread name of the caller.
+        if thread_name is None:
+            thread_name = self.get_thread_name()
+
+        self._watchdog_kicks[thread_name] = time.time()
+
+        logging.debug('Received kick from thread {}'.format(thread_name))
+
+    def get_loop_status(self):
+        if self._io_loops_started:
+            return self._threadreport
+        else:
+            return None
 
     def get_avail_extensions(self):
         return ', '.join(self._supported_extensions)
@@ -590,6 +722,7 @@ class LokiCarrier(ABC):
             disk_info_directories = [x.strip() for x in disk_info_directories.split(',')]
 
         while not self.TERMINATE_THREADS:
+            self.watchdog_kick()
             time.sleep(5)
 
             self._sync_performance_meminfo()
@@ -1148,7 +1281,8 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
         super(LokiCarrierEnvmonitor, self)._start_io_loops(options)
         # self._thread_executor should already be defined in the super function
 
-        self._threads['env'] = self._thread_executor.submit(self._env_loop_readingsync)
+        self.add_thread('env', self._env_loop_readingsync)
+        self.watchdog_add_thread('env', self._env_reading_sync_period_s * 2)
 
     def env_get_sensor_cached(self, name, sType):
         return self._env_cached_readings[sType].get(name, 'No Reading')
@@ -1156,6 +1290,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
     def _env_loop_readingsync(self):
         while not self.TERMINATE_THREADS:
             self._env_sync_reading_cache()
+            self.watchdog_kick()
             time.sleep(self._env_reading_sync_period_s)
 
     def _env_sync_reading_cache(self):
@@ -1278,7 +1413,7 @@ class LokiCarrierPowerMonitor(LokiCarrier, ABC):
         super(LokiCarrierPowerMonitor, self)._start_io_loops(options)
         # self._thread_executor should already be defined in the super function
 
-        self._threads['psu'] = self._thread_executor.submit(self._psu_loop_readingsync)
+        self.add_thread('psu', self._psu_loop_readingsync)
 
     # Return the cached value of the rail reading specified
     def psu_get_rail_cached(self, name, reading_type):
@@ -1606,7 +1741,6 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
                     raise Exception('Attempted to program a channel directed into the level-sensitive Zynq IO: {}. MAKE SURE YOU KNOW WHAT YOU ARE DOING. If certain, set flag flag_zynq_channels to False in the odin config file.')
                 else:
                     self._logger.warning('This .mfg programs a channel directed into the Zynq. Exception has been silenced.')
-
 
     def _clkgen_sync_config_avail(self):
         configlist = []

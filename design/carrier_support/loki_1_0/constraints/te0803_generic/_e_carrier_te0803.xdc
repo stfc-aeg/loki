@@ -35,32 +35,16 @@ set_property IOSTANDARD LVCMOS18 [get_ports BASE_sc17]
 set_property IOSTANDARD LVCMOS18 [get_ports BASE_sc18]
 set_property IOSTANDARD LVCMOS18 [get_ports BASE_sc19]
 
-# Audio Codec
-#LRCLK		  J3:49 
-#BCLK		    J3:51 
-#DAC_SDATA	J3:53 
-#ADC_SDATA	J3:55 
-set_property PACKAGE_PIN L13 [get_ports I2S_lrclk ]
-set_property PACKAGE_PIN L14 [get_ports I2S_bclk ]
-set_property PACKAGE_PIN E15 [get_ports I2S_sdin ]
-set_property PACKAGE_PIN F15 [get_ports I2S_sdout ]
-set_property IOSTANDARD LVCMOS18 [get_ports I2S_lrclk ]
-set_property IOSTANDARD LVCMOS18 [get_ports I2S_bclk ]
-set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdin ]
-set_property IOSTANDARD LVCMOS18 [get_ports I2S_sdout ]
-
 # SPI and I2C will now be exposed through MIO, not EMIO
 
 # Application Present Input (EMIO GPIO 0)
-# Does not exist on this carrier, routed out on FMC
 # These can be overridded in application-specific constraints
-set_property PACKAGE_PIN E12 [get_ports APP_PRESENT_lc0 ]
+set_property PACKAGE_PIN F15 [get_ports APP_PRESENT_lc0 ]
 set_property IOSTANDARD LVCMOS18 [get_ports APP_PRESENT_lc0 ]
 
 # Backplane Present Input (EMIO GPIO 1)
-# Does not exist on this carrier, routed out on FMC
 # These can be overridded in application-specific constraints
-set_property PACKAGE_PIN D11 [get_ports BKPLN_PRESENT_lc1 ]
+set_property PACKAGE_PIN E15 [get_ports BKPLN_PRESENT_lc1 ]
 set_property IOSTANDARD LVCMOS18 [get_ports BKPLN_PRESENT_lc1 ]
 
 # User Button Inputs (EMIO GPIO 2&3)

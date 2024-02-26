@@ -2,6 +2,7 @@ import threading
 import math
 import csv
 import logging
+from contextlib import contextmanager
 
 # tabulate module will give nicer results, but a rough table can be provided
 try:
@@ -254,7 +255,7 @@ class RegisterController (object):
 
         # Create lock used to protect register cache and SPI access with
         # critical sections
-        self._register_mutex = threading.Lock()
+        self._register_mutex = threading.RLock()
         #todo actually use this
 
         # Create register cache, which will be a dictionary of addressed registers, where
@@ -267,6 +268,22 @@ class RegisterController (object):
         self._fields = {}
 
         self.stats_reset()
+
+    # Allow the register controller to expose an acquire() method that can be used with 'with' to
+    # protect access to derived classes. This is not REQUIRED for use, as the mutex is already used
+    # internallly to protect between separate transactions (supporting fields, multifields etc).
+    @contextmanager
+    def acquire(self, blocking=True, timeout=-1):
+        # Grab the lock with the supplied settings
+        result = self._register_mutex.acquire(blocking=blocking, timeout=timeout)
+
+        # Allow the caller to execute their 'with'. 'result' is needed so that
+        # if the lock cannot be grabbed the user can handle it.
+        yield result
+
+        # Release the lock, if it was actually acquired
+        if result:
+            self._register_mutex.release()
 
     def get_word_width(self):
         return self._word_width_bits
@@ -325,53 +342,61 @@ class RegisterController (object):
         # Return the cached value unless it is invalid, in which case SPI is used
         # If direct_read is False, cache will always be ignored for this read
 
-        # Attempt cache read
-        cached_values = []
-        for address in range(start_address, start_address+length):
-            try:
-                regcache = self._register_cache[address].get_value()
-                cached_values.append(regcache)
-            except Exception as e:
-                # If failed to get any cached value, abort
-                cached_values.append(None)
+        with self.acquire(blocking=True, timeout=1) as mutex_rslt:
+            if not mutex_rslt:
+                raise Exception('Failed to get register controller mutex')
 
-        # If any registers had no valid cache, read the values directly
-        if None in cached_values or direct_read:
-            #print('Failed to use cache, reading directly')
-            try:
-                direct_read_values = self._read_register_direct(start_address, length)
-            except Exception as e:
-                # Failed to read the direct interface of the device
-                self._stats_record_failread()
-                self._logger.error('Attempted a direct read of register 0x{}, failed: {}'.format(hex(start_address), e))
-                raise
+            # Attempt cache read
+            cached_values = []
+            for address in range(start_address, start_address+length):
+                try:
+                    regcache = self._register_cache[address].get_value()
+                    cached_values.append(regcache)
+                except Exception as e:
+                    # If failed to get any cached value, abort
+                    cached_values.append(None)
 
-            # Cache the values
-            for i in range(length):
-                self._register_cache[start_address+i].set_value(direct_read_values[i])
+            # If any registers had no valid cache, read the values directly
+            if None in cached_values or direct_read:
+                #print('Failed to use cache, reading directly')
+                try:
+                    direct_read_values = self._read_register_direct(start_address, length)
+                except Exception as e:
+                    # Failed to read the direct interface of the device
+                    self._stats_record_failread()
+                    self._logger.error('Attempted a direct read of register 0x{}, failed: {}'.format(hex(start_address), e))
+                    raise
 
-            latest_values = direct_read_values
-            self._stats_record_directread()
-            self._logger.debug('Made a direct read to ASIC register 0x{}'.format(hex(start_address)))
-        else:
-            latest_values = cached_values
-            self._stats_record_cachedread()
+                # Cache the values
+                for i in range(length):
+                    self._register_cache[start_address+i].set_value(direct_read_values[i])
 
-        return latest_values
+                latest_values = direct_read_values
+                self._stats_record_directread()
+                self._logger.debug('Made a direct read to ASIC register 0x{}'.format(hex(start_address)))
+            else:
+                latest_values = cached_values
+                self._stats_record_cachedread()
+
+            return latest_values
 
     def write_register(self, start_address, values):
         # Write to the array as a whole register (single operation), and cache for later use
 
-        # Write direct
-        try:
-            self._write_register_direct(start_address, values)
-        except Exception as e:
-            self._logger.error('Attempted a write of register 0x{}, failed: {}'.format(hex(start_address), e))
-            raise
+        with self.acquire(blocking=True, timeout=1) as mutex_rslt:
+            if not mutex_rslt:
+                raise Exception('Failed to get register controller mutex')
 
-        # Cache the written values
-        for i in range(len(values)):
-            self._register_cache[start_address+i].set_value(values[i])
+            # Write direct
+            try:
+                self._write_register_direct(start_address, values)
+            except Exception as e:
+                self._logger.error('Attempted a write of register 0x{}, failed: {}'.format(hex(start_address), e))
+                raise
+
+            # Cache the written values
+            for i in range(len(values)):
+                self._register_cache[start_address+i].set_value(values[i])
 
 
     def _stats_record_directread(self):
@@ -382,12 +407,19 @@ class RegisterController (object):
         # Record a register read operation that used the cached value
         self._stats_cached += 1
 
+    def _stats_record_failread(self):
+        self._stats_failed += 1
+
     def stats_reset(self):
         self._stats_direct = 0
         self._stats_cached = 0
+        self._stats_failed = 0
 
     def stats_cached_direct(self):
         return (self._stats_cached, self._stats_direct)
+
+    def stats_failed(self):
+        return self._stats_failed
 
     def _get_field(self, name):
         return self._fields[name]
@@ -396,10 +428,18 @@ class RegisterController (object):
         return list(self._fields.keys())
 
     def read_field(self, fieldname):
-        return self._get_field(fieldname).read()
+        with self.acquire(blocking=True, timeout=1) as mutex_rslt:
+            if not mutex_rslt:
+                raise Exception('Failed to get register controller mutex')
+
+            return self._get_field(fieldname).read()
 
     def write_field(self, fieldname, value):
-        self._get_field(fieldname).write(value)
+        with self.acquire(blocking=True, timeout=1) as mutex_rslt:
+            if not mutex_rslt:
+                raise Exception('Failed to get register controller mutex')
+
+            self._get_field(fieldname).write(value)
 
 
     def summarise_fields(self, address_range=None, ignore_subfields=True, additional_decode=None):

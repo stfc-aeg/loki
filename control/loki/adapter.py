@@ -135,6 +135,10 @@ class PinHandler():
         pin = self.get_pin(friendly_name)
         return pin.direction() == pin.DIRECTION_INPUT
 
+    def is_pin_active_high(self, friendly_name):
+        pin = self.get_pin(friendly_name)
+        return pin.active_state() == pin.ACTIVE_HIGH
+
     def sync_pin_value_cache(self, sync_output_pins=False):
         # Updates the cached pin values from gpio lines directly. Works only for input pins by default,
         # unless sync_output_pins=True is set. Should ideally be called by an asynchronous update loop.
@@ -257,7 +261,13 @@ class PinHandler():
         # Print out the current pinmap
         pm = ''
         for pin_name in self.get_pin_names():
-            pm += '{}: {}\n'.format(pin_name, self.get_pin(pin_name))
+            pin = self.get_pin(pin_name)
+            pm += '{}: {}, {} {}\n'.format(
+                pin_name,
+                pin,
+                '(input)' if self.is_pin_input(pin_name) else '(output)',
+                '(active high)' if self.is_pin_active_high(pin_name) else '(active low)',
+            )
         return pm
 
 
@@ -320,6 +330,8 @@ class LokiCarrier(ABC):
 
         self._logger.info('Pin mappings settled:\n{}'.format(self._pin_handler.pinmap()))
 
+        self._io_loops_started = False
+
         # Construct the parameter tree (will call extensions automatically)
         self._paramtree = ParameterTree(self._gen_paramtree_dict())
 
@@ -337,6 +349,10 @@ class LokiCarrier(ABC):
         # Set up state machines and timer lroops (potentially in carrier)
         # todo, consider moving base call into adapter for once other adapters are initialised
         self._logger.info('starting IO loops')
+        self._threads = {}              # Holds all threads for general state monitoring
+        self._watchdog_threads = {}     # Holds threads that will be checked for watchdog kicks
+        self._watchdog_kicks = {}       # Stores the latest kicks
+        self._thread_ids = {}           # Store thread names relative to actual thread ids
         self._start_io_loops(kwargs)
         self._logger.info('IO loops started')
 
@@ -359,6 +375,20 @@ class LokiCarrier(ABC):
         #        except Exception as e:
         #            self._logger.critical('FAILED TO KILL THREAD {}: {}'.format(threadname, e))
 
+    def add_thread(self, thread_name, thread_function, *args, **kwargs):
+        logging.debug('Creating new thread {} with target function {} and args {} /kwargs {}'.format(thread_name, thread_function, args, kwargs))
+
+        # This function will run in the created thread before anything else, reporting the thread ID.
+        def thread_function_wrapper(self, thread_name, thread_function, *args, **kwargs):
+            thread_id = threading.current_thread().ident
+            logging.debug('Storing thread id {} for thread name {}'.format(thread_id, thread_name))
+            self._thread_ids[thread_id] = thread_name
+
+            thread_function(*args, **kwargs)
+
+        # Create new thread, pointing to a lambda wrapping the actual target call
+        self._threads[thread_name] = self._thread_executor.submit(lambda: thread_function_wrapper(self, thread_name, thread_function, *args, **kwargs))
+
     def _start_io_loops(self, options):
 
         self.TERMINATE_THREADS = False
@@ -367,22 +397,28 @@ class LokiCarrier(ABC):
         # However, make sure that super is called in each.
         self._thread_executor = futures.ThreadPoolExecutor(max_workers=None)
 
-        # Structure to hold threads (including those created by derived classes) for monitoring
-        self._threads = {}
-
-        self._threads['gpio'] = self._thread_executor.submit(self._loop_gpiosync)
-        self._threads['ams'] = self._thread_executor.submit(self._loop_ams)
-        self._threads['perf'] = self._thread_executor.submit(self._loop_performance, options)
+        # Add common system threads, also to watchdog
+        self.add_thread('gpio', self._loop_gpiosync)
+        self.watchdog_add_thread('gpio', 10)
+        self.add_thread('ams', self._loop_ams)
+        self.watchdog_add_thread('ams', 10)
+        self.add_thread('perf', self._loop_performance, options)
+        self.watchdog_add_thread('perf', 10)
+        self.add_thread('watchdog', self._loop_watchdog)
 
         atexit.register(self._terminate_loops)
 
+        self._io_loops_started = True
+
     def _loop_gpiosync(self):
         while not self.TERMINATE_THREADS:
+            self.watchdog_kick()
             self._pin_handler.sync_pin_value_cache()
             time.sleep(0.1)
 
     def _loop_ams(self):
         while not self.TERMINATE_THREADS:
+            self.watchdog_kick()
             self._get_zynq_ams_temps_raw()
             time.sleep(5)
 
@@ -523,26 +559,132 @@ class LokiCarrier(ABC):
         # call this variant.
         return {}
 
-    def get_loop_status(self):
-        try:
-            # Assume that any thread in _threads is intended to run forever
-            threadreport = {}
-            for threadname in self._threads:
-                threadreport.update(
-                    {
-                        threadname: {
-                            'running': self._threads[threadname].running(),
-                            'done': self._threads[threadname].done(),
-                            'exception': 'N/A' if not self._threads[threadname].done() else str(self._threads[threadname].exception()),
+    def _loop_watchdog(self):
+        # The loop watchdog will repeatedly check the state of all running threads, updating
+        # the loop status dictionary. In addition, any monitored threads with a timeout will
+        # have the time checked since their last kick. If a kick is missed, an error will be
+        # printed out in the log, and an optional callback will be called.
+
+        self._threadreport = {}
+
+        logging.info('Watchdog waiting for threads to start')
+
+        while not self._io_loops_started:
+            time.sleep(1)
+
+        logging.info('Watchdog starting, watching threads: {}'.format(self._watchdog_threads.keys()))
+
+        while not self.TERMINATE_THREADS:
+            # Note that altering this will add to the time since last kick. If a checking interval
+            # for a thread is shorter than this, the check will still fail.
+            time.sleep(1)
+
+            try:
+
+                # Loop through every thread
+                for threadname in self._threads.keys():
+
+                    # If the thread is monitored, check it has kicked the watchdog recently enough
+                    watchdog_status = 'N/A'
+                    if threadname in self._watchdog_threads.keys():
+                        interval_s, callback = self._watchdog_threads[threadname]
+                        checktime = time.time()
+                        lastkick = self._watchdog_kicks[threadname]
+                        if (checktime - lastkick) < interval_s or checktime < lastkick:
+                            # Check passed
+                            watchdog_status = 'OK'
+                            logging.debug('Watchdog received kick in time for thread {}: kick {} was within {} seconds'.format(
+                                threadname, (checktime - lastkick), interval_s
+                            ))
+                        else:
+                            # Watchdog triggered
+                            watchdog_status = 'Triggered'
+
+                            # Report to console
+                            logging.error('Watchdog did not receive kick from thread {} within {}s (last kick {}s ago)'.format(
+                                threadname, interval_s, (checktime - lastkick)
+                            ))
+
+                            # Record in loop status
+
+                            # If there has been a registered callback, execute it
+                            if callback:
+                                logging.error('Watchdog calling callback for thread {}: {}'.format(threadname, callback))
+                                try:
+                                    callback()
+                                except Exception as e:
+                                    raise Exception('Error during watchdog callback for thread {}: {}'.format(threadname, e))
+
+                    # Update the thread information for any thread running, regardless of whether
+                    # it kicks the watchdog
+                    self._threadreport.update(
+                        {
+                            threadname: {
+                                'running': self._threads[threadname].running(),
+                                'done': self._threads[threadname].done(),
+                                'exception': 'N/A' if not self._threads[threadname].done() else str(self._threads[threadname].exception()),
+                                'wd_state': watchdog_status, 
+                            }
                         }
-                    }
-                )
+                    )
 
-            return threadreport
+            except Exception as e:
+                logging.error("ERROR IN WATCHDOG!!!!!! Ignoring...: {}".format(e))
 
-        except Exception as e:
-            self._logger.error('Failed to get thread info: {}'.format(e))
-            return 'Failed to get thread info'
+
+
+    def watchdog_add_thread(self, threadname, max_interval_s, callback_function=None):
+        # Add an already-created thread to the watchdog, with a given max interval for received kicks.
+
+        # Ensure that it does not immediately fail
+        self.watchdog_kick(thread_name=threadname)
+
+        # Add the thread name to the monitored threads
+        self._watchdog_threads.update({threadname: (max_interval_s, callback_function)})
+
+    def watchdog_pause_thread(self, threadname=None):
+        # Stop reporting if the given thread does not meet watchdog requirements. This can be used
+        # to avoid errors if there is a one-time process known to take a long time. Either use a
+        # supplied thread name, or the thread the function is called from.
+        #TODO
+        pass
+
+    def watchdog_resume_thread(self, threadname=None):
+        # Resume reporting if the given thread does not meet watchdog requirements. Either use a
+        # supplied thread name, or the thread the function is called from.
+        #TODO
+        pass
+
+    def watchdog_remove_thread(self, threadname):
+        # Stop monitoring this thread
+        self._watchdog_threads.pop(threadname)
+        self._watchdog_kicks.pop(threadname)
+
+    def get_thread_name(self):
+        # Get the thread name of the thread calling this function...
+        current_thread_id = threading.currentThread().ident
+
+        current_thread_name = self._thread_ids.get(current_thread_id, None)
+
+        return current_thread_name
+
+    def watchdog_kick(self, thread_name=None):
+        # Kick the watchdog from the current thread. Will return an error if the thread is not one that
+        # is currently being watched.
+
+        # If a thread name is not supplied, get the current thread name of the caller.
+        if thread_name is None:
+            thread_name = self.get_thread_name()
+
+        self._watchdog_kicks[thread_name] = time.time()
+
+        logging.debug('Received kick from thread {}'.format(thread_name))
+
+    def get_loop_status(self):
+        if self._io_loops_started:
+            return self._threadreport
+        else:
+            return None
 
     def get_avail_extensions(self):
         return ', '.join(self._supported_extensions)
@@ -580,6 +722,7 @@ class LokiCarrier(ABC):
             disk_info_directories = [x.strip() for x in disk_info_directories.split(',')]
 
         while not self.TERMINATE_THREADS:
+            self.watchdog_kick()
             time.sleep(5)
 
             self._sync_performance_meminfo()
@@ -633,7 +776,9 @@ class LokiCarrier(ABC):
                 self._zynq_disk_usage[directory] = psutil.disk_usage(directory).percent
             except Exception as e:
                 self._zynq_disk_usage[directory] = None
-                self._logger.error('Failed to get disk usage for directory {}: {}'.format(directory, e))
+
+                # Do not report as error since directory could feasibly just not exist
+                self._logger.debug('Failed to get disk usage for directory {}: {}'.format(directory, e))
 
     def _sync_performance_cpuinfo(self):
         # Update cached cpu-related performance values
@@ -1078,10 +1223,14 @@ class LokiCarrierDAC(LokiCarrier, ABC):
 
     @abstractmethod
     def dac_set_output(self, output_num, voltage):
+        # Output numbers correspond to the LOKI board, and are counted starting at 0, no
+        # matter which device is in use.
         pass
 
     @abstractmethod
     def dac_get_output(self, output_num):
+        # Output numbers correspond to the LOKI board, and are counted starting at 0, no
+        # matter which device is in use.
         pass
 
     @abstractmethod
@@ -1132,7 +1281,8 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
         super(LokiCarrierEnvmonitor, self)._start_io_loops(options)
         # self._thread_executor should already be defined in the super function
 
-        self._threads['env'] = self._thread_executor.submit(self._env_loop_readingsync)
+        self.add_thread('env', self._env_loop_readingsync)
+        self.watchdog_add_thread('env', self._env_reading_sync_period_s * 2)
 
     def env_get_sensor_cached(self, name, sType):
         return self._env_cached_readings[sType].get(name, 'No Reading')
@@ -1140,6 +1290,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
     def _env_loop_readingsync(self):
         while not self.TERMINATE_THREADS:
             self._env_sync_reading_cache()
+            self.watchdog_kick()
             time.sleep(self._env_reading_sync_period_s)
 
     def _env_sync_reading_cache(self):
@@ -1262,7 +1413,7 @@ class LokiCarrierPowerMonitor(LokiCarrier, ABC):
         super(LokiCarrierPowerMonitor, self)._start_io_loops(options)
         # self._thread_executor should already be defined in the super function
 
-        self._threads['psu'] = self._thread_executor.submit(self._psu_loop_readingsync)
+        self.add_thread('psu', self._psu_loop_readingsync)
 
     # Return the cached value of the rail reading specified
     def psu_get_rail_cached(self, name, reading_type):
@@ -1383,6 +1534,10 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         kwargs.setdefault('pin_config_is_input_temp_reset', False)
         kwargs.setdefault('pin_config_default_value_temp_reset', 1)     # Since pin is active low, 1 means grounded, i.e. in reset
 
+        kwargs.setdefault('pin_config_id_temp_int', 'LTC_INT')
+        kwargs.setdefault('pin_config_active_low_temp_int', False)
+        kwargs.setdefault('pin_config_is_input_temp_int', True)
+
         # Gather settings for BME280 monitoring device, init immediately (always on)
         self._bme280 = DeviceHandler(device_type_name='BME280')
         self._bme280.i2c_bus = self._private_interfaces_i2c['APP_SUPPORT']
@@ -1409,6 +1564,10 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         super(LokiCarrier_1v0, self).__init__(**kwargs)
 
         self._ltc2986.pin_reset = self.get_pin('temp_reset')
+        self._ltc2986.lock.acquire()
+        self._config_ltc2986()
+        if self._ltc2986.initialised:
+            self._ltc2986.lock.release()
 
         # Pins only available after super init, therefore zl30266 init can only take place now
         self._zl30266.pin_reset = self.get_pin('clkgen_reset')
@@ -1477,11 +1636,94 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         except Exception as e:
             self._zl30266.critical_error('Failed to init ZL30266: {}'.format(e))
 
-    @abstractmethod
     def _config_ltc2986(self):
-        # The actual uses of ltc2986 will be application defined and off-board, so the application
-        # class should define this.
-        pass
+        # Bare-minimum config to create the device. Actual setup of this device, much
+        # like the ZL30266, will be performed by the user, who will have to add sensors
+        # depending on the application.
+        try:
+            self._ltc2986.initialised = False
+            self._ltc2986.error = False
+            self._ltc2986.error_message = False
+
+            # Reset the device
+            self._ltc2986.pin_reset.set_value(1)
+            time.sleep(1)
+            self._ltc2986.pin_reset.set_value(0)
+
+            # Create the SPIDev device
+            (spi_bus, spi_device) = self._ltc2986.spidev
+            self._ltc2986.device = LTC2986(bus=spi_bus, device=spi_device)
+
+            self._ltc2986.loki_pt100_enabled = False
+
+            self._ltc2986.initialised = True
+
+            self._logger.debug('LTC2986 init completed successfully')
+        except Exception as e:
+            self._ltc2986.critical_error('Failed to init LTC2986: {}'.format(e))
+
+    def ltc_get_device(self):
+        # Allow the user to get the device handler, so that they can add their own
+        # configurations as desired.
+        return self._ltc2986
+
+    def ltc_get_interrupt_direct(self):
+        # Directly return the current state of interrupt line. Note that although this
+        # is mutex protected, it is not rate limited.
+        return self._ltc2986.pin_int.get_value()
+
+    def ltc_enable_loki_pt100(self):
+        # There is a socket for a PT100 (PL1) already on-board, that if populated, can
+        # be enabled. Once enabled the user can use 'ltc_read_loki_pt100_direct' however
+        # they like, but it is suggested that it is added as an environment sensor under
+        # an application-specific name.
+        self._ltc2986.loki_pt100_enabled = False
+
+        if self._ltc2986.initialised:
+            with self._ltc2986.acquire(blocking=True, timeout=1) as rslt:
+                if not rslt:
+                    raise Exception('Failed to get LTC lock, timed out')
+
+                    self._ltc2986.device.add_rtd_channel(
+                        LTC2986.Sensor_Type.SENSOR_TYPE_RTD_PT100,
+                        LTC2986.RTD_RSense_Channel.CH4_CH3,
+                        self._ltc2986.rsense_ohms,
+                        LTC2986.RTD_Num_Wires.NUM_2_WIRES,
+                        #LTC2986.RTD_Excitation_Mode.NO_ROTATION_SHARING,
+                        LTC2986.RTD_Excitation_Mode.NO_ROTATION_NO_SHARING,
+                        LTC2986.RTD_Excitation_Current.CURRENT_500UA,
+                        LTC2986.RTD_Curve.EUROPEAN,
+                        self._ltc2986.pt100_channel
+                    )
+
+                    self._logger.info('Enabled on-LOKI-carrier PT100 channel')
+
+                self._ltc2986.loki_pt100_enabled = True
+        else:
+            raise Exception('Cannot enable PT100 when LTC has not been configured')
+
+    def ltc_read_channel_direct(self, channel_number):
+        # This is made external so that the user can pass it into threads, but note
+        # that it is not rate limited. Channels that have had sensors added can be
+        # read with this.
+        if self._ltc2986.initialised:
+            with self._ltc2986.acquire(blocking=True, timeout=1) as rslt:
+                if not rslt:
+                    raise Exception('Failed to get LTC lock, timed out')
+
+                return self._ltc2986.device.measure_channel(channel_number)
+
+        else:
+            return None
+
+    def ltc_read_loki_pt100_direct(self):
+        # Directly return the current on-LOKI-carrier PT100 temperature reading. Meant
+        # to be used by the user in a rate limited way, ideally added to the environment
+        # monitor sensor list under a sensible application-specific name.
+        if self._ltc2986.loki_pt100_enabled:
+            return self.ltc_read_channel_direct(self._ltc2986.pt100_channel)
+        else:
+            return None
 
     def _clkgen_set_config_direct(self, configname):
         with self._zl30266.acquire(blocking=True, timeout=1) as rslt:
@@ -1499,7 +1741,6 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
                     raise Exception('Attempted to program a channel directed into the level-sensitive Zynq IO: {}. MAKE SURE YOU KNOW WHAT YOU ARE DOING. If certain, set flag flag_zynq_channels to False in the odin config file.')
                 else:
                     self._logger.warning('This .mfg programs a channel directed into the Zynq. Exception has been silenced.')
-
 
     def _clkgen_sync_config_avail(self):
         configlist = []
@@ -1522,6 +1763,12 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         return self._zl30266.config_list
 
     def dac_get_output(self, output_num):
+        # Output numbers correspond to the LOKI board, and are counted starting at 0, no
+        # matter which device is in use.
+
+        # MAP LOKI channels (starting at 0) to MAX5306 channels (starting at 1):
+        output_num = output_num + 1
+
         try:
             with self._max5306.acquire(blocking=True, timeout=1) as rslt:
                 if not rslt:
@@ -1535,6 +1782,12 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
             return 'N/A'
 
     def dac_set_output(self, output_num, voltage):
+        # Output numbers correspond to the LOKI board, and are counted starting at 0, no
+        # matter which device is in use.
+
+        # MAP LOKI channels (starting at 0) to MAX5306 channels (starting at 1):
+        output_num = output_num + 1
+
         with self._max5306.acquire(blocking=True, timeout=1) as rslt:
             if not rslt:
                 raise Exception('Could not get MAX5306 mutex, timed out')
@@ -1916,6 +2169,12 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         pass
 
     def dac_get_output(self, output_num):
+        # Output numbers correspond to the LOKI board, and are counted starting at 0, no
+        # matter which device is in use.
+
+        # MAP LOKI channels (starting at 0) to MAX5306 channels (starting at 1):
+        output_num = output_num + 1
+
         try:
             with self._max5306.acquire(blocking=True, timeout=1) as rslt:
                 if not rslt:
@@ -1929,6 +2188,12 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
             return 'N/A'
 
     def dac_set_output(self, output_num, voltage):
+        # Output numbers correspond to the LOKI board, and are counted starting at 0, no
+        # matter which device is in use.
+
+        # MAP LOKI channels (starting at 0) to MAX5306 channels (starting at 1):
+        output_num = output_num + 1
+
         with self._max5306.acquire(blocking=True, timeout=1) as rslt:
             if not rslt:
                 raise Exception('Could not get MAX5306 mutex, timed out')

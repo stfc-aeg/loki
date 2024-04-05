@@ -395,7 +395,7 @@ class LokiCarrier(ABC):
 
         # This function can be extended by the extension LokiCarrier classes if they would benefit from async loops.
         # However, make sure that super is called in each.
-        self._thread_executor = futures.ThreadPoolExecutor(max_workers=None)
+        self._thread_executor = futures.ThreadPoolExecutor(max_workers=60)
 
         # Add common system threads, also to watchdog
         self.add_thread('gpio', self._loop_gpiosync)

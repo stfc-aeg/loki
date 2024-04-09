@@ -177,17 +177,17 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 /* SPI (general devices) */
 &spi0 {
 	spidev@0 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <0>;
 	};
 	spidev@1 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <1>;
 	};
 	spidev@2 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <2>;
 	};
@@ -196,17 +196,17 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 /* SPI1 (ASIC) */
 &spi1 {
 	spidev@0 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <0>;
 	};
 	spidev@1 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <1>;
 	};
 	spidev@2 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <2>;
 	};

@@ -171,7 +171,7 @@ class PinHandler():
         else:
             raise Exception('Cannot set an input pin')
 
-    def add_pin(self, friendly_name, pin_id, is_input, is_active_low=False, default_value=0):
+    def add_pin(self, friendly_name, pin_id, is_input, is_active_low=False, default_value=0, extra_flags=0):
         # Check if the name is already in use
         if self._pins.get(friendly_name) is not None:
             raise RuntimeError('pin friendly name {} already exists for {}, cannot use again for ID {}'.format(
@@ -188,7 +188,7 @@ class PinHandler():
             line.request(
                 consumer=self._consumername,
                 type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
-                flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0),
+                flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0) | extra_flags,
                 default_val=default_value)
         except Exception as e:
             raise RuntimeError('could not request line {}: {}'.format(line, e))
@@ -209,7 +209,7 @@ class PinHandler():
 
         # Separate options by the pin friendly name they refer to
         config_by_pin = {}
-        allowed_settings = ['id', 'active_low', 'nc', 'is_input', 'default_value']
+        allowed_settings = ['id', 'active_low', 'nc', 'is_input', 'default_value', 'bias_pull_down', 'bias_pull_up', 'bias_disable', 'open_source', 'open_drain']
         for key in pin_config_options.keys():
             # Settings not in the list are ignored
             for allowed_setting in allowed_settings:
@@ -243,6 +243,13 @@ class PinHandler():
                 pin_is_input = pin_info.get('is_input')
                 pin_not_connected = pin_info.get('nc', False)   # This is optional, assumed pins are connected
                 pin_default = pin_info.get('default_value', 1 if pin_active_low else 0)   # De-assert by default
+
+                # Additional Config Flags - optional
+                pin_flag_bias_pull_down = gpiod.LINE_REQ_FLAG_BIAS_PULL_DOWN if pin_info.get('bias_pull_down', False) else 0
+                pin_flag_bias_pull_up = gpiod.LINE_REQ_FLAG_BIAS_PULL_UP if pin_info.get('bias_pull_up', False) else 0
+                pin_flag_bias_disable = gpiod.LINE_REQ_FLAG_BIAS_DISABLE if pin_info.get('bias_disable', False) else 0
+                pin_flag_open_drain = gpiod.LINE_REQ_FLAG_OPEN_DRAIN if pin_info.get('open_drain', False) else 0
+                pin_flag_open_source = gpiod.LINE_REQ_FLAG_OPEN_SOURCE if pin_info.get('open_source', False) else 0
             except KeyError as e:
                 raise KeyError('Not enough information to register pin {}: {}'.format(pin_name, e))
 
@@ -254,7 +261,8 @@ class PinHandler():
                     pin_id=pin_id,
                     is_input=pin_is_input,
                     is_active_low=pin_active_low,
-                    default_value=pin_default
+                    default_value=pin_default,
+                    extra_flags=(pin_flag_bias_pull_down | pin_flag_bias_pull_up | pin_flag_bias_disable | pin_flag_open_drain | pin_flag_open_source),
                 )
 
     def pinmap(self):
@@ -395,7 +403,7 @@ class LokiCarrier(ABC):
 
         # This function can be extended by the extension LokiCarrier classes if they would benefit from async loops.
         # However, make sure that super is called in each.
-        self._thread_executor = futures.ThreadPoolExecutor(max_workers=None)
+        self._thread_executor = futures.ThreadPoolExecutor(max_workers=60)
 
         # Add common system threads, also to watchdog
         self.add_thread('gpio', self._loop_gpiosync)

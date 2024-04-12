@@ -9,7 +9,9 @@
 
 ### END INIT INFO
 
-REMOTE_CONFIGURATION_LOCATION="/mnt/flashmtd1/loki-config/"
+#REMOTE_CONFIGURATION_LOCATION="/mnt/flashmtd1/loki-config/"
+REMOTE_CONFIGURATION_LOCATION="/mnt/sd-mmcblk0p1/loki-config/"
+
 REMOTE_CONFIGURATION_FILENAME="loki-config.conf"
 CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
 REMOTE_NETWORK_CONFIGURATION_FILENAME="interfaces"

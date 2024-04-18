@@ -56,13 +56,13 @@ do_install_append() {
     # Create an empty directory to stage LOKI image updates
     install -d ${D}${base_prefix}/opt/loki-update
 
-    # Create a directory for system commands to be sourced
-    install -d ${D}${base_prefix}/opt/loki-commands
-	install -m 0755 '${WORKDIR}/loki-aliases.sh' '${D}${base_prefix}/opt/loki-commands/loki-aliases.sh'
+    # Create a directory for system commands to be sourced automatically
+    install -d ${D}${base_prefix}/etc/profile.d/
+	install -m 0755 '${WORKDIR}/loki-aliases.sh' '${D}${base_prefix}/etc/profile.d/loki-aliases.sh'
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
 FILES_${PN} += "${base_prefix}/etc/init.d/*"
 FILES_${PN} += "${base_prefix}/opt/loki-update/"
-FILES_${PN} += "${base_prefix}/opt/loki-commands"
+FILES_${PN} += "${base_prefix}/etc/profile.d/*"
 FILES_${PN} += "${base_prefix}/etc/conf.d/loki-config/*"

@@ -7,7 +7,6 @@ SRC_URI = "file://loki-config.sh \
     file://loki-bootstrap-emmc.sh \
     file://loki-connect-control-host.sh \
     file://loki-get-system-id.sh \
-    file://loki-aliases.sh \
     file://config-default.conf \
     "
 
@@ -56,14 +55,9 @@ do_install_append() {
 
     # Create an empty directory to stage LOKI image updates
     install -d ${D}${base_prefix}/opt/loki-update
-
-    # Create a directory for system commands to be sourced automatically
-    install -d ${D}${base_prefix}/etc/profile.d/
-	install -m 0755 '${WORKDIR}/loki-aliases.sh' '${D}${base_prefix}/etc/profile.d/loki-aliases.sh'
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
 FILES_${PN} += "${base_prefix}/etc/init.d/*"
 FILES_${PN} += "${base_prefix}/opt/loki-update/"
-FILES_${PN} += "${base_prefix}/etc/profile.d/*"
 FILES_${PN} += "${base_prefix}/etc/conf.d/loki-config/*"

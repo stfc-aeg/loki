@@ -8,6 +8,7 @@ SRC_URI = "file://lokiinfo/application-version \
     file://lokiinfo/application-name \
     file://lokiinfo/platform \
     file://lokiinfo/version \
+    file://loki-aliases.sh \
     "
 
 # Ensure that if any recipe intends to include this directory that it has DEPENDS += "loki-user".
@@ -53,9 +54,14 @@ do_install_append() {
 	install -m 0755 '${WORKDIR}/lokiinfo/platform' '${D}${base_prefix}/etc/loki/platform'
 	install -m 0755 '${WORKDIR}/lokiinfo/application-name' '${D}${base_prefix}/etc/loki/application-name'
 	install -m 0755 '${WORKDIR}/lokiinfo/application-version' '${D}${base_prefix}/etc/loki/application-version'
+
+    # Create a directory for system commands to be sourced automatically by interactive shells
+    install -d ${D}${base_prefix}/etc/profile.d/
+	install -m 0755 '${WORKDIR}/loki-aliases.sh' '${D}${base_prefix}/etc/profile.d/loki-aliases.sh'
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
 FILES_${PN} += "${base_prefix}${LOKI_INSTALL_DIRECTORY}"
 FILES_${PN} += "${base_prefix}/etc/loki"
+FILES_${PN} += "${base_prefix}/etc/profile.d/*"
 FILES_${PN} += "${base_prefix}/etc/udev/rules.d/*"

@@ -14,8 +14,6 @@ REMOTE_CONFIGURATION_LOCATION="/mnt/sd-mmcblk0p1/loki-config/"
 
 REMOTE_CONFIGURATION_FILENAME="loki-config.conf"
 CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
-REMOTE_NETWORK_CONFIGURATION_FILENAME="interfaces"
-NETWORK_CONFIG_DEFAULT_LOCATION="/etc/network/interfaces"
 LOKI_USERNAME="loki"
 SSHCONFDIR_FLASH="/mnt/flashmtd1/.ssh"
 SSHCONFDIR_IMG="/home/${LOKI_USERNAME}/.ssh"
@@ -74,52 +72,6 @@ fi
 if [ "$CONFIG_VERSION" -gt "$conf_CONFIG_VERSION" ]; then
     echo "Configuration out of date (version $conf_CONFIG_VERSION, vs system version $CONFIG_VERSION), aborting..."
     exit 1
-fi
-
-#--------------------------------------------------------------------------------------------------------
-# Perform network config override if desired
-
-# Copy the existing filesystem default file to the destination, only if there is no file there. This is so
-# that it can be edited, even if it is not currently in use.
-remote_network_conf_found=0
-remote_network_conf_path="$REMOTE_CONFIGURATION_LOCATION$REMOTE_NETWORK_CONFIGURATION_FILENAME"
-if test -f "$remote_network_conf_path"; then
-    echo "External network configuration file found at $remote_network_conf_path"
-    remote_network_conf_found=1
-else
-    if test -d "$REMOTE_CONFIGURATION_LOCATION"; then
-        # If the external configuration directory exists (but the file does not), copy the
-        # default configuration to the directory
-        echo "No external network configuration file found, but directory exists, copying $NETWORK_CONFIG_DEFAULT_LOCATION to $remote_network_conf_path"
-        cp $NETWORK_CONFIG_DEFAULT_LOCATION $remote_network_conf_path
-        remote_network_conf_found=1
-    else
-        # If the config location does not exist, abort and use the default live config
-        echo "Configuration destination directory does not exist, must use internal config"
-        remote_network_conf_found=0
-    fi
-fi
-
-# Activate the external configuration, if actually present as well as enabled by the main config file
-if [ "$conf_NETWORK_OVERRIDE_ENABLE" = "1" ] && [ $remote_network_conf_found = 1 ]; then
-    echo "Overriding network configuration with interfaces file at $remote_network_conf_path"
-
-    # Copy the destination file to the live system file to 'install'
-    cp $remote_network_conf_path $NETWORK_CONFIG_DEFAULT_LOCATION || echo "Error in network config copy..."
-
-    # Re-start the network configuration service
-    /etc/init.d/networking restart
-
-    echo "External network configuration installed and activated"
-else
-    echo "Using default network configuration (override enabled: $conf_NETWORK_OVERRIDE_ENABLE, found: $remote_network_conf_found)"
-fi
-
-# If the static IP has been specified, apply this *after* the config file. This way any other settings will
-# be retained.
-if [ "$conf_NETWORK_STATIC_IP_ENABLE" = "1" ]; then
-    echo "Network configuration will be overridden with static IP $conf_NETWORK_STATIC_IP for interface $STATIC_IP_INTERFACE_NAME"
-    ifconfig $STATIC_IP_INTERFACE_NAME $conf_NETWORK_STATIC_IP
 fi
 
 # If the loki user .ssh directory is to be persistent, create it in flash and bind mount over existing version

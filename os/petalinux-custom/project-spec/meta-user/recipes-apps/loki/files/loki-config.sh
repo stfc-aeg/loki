@@ -15,7 +15,7 @@ REMOTE_CONFIGURATION_LOCATION="/mnt/sd-mmcblk0p1/loki-config/"
 REMOTE_CONFIGURATION_FILENAME="loki-config.conf"
 CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
 LOKI_USERNAME="loki"
-SSHCONFDIR_FLASH="/mnt/flashmtd1/.ssh"
+SSHCONFDIR_EMMC="/mnt/sd-mmcblk0p1/.ssh"
 SSHCONFDIR_IMG="/home/${LOKI_USERNAME}/.ssh"
 STATIC_IP_INTERFACE_NAME="eth0"
 CONFIG_VERSION=1
@@ -74,28 +74,28 @@ if [ "$CONFIG_VERSION" -gt "$conf_CONFIG_VERSION" ]; then
     exit 1
 fi
 
-# If the loki user .ssh directory is to be persistent, create it in flash and bind mount over existing version
+# If the loki user .ssh directory is to be persistent, create it in eMMC and bind mount over existing version
 if [ "$conf_PERSISTENT_SSH_AUTH" = "1" ]; then
     echo "SSH authorized keys will persist between boots and image updates"
 
-    # Make directories on flash as well as internal one if it does not exist
-    mkdir -p ${SSHCONFDIR_FLASH}
+    # Make directories on eMMC as well as internal one if it does not exist
+    mkdir -p ${SSHCONFDIR_EMMC}
     mkdir -p ${SSHCONFDIR_IMG}
 
-    # If there are any keys already in the internal .ssh authorized_keys that do not appear in the flash
+    # If there are any keys already in the internal .ssh authorized_keys that do not appear in the eMMC
     # version, add them
     if test -f "${SSHCONFDIR_IMG}/authorized_keys"; then
-        if test -f "${SSHCONFDIR_FLASH}/authorized_keys"; then
+        if test -f "${SSHCONFDIR_EMMC}/authorized_keys"; then
             # Append any keys that appear only in the internal file to the flash one
-            cat ${SSHCONFDIR_IMG}/authorized_keys ${SSHCONFDIR_FLASH}/authorized_keys ${SSHCONFDIR_FLASH}/authorized_keys \
-                | sort | uniq -u >> ${SSHCONFDIR_FLASH}/authorized_keys
+            cat ${SSHCONFDIR_IMG}/authorized_keys ${SSHCONFDIR_EMMC}/authorized_keys ${SSHCONFDIR_EMMC}/authorized_keys \
+                | sort | uniq -u >> ${SSHCONFDIR_EMMC}/authorized_keys
         fi
     fi
 
     # Config and other files in flash will simply overwrite the image version
 
     # Bind mount the flash directory to the internal one
-    mount --bind ${SSHCONFDIR_FLASH} ${SSHCONFDIR_IMG}
+    mount --bind ${SSHCONFDIR_EMMC} ${SSHCONFDIR_IMG}
 fi
 
 #--------------------------------------------------------------------------------------------------------

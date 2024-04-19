@@ -1,3 +1,4 @@
 # Disallow root logins by default
 DROPBEAR_EXTRA_ARGS="-w"
-DROPBEAR_RSAKEY="/mnt/flashmtd1/dropbear_ssh_host_key"
+DROPBEAR_RSAKEY="/mnt/sd-mmcblk0p1/dropbear/dropbear_ssh_host_key_rsa"
+DROPBEAR_ECDSAKEY="/mnt/sd-mmcblk0p1/dropbear/dropbear_ssh_host_key_ecdsa"

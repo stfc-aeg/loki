@@ -1,7 +1,7 @@
 #!/bin/sh
 ### BEGIN INIG INFO
 # Provides              lokiconfig
-# Required-Start        $networking
+# Required-Start        $networking lokibootstrapemmc lokicontrolhost
 # Required-Stop
 # Default-Start         S 1 2 3 4 5
 # Default-Stop          0 6
@@ -14,10 +14,8 @@ REMOTE_CONFIGURATION_LOCATION="/mnt/sd-mmcblk0p1/loki-config/"
 
 REMOTE_CONFIGURATION_FILENAME="loki-config.conf"
 CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
-REMOTE_NETWORK_CONFIGURATION_FILENAME="interfaces"
-NETWORK_CONFIG_DEFAULT_LOCATION="/etc/network/interfaces"
 LOKI_USERNAME="loki"
-SSHCONFDIR_FLASH="/mnt/flashmtd1/.ssh"
+SSHCONFDIR_EMMC="/mnt/sd-mmcblk0p1/.ssh"
 SSHCONFDIR_IMG="/home/${LOKI_USERNAME}/.ssh"
 STATIC_IP_INTERFACE_NAME="eth0"
 CONFIG_VERSION=1
@@ -76,74 +74,28 @@ if [ "$CONFIG_VERSION" -gt "$conf_CONFIG_VERSION" ]; then
     exit 1
 fi
 
-#--------------------------------------------------------------------------------------------------------
-# Perform network config override if desired
-
-# Copy the existing filesystem default file to the destination, only if there is no file there. This is so
-# that it can be edited, even if it is not currently in use.
-remote_network_conf_found=0
-remote_network_conf_path="$REMOTE_CONFIGURATION_LOCATION$REMOTE_NETWORK_CONFIGURATION_FILENAME"
-if test -f "$remote_network_conf_path"; then
-    echo "External network configuration file found at $remote_network_conf_path"
-    remote_network_conf_found=1
-else
-    if test -d "$REMOTE_CONFIGURATION_LOCATION"; then
-        # If the external configuration directory exists (but the file does not), copy the
-        # default configuration to the directory
-        echo "No external network configuration file found, but directory exists, copying $NETWORK_CONFIG_DEFAULT_LOCATION to $remote_network_conf_path"
-        cp $NETWORK_CONFIG_DEFAULT_LOCATION $remote_network_conf_path
-        remote_network_conf_found=1
-    else
-        # If the config location does not exist, abort and use the default live config
-        echo "Configuration destination directory does not exist, must use internal config"
-        remote_network_conf_found=0
-    fi
-fi
-
-# Activate the external configuration, if actually present as well as enabled by the main config file
-if [ "$conf_NETWORK_OVERRIDE_ENABLE" = "1" ] && [ $remote_network_conf_found = 1 ]; then
-    echo "Overriding network configuration with interfaces file at $remote_network_conf_path"
-
-    # Copy the destination file to the live system file to 'install'
-    cp $remote_network_conf_path $NETWORK_CONFIG_DEFAULT_LOCATION || echo "Error in network config copy..."
-
-    # Re-start the network configuration service
-    /etc/init.d/networking restart
-
-    echo "External network configuration installed and activated"
-else
-    echo "Using default network configuration (override enabled: $conf_NETWORK_OVERRIDE_ENABLE, found: $remote_network_conf_found)"
-fi
-
-# If the static IP has been specified, apply this *after* the config file. This way any other settings will
-# be retained.
-if [ "$conf_NETWORK_STATIC_IP_ENABLE" = "1" ]; then
-    echo "Network configuration will be overridden with static IP $conf_NETWORK_STATIC_IP for interface $STATIC_IP_INTERFACE_NAME"
-    ifconfig $STATIC_IP_INTERFACE_NAME $conf_NETWORK_STATIC_IP
-fi
-
-# If the loki user .ssh directory is to be persistent, create it in flash and bind mount over existing version
+# If the loki user .ssh directory is to be persistent, create it in eMMC and bind mount over existing version
 if [ "$conf_PERSISTENT_SSH_AUTH" = "1" ]; then
     echo "SSH authorized keys will persist between boots and image updates"
 
-    # Make directories on flash as well as internal one if it does not exist
-    mkdir -p ${SSHCONFDIR_FLASH}
+    # Make directories on eMMC as well as internal one if it does not exist
+    mkdir -p ${SSHCONFDIR_EMMC}
     mkdir -p ${SSHCONFDIR_IMG}
 
-    # If there are any keys already in the internal .ssh authorized_keys that do not appear in the flash
+    # If there are any keys already in the internal .ssh authorized_keys that do not appear in the eMMC
     # version, add them
     if test -f "${SSHCONFDIR_IMG}/authorized_keys"; then
-        if test -f "${SSHCONFDIR_FLASH}/authorized_keys"; then
+        if test -f "${SSHCONFDIR_EMMC}/authorized_keys"; then
             # Append any keys that appear only in the internal file to the flash one
-            cat ${SSHCONFDIR_IMG}/authorized_keys ${SSHCONFDIR_FLASH}/authorized_keys ${SSHCONFDIR_FLASH}/authorized_keys \
-                | sort | uniq -u >> ${SSHCONFDIR_FLASH}/authorized_keys
+            cat ${SSHCONFDIR_IMG}/authorized_keys ${SSHCONFDIR_EMMC}/authorized_keys ${SSHCONFDIR_EMMC}/authorized_keys \
+                | sort | uniq -u >> ${SSHCONFDIR_EMMC}/authorized_keys
         fi
     fi
 
     # Config and other files in flash will simply overwrite the image version
 
     # Bind mount the flash directory to the internal one
-    mount --bind ${SSHCONFDIR_FLASH} ${SSHCONFDIR_IMG}
+    mount --bind ${SSHCONFDIR_EMMC} ${SSHCONFDIR_IMG}
 fi
 
 #--------------------------------------------------------------------------------------------------------

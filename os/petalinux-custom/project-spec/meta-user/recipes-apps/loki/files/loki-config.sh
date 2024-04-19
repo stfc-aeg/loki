@@ -1,7 +1,7 @@
 #!/bin/sh
 ### BEGIN INIG INFO
 # Provides              lokiconfig
-# Required-Start        $networking autoformatemmc lokicontrolhost
+# Required-Start        $networking lokibootstrapemmc lokicontrolhost
 # Required-Stop
 # Default-Start         S 1 2 3 4 5
 # Default-Stop          0 6

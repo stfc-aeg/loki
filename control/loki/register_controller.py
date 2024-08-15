@@ -277,13 +277,22 @@ class RegisterController (object):
         # Grab the lock with the supplied settings
         result = self._register_mutex.acquire(blocking=blocking, timeout=timeout)
 
-        # Allow the caller to execute their 'with'. 'result' is needed so that
-        # if the lock cannot be grabbed the user can handle it.
-        yield result
+        try:
+            # Allow the caller to execute their 'with'. 'result' is needed so that
+            # if the lock cannot be grabbed the user can handle it.
+            yield result
 
-        # Release the lock, if it was actually acquired
-        if result:
-            self._register_mutex.release()
+        except:
+            # Pass through any exception
+            raise
+
+        finally:
+            # Even if there is an exception, release the lock so that it doesn't lock up the ASIC
+            # access. This will only release the lock if it was actually gained in the first place.
+
+            # Release the lock, if it was actually acquired
+            if result:
+                self._register_mutex.release()
 
     def get_word_width(self):
         return self._word_width_bits

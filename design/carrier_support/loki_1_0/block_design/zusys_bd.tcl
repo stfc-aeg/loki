@@ -1,4 +1,4 @@
-catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4cg_1e_tebf0808:part0:2.0, FPGA: xczu4cg-sfvc784-1-e at 2024-02-15T10:50:38."}
+catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4cg_1e_tebf0808:part0:2.0, FPGA: xczu4cg-sfvc784-1-e at 2024-08-23T15:41:52."}
 
 if { ![info exist TE::VERSION_CONTROL] } {
     set TE::VERSION_CONTROL true
@@ -143,6 +143,10 @@ set bCheckIPs 1
 if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
 trenz.biz:user:SC0808BF:*\
+xilinx.com:ip:axi_bram_ctrl:*\
+xilinx.com:ip:blk_mem_gen:*\
+xilinx.com:ip:axi_gpio:*\
+xilinx.com:ip:smartconnect:*\
 trenz.biz:user:axis_live_audio:*\
 xilinx.com:ip:proc_sys_reset:*\
 xilinx.com:ip:vio:*\
@@ -856,6 +860,9 @@ proc create_root_design { parentCell } {
   set ULED_lc13_16 [ create_bd_port -dir O -from 3 -to 0 ULED_lc13_16 ]
   set USER_BTN_0_lc2 [ create_bd_port -dir I -from 0 -to 0 USER_BTN_0_lc2 ]
   set USER_BTN_1_lc3 [ create_bd_port -dir I -from 0 -to 0 USER_BTN_1_lc3 ]
+  set gpio_1 [ create_bd_port -dir O -from 31 -to 0 gpio_1 ]
+  set gpio_2 [ create_bd_port -dir O -from 31 -to 0 gpio_2 ]
+  set gpio_3 [ create_bd_port -dir I -from 31 -to 0 gpio_3 ]
 
   # Create instance: GPIO_Tree
   create_hier_cell_GPIO_Tree [current_bd_instance .] GPIO_Tree
@@ -869,11 +876,44 @@ proc create_root_design { parentCell } {
   # Create instance: SC0808BF_0, and set properties
   set SC0808BF_0 [ create_bd_cell -type ip -vlnv trenz.biz:user:SC0808BF SC0808BF_0 ]
 
+  # Create instance: axi_bram_ctrl_0, and set properties
+  set axi_bram_ctrl_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_bram_ctrl axi_bram_ctrl_0 ]
+
+  # Create instance: axi_bram_ctrl_0_bram, and set properties
+  set axi_bram_ctrl_0_bram [ create_bd_cell -type ip -vlnv xilinx.com:ip:blk_mem_gen axi_bram_ctrl_0_bram ]
+  set_property -dict [ list \
+   CONFIG.Memory_Type {True_Dual_Port_RAM} \
+ ] $axi_bram_ctrl_0_bram
+
+  # Create instance: axi_gpio_1, and set properties
+  set axi_gpio_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio axi_gpio_1 ]
+  set_property -dict [ list \
+   CONFIG.C_ALL_OUTPUTS {1} \
+   CONFIG.C_ALL_OUTPUTS_2 {1} \
+   CONFIG.C_IS_DUAL {0} \
+ ] $axi_gpio_1
+
+  # Create instance: axi_gpio_2, and set properties
+  set axi_gpio_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio axi_gpio_2 ]
+
+  # Create instance: axi_gpio_3, and set properties
+  set axi_gpio_3 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio axi_gpio_3 ]
+
+  # Create instance: axi_smc, and set properties
+  set axi_smc [ create_bd_cell -type ip -vlnv xilinx.com:ip:smartconnect axi_smc ]
+  set_property -dict [ list \
+   CONFIG.NUM_MI {4} \
+   CONFIG.NUM_SI {1} \
+ ] $axi_smc
+
   # Create instance: axis_live_audio_0, and set properties
   set axis_live_audio_0 [ create_bd_cell -type ip -vlnv trenz.biz:user:axis_live_audio axis_live_audio_0 ]
 
   # Create instance: proc_sys_reset_0, and set properties
   set proc_sys_reset_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset proc_sys_reset_0 ]
+
+  # Create instance: rst_ps8_0_99M, and set properties
+  set rst_ps8_0_99M [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset rst_ps8_0_99M ]
 
   # Create instance: vio_general, and set properties
   set vio_general [ create_bd_cell -type ip -vlnv xilinx.com:ip:vio vio_general ]
@@ -2422,8 +2462,15 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net RGPIO_Master_CPLD_RGPIO_M_EXT [get_bd_intf_pins RGPIO/RGPIO_M_EXT] [get_bd_intf_pins SC0808BF_0/RGPIO_MASTER_CPLD]
   connect_bd_intf_net -intf_net RGPIO_Slave_CPLD_RGPIO_M_EXT [get_bd_intf_pins RGPIO/RGPIO_M_EXT1] [get_bd_intf_pins SC0808BF_0/RGPIO_SLAVE_CPLD]
   connect_bd_intf_net -intf_net SC0808BF_0_BASE [get_bd_intf_ports BASE] [get_bd_intf_pins SC0808BF_0/BASE]
+  connect_bd_intf_net -intf_net axi_bram_ctrl_0_BRAM_PORTA [get_bd_intf_pins axi_bram_ctrl_0/BRAM_PORTA] [get_bd_intf_pins axi_bram_ctrl_0_bram/BRAM_PORTA]
+  connect_bd_intf_net -intf_net axi_bram_ctrl_0_BRAM_PORTB [get_bd_intf_pins axi_bram_ctrl_0/BRAM_PORTB] [get_bd_intf_pins axi_bram_ctrl_0_bram/BRAM_PORTB]
+  connect_bd_intf_net -intf_net axi_smc_M00_AXI [get_bd_intf_pins axi_bram_ctrl_0/S_AXI] [get_bd_intf_pins axi_smc/M00_AXI]
+  connect_bd_intf_net -intf_net axi_smc_M01_AXI [get_bd_intf_pins axi_gpio_1/S_AXI] [get_bd_intf_pins axi_smc/M01_AXI]
+  connect_bd_intf_net -intf_net axi_smc_M02_AXI [get_bd_intf_pins axi_gpio_3/S_AXI] [get_bd_intf_pins axi_smc/M02_AXI]
+  connect_bd_intf_net -intf_net axi_smc_M03_AXI [get_bd_intf_pins axi_gpio_2/S_AXI] [get_bd_intf_pins axi_smc/M03_AXI]
   connect_bd_intf_net -intf_net axis_live_audio_0_m_axis [get_bd_intf_pins axis_live_audio_0/m_axis] [get_bd_intf_pins zynq_ultra_ps_e_0/S_AXIS_AUDIO]
   connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_M_AXIS_MIXED_AUDIO [get_bd_intf_pins axis_live_audio_0/s_axis] [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXIS_MIXED_AUDIO]
+  connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_M_AXI_HPM0_LPD [get_bd_intf_pins axi_smc/S00_AXI] [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXI_HPM0_LPD]
 
   # Create port connections
   connect_bd_net -net APP_PRESENT_lc0_0_1 [get_bd_ports APP_PRESENT_lc0] [get_bd_pins LOKI_Control/APP_PRESENT_lc0]
@@ -2443,8 +2490,12 @@ proc create_root_design { parentCell } {
   connect_bd_net -net TEMP_INT_lc4_0_1 [get_bd_ports TEMP_INT_lc4] [get_bd_pins LOKI_Control/TEMP_INT_lc4]
   connect_bd_net -net USER_BTN_0_lc2_0_1 [get_bd_ports USER_BTN_0_lc2] [get_bd_pins LOKI_Control/USER_BTN_0_lc2]
   connect_bd_net -net USER_BTN_1_lc3_0_1 [get_bd_ports USER_BTN_1_lc3] [get_bd_pins LOKI_Control/USER_BTN_1_lc3]
+  connect_bd_net -net axi_gpio_0_gpio_io_o [get_bd_ports gpio_1] [get_bd_pins axi_gpio_1/gpio_io_o]
+  connect_bd_net -net axi_gpio_2_gpio_io_o [get_bd_ports gpio_2] [get_bd_pins axi_gpio_2/gpio_io_o]
+  connect_bd_net -net gpio_io_i_0_1 [get_bd_ports gpio_3] [get_bd_pins axi_gpio_3/gpio_io_i]
   connect_bd_net -net loki_ctrl_i_0_16_1 [get_bd_pins GPIO_Tree/loki_ctrl_i_0_16] [get_bd_pins LOKI_Control/loki_ctrl_i]
   connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins RGPIO/RGPIO_M_RESET_N] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
+  connect_bd_net -net rst_ps8_0_99M_peripheral_aresetn [get_bd_pins axi_bram_ctrl_0/s_axi_aresetn] [get_bd_pins axi_gpio_1/s_axi_aresetn] [get_bd_pins axi_gpio_2/s_axi_aresetn] [get_bd_pins axi_gpio_3/s_axi_aresetn] [get_bd_pins axi_smc/aresetn] [get_bd_pins rst_ps8_0_99M/peripheral_aresetn]
   connect_bd_net -net vio_CAN_0_S [get_bd_pins SC0808BF_0/CAN_S] [get_bd_pins vio_general/probe_out2]
   connect_bd_net -net vio_LED_HD [get_bd_pins SC0808BF_0/LED_HD] [get_bd_pins vio_general/probe_out0]
   connect_bd_net -net vio_LED_XMOD2 [get_bd_pins SC0808BF_0/LED_XMOD2] [get_bd_pins vio_general/probe_out1]
@@ -2452,10 +2503,14 @@ proc create_root_design { parentCell } {
   connect_bd_net -net zynq_ultra_ps_e_0_emio_gpio_o [get_bd_pins GPIO_Tree/din] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_o]
   connect_bd_net -net zynq_ultra_ps_e_0_emio_gpio_t [get_bd_pins GPIO_Tree/tri_in] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_t]
   connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins RGPIO/clk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk1]
-  connect_bd_net -net zynq_ultra_ps_e_0_pl_clk1 [get_bd_pins RGPIO/clk1] [get_bd_pins vio_general/clk] [get_bd_pins zynq_ultra_ps_e_0/maxihpm0_lpd_aclk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]
-  connect_bd_net -net zynq_ultra_ps_e_0_pl_resetn0 [get_bd_pins proc_sys_reset_0/ext_reset_in] [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0]
+  connect_bd_net -net zynq_ultra_ps_e_0_pl_clk1 [get_bd_pins RGPIO/clk1] [get_bd_pins axi_bram_ctrl_0/s_axi_aclk] [get_bd_pins axi_gpio_1/s_axi_aclk] [get_bd_pins axi_gpio_2/s_axi_aclk] [get_bd_pins axi_gpio_3/s_axi_aclk] [get_bd_pins axi_smc/aclk] [get_bd_pins rst_ps8_0_99M/slowest_sync_clk] [get_bd_pins vio_general/clk] [get_bd_pins zynq_ultra_ps_e_0/maxihpm0_lpd_aclk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]
+  connect_bd_net -net zynq_ultra_ps_e_0_pl_resetn0 [get_bd_pins proc_sys_reset_0/ext_reset_in] [get_bd_pins rst_ps8_0_99M/ext_reset_in] [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0]
 
   # Create address segments
+  assign_bd_address -offset 0x80000000 -range 0x00002000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_bram_ctrl_0/S_AXI/Mem0] -force
+  assign_bd_address -offset 0x80010000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_gpio_1/S_AXI/Reg] -force
+  assign_bd_address -offset 0x80030000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_gpio_3/S_AXI/Reg] -force
+  assign_bd_address -offset 0x80020000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_gpio_2/S_AXI/Reg] -force
 
 
   # Restore current instance

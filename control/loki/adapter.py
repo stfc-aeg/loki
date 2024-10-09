@@ -103,23 +103,53 @@ class PinHandler():
     # This driver can coexist with any other gpiod handling of pins, so is kept simple by only using the
     # flag for active_low. If additional functionality is required (e.g. events) implement separately.
 
-    def __init__(self, consumername='LOKI'):
+    def __init__(self, consumername='LOKI', zynqmp_base_gpiochip_num=0):
+        # The base gpiochip number in /dev/gpiochip* is always 0 unless more GPIO buses have been added with
+        # AXI in the hardware design.
         self._pins = {}
         self._pin_states_cached = {}
         self._consumername = consumername
+        self._zynqmp_base_gpiochip_num = int(zynqmp_base_gpiochip_num)
+        self._logger = logging.getLogger('{}-pinhandler'.format(consumername))
+        self._logger.debug('Created pin handler for {} with base GPIO chip number {}'.format(consumername, zynqmp_base_gpiochip_num))
 
     # If id is a string, use gpiod.find_line to get the pin, otherwise use typical gpiod.get_line.
-    @staticmethod
-    def _gpiod_line_from_id(line_id):
+    def _gpiod_line_from_id(self, line_id, chip_number=None):
 
         if line_id is None:
             return None
 
+        # First, attempt using a direct pin number on a known GPIO chip. If this fails, just search the
+        # identified in the hope that it is unique.
         try:
-            # gpiochip0 is assumed since it is the only available chip on the ZynqMP platform
-            chip = gpiod.Chip('gpiochip0')
-            return chip.get_line(int(line_id))
+            pin_number_int = int(line_id)
+            self._logger.debug('Line ID {} matched as numerical, will use gpiochip->line-number identifiacation method'.format(line_id))
+
+            # The chip number by default is the one for the standard GPIO bus provided by ZynqMP. Only change
+            # this if you know you are using a different bus (e.g. an AXI one). If you are using a unique pin
+            # 'name', find_line() should find it without specifying a chip at all.
+            if chip_number is None:
+                chip_number = self._zynqmp_base_gpiochip_num
+                self._logger.warning('A GPIO chip (bus) number was not provided for pin {}, using the default bus'.format(line_id))
+
+            try:
+                self._logger.debug('Seaching for a GPIO chip (bus) with ID {}'.format(chip_number))
+                chip = gpiod.Chip('gpiochip{}'.format(chip_number))
+
+                try:
+                    self._logger.debug('Seaching for line number {}'.format(pin_number_int))
+                    return chip.get_line(pin_number_int)
+                except OSError:
+                    raise OSError('Line number {} does not exist for GPIO chip (bus) {}'.format(pin_number_int, chip_number))
+
+            except FileNotFoundError:
+                # This chip number does not exist.
+                raise FileNotFoundError('GPIO (bus) number {} does not exist'.format(chip_number))
+
         except ValueError:
+            # The pin_id must not be numerical, so search for it by name. This does not require a specific
+            # chip number.
+            self._logger.debug('Line ID {} not numerical, will search by name'.format(line_id))
             return gpiod.find_line(line_id)
 
     def get_pin(self, friendly_name):
@@ -171,30 +201,34 @@ class PinHandler():
         else:
             raise Exception('Cannot set an input pin')
 
-    def add_pin(self, friendly_name, pin_id, is_input, is_active_low=False, default_value=0, extra_flags=0):
-        # Check if the name is already in use
-        if self._pins.get(friendly_name) is not None:
-            raise RuntimeError('pin friendly name {} already exists for {}, cannot use again for ID {}'.format(
-                friendly_name, self._pins[friendly_name], pin_id))
-
-        # Find the line from its id
-        line = self._gpiod_line_from_id(pin_id)
-        if line is None:
-            raise RuntimeError('could not find matching gpiod line for id {} (for pin name {})'.format(
-                pin_id, friendly_name))
-
-        # Request the pin with given settings
+    def add_pin(self, friendly_name, pin_id, is_input, is_active_low=False, default_value=0, extra_flags=0, chip_number=None):
         try:
-            line.request(
-                consumer=self._consumername,
-                type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
-                flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0) | extra_flags,
-                default_val=default_value)
-        except Exception as e:
-            raise RuntimeError('could not request line {}: {}'.format(line, e))
+            # Check if the name is already in use
+            if self._pins.get(friendly_name) is not None:
+                raise RuntimeError('pin friendly name {} already exists for {}, cannot use again for ID {}'.format(
+                    friendly_name, self._pins[friendly_name], pin_id))
 
-        # Store the pin by friendly name
-        self._pins[friendly_name] = line
+            # Find the line from its id
+            line = self._gpiod_line_from_id(pin_id, chip_number=chip_number)
+            if line is None:
+                raise RuntimeError('could not find matching gpiod line for id {} (for pin name {})'.format(
+                    pin_id, friendly_name))
+
+            # Request the pin with given settings
+            try:
+                line.request(
+                    consumer=self._consumername,
+                    type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
+                    flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0) | extra_flags,
+                    default_val=default_value)
+            except Exception as e:
+                raise RuntimeError('could not request line {}: {}'.format(line, e))
+
+            # Store the pin by friendly name
+            self._pins[friendly_name] = line
+
+        except Exception as e:
+            raise RuntimeError('Failed to add pin {}: {}'.format(friendly_name, e))
 
     @staticmethod
     def _sort_options_per_pin(options):
@@ -209,7 +243,7 @@ class PinHandler():
 
         # Separate options by the pin friendly name they refer to
         config_by_pin = {}
-        allowed_settings = ['id', 'active_low', 'nc', 'is_input', 'default_value', 'bias_pull_down', 'bias_pull_up', 'bias_disable', 'open_source', 'open_drain']
+        allowed_settings = ['id', 'chipnum', 'active_low', 'nc', 'is_input', 'default_value', 'bias_pull_down', 'bias_pull_up', 'bias_disable', 'open_source', 'open_drain']
         for key in pin_config_options.keys():
             # Settings not in the list are ignored
             for allowed_setting in allowed_settings:
@@ -243,6 +277,7 @@ class PinHandler():
                 pin_is_input = pin_info.get('is_input')
                 pin_not_connected = pin_info.get('nc', False)   # This is optional, assumed pins are connected
                 pin_default = pin_info.get('default_value', 1 if pin_active_low else 0)   # De-assert by default
+                pin_chipnum = pin_info.get('chipnum', None)     # Optional, will use base ZynqMP GPIO bus by default
 
                 # Additional Config Flags - optional
                 pin_flag_bias_pull_down = gpiod.LINE_REQ_FLAG_BIAS_PULL_DOWN if pin_info.get('bias_pull_down', False) else 0
@@ -263,6 +298,7 @@ class PinHandler():
                     is_active_low=pin_active_low,
                     default_value=pin_default,
                     extra_flags=(pin_flag_bias_pull_down | pin_flag_bias_pull_up | pin_flag_bias_disable | pin_flag_open_drain | pin_flag_open_source),
+                    chip_number=pin_chipnum,
                 )
 
     def pinmap(self):
@@ -327,7 +363,7 @@ class LokiCarrier(ABC):
         self._config_pin_defaults(kwargs)
 
         # Request all pins configured for the device, including those for extension classes, using options
-        self._pin_handler = PinHandler(self._variant)
+        self._pin_handler = PinHandler(self._variant, kwargs.get('zynqmp_base_gpio_chip_num', 0))
         self._pin_handler.add_pins_from_options(kwargs)
 
         # Map pinhandler functions to class functions for easier external use

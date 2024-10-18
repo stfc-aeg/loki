@@ -273,8 +273,8 @@ class PinHandler():
 
             try:
                 pin_id = pin_info.get('id')
-                pin_active_low = pin_info.get('active_low')
-                pin_is_input = pin_info.get('is_input')
+                pin_active_low = int(pin_info.get('active_low')) if pin_info.get('active_low') is not None else None
+                pin_is_input = int(pin_info.get('is_input')) if pin_info.get('is_input') is not None else None
                 pin_not_connected = pin_info.get('nc', False)   # This is optional, assumed pins are connected
                 pin_default = pin_info.get('default_value', 1 if pin_active_low else 0)   # De-assert by default
                 pin_chipnum = pin_info.get('chipnum', None)     # Optional, will use base ZynqMP GPIO bus by default

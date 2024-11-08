@@ -5,6 +5,45 @@
 ################
 @@PRE_BOOTENV@@
 
+# Enable the LEDs
+gpio set 106 ;
+
+# Show a LED sequence indicating that U-Boot has started the script
+gpio clear 91 ;
+gpio clear 92 ;
+gpio clear 93 ;
+gpio clear 94 ;
+sleep 0.1 ;
+gpio set 91 ;
+sleep 0.1 ;
+gpio set 92 ;
+sleep 0.1 ;
+gpio set 93 ;
+sleep 0.1 ;
+gpio set 94 ;
+sleep 0.5 ;
+gpio clear 91 ;
+gpio clear 92 ;
+gpio clear 93 ;
+gpio clear 94 ;
+
+# Override the boot device if certain user buttons are pressed
+if gpio input 81 ; then
+    echo Button 1 not pressed
+else ;
+    echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    echo !!! Button 1 pressed, recovery boot !!!
+    echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    # Indicate that we have entered recovery using the LED pins
+    # The user can now stop holding the button.
+    gpio set 93 ;
+    gpio set 94 ;
+
+    setenv boot_targets "qspi0 ${boot_targets}"
+fi
+
+
 for boot_target in ${boot_targets};
 do
 	if test "${boot_target}" = "jtag" ; then

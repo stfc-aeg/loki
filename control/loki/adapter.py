@@ -1547,10 +1547,13 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         kwargs.setdefault('pin_config_id_led1', 'LED1')
         kwargs.setdefault('pin_config_id_led2', 'LED2')
         kwargs.setdefault('pin_config_id_led3', 'LED3')
+        kwargs.setdefault('pin_config_id_leds_enable', 'LED Dark')
         kwargs.setdefault('pin_config_active_low_led0', False)      # User LEDs on this board are active high
         kwargs.setdefault('pin_config_active_low_led1', False)      # User LEDs on this board are active high
         kwargs.setdefault('pin_config_active_low_led2', False)      # User LEDs on this board are active high
         kwargs.setdefault('pin_config_active_low_led3', False)      # User LEDs on this board are active high
+        kwargs.setdefault('pin_config_active_low_leds_enable', False)
+        kwargs.setdefault('pin_config_default_value_leds_enable', True) # LEDs are enabled by default
 
         kwargs.setdefault('pin_config_id_button0', 'BUTTON0')
         kwargs.setdefault('pin_config_active_low_button0', False)   # These buttons are active high
@@ -1619,6 +1622,13 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         self._config_zl30266()
         if self._zl30266.initialised:
             self._zl30266.lock.release()
+
+    def leds_enable(self, enable=True):
+        self.set_pin_value('leds_enable', bool(enable))
+        self._logger.info('LOKI LEDs {}abled'.format('En' if enable else 'Dis'))
+
+    def leds_enabled(self):
+        return bool(self.get_pin_value('leds_enable'))
 
     def _config_bme280(self):
         try:

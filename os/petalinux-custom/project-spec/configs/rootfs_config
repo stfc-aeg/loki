@@ -1790,7 +1790,7 @@ CONFIG_libgpiod=y
 #
 # libusb1 
 #
-# CONFIG_libusb1 is not set
+CONFIG_libusb1=y
 # CONFIG_libusb1-dev is not set
 # CONFIG_libusb1-dbg is not set
 

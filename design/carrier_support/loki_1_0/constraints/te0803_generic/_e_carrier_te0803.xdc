@@ -94,8 +94,6 @@ set_property PACKAGE_PIN K13 [get_ports TEMP_NRST_lc12 ]
 set_property IOSTANDARD LVCMOS18 [get_ports TEMP_NRST_lc12 ]
 
 # User LEDs (EMIO GPIO 13-16)
-# Does not exist on this carrier, routed out on FMC
-# These can be overridded in application-specific constraints
 set_property PACKAGE_PIN F10 [get_ports {ULED_lc13_16[0]} ]
 set_property PACKAGE_PIN A11 [get_ports {ULED_lc13_16[1]} ]
 set_property PACKAGE_PIN G11 [get_ports {ULED_lc13_16[2]} ]
@@ -104,6 +102,9 @@ set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[0]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[1]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[2]} ]
 set_property IOSTANDARD LVCMOS18 [get_ports {ULED_lc13_16[3]} ]
+
+# EMIO28 - Now used as LED Enable
+set_property PACKAGE_PIN D11 [get_ports {GPIO_APP_21_31[7]} ]
 
 # Application-specific GPIO (always built, EMIO GPIO 21-31)
 # On this carrier have been routed to P2 PMOD (dir pins also)
@@ -122,8 +123,6 @@ set_property PACKAGE_PIN F11 [get_ports {GPIO_APP_21_31[4]} ]
 set_property PACKAGE_PIN F12 [get_ports {GPIO_APP_21_31[5]} ]
 # EMIO27 - PL3: 7
 set_property PACKAGE_PIN A10 [get_ports {GPIO_APP_21_31[6]} ]
-# EMIO28 - PL3: 8
-set_property PACKAGE_PIN B11 [get_ports {GPIO_APP_21_31[7]} ]
 # EMIO29 - NC
 set_property PACKAGE_PIN K2 [get_ports {GPIO_APP_21_31[8]} ]
 # EMIO30 - NC

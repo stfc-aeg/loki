@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: hardware software all os mostlyclean clean distclean clobber export_bd_tcl platform_configure
+.PHONY: hardware software all os mostlyclean clean distclean clobber export_bd_tcl platform_configure project
 
 VIVADO_PROJ_PATH = vivado
 
@@ -41,6 +41,7 @@ ${VIVADO_PROJ_PATH}: .platform_configured
 
 	# Update timestamp
 	touch ${VIVADO_PROJ_PATH}
+project: ${VIVADO_PROJ_PATH} ;
 
 # Up-to-date TCL files are exported from the existing Vivado design
 export_bd_tcl:

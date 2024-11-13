@@ -1945,13 +1945,23 @@ class DeviceHandler():
             # Grab the lock with the supplied settings
             result = self.lock.acquire(blocking=blocking, timeout=timeout)
 
-            # Allow the caller to execute their 'with'. 'result' is needed so that
-            # if the lock cannot be grabbed the user can handle it.
-            yield result
+            try:
+                # Allow the caller to execute their 'with'. 'result' is needed so that
+                # if the lock cannot be grabbed the user can handle it.
+                yield result
 
-            # Release the lock, if it was actually acquired
-            if result:
-                self.lock.release()
+            except:
+                # Pass through any exception
+                raise
+
+            finally:
+                # Even if there is an exception, release the lock so that it doesn't lock up
+                # the system for other attempted accesses to this device. This will only release
+                # the lock if it was actually gained in the first place.
+
+                # Release the lock, if it was actually acquired
+                if result:
+                    self.lock.release()
 
     def critical_error(self, message=''):
         # Mark the device not to be used, and record the error in log and paramtree status

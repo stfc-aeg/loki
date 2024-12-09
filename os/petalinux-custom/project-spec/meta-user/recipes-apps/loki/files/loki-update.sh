@@ -5,13 +5,18 @@ source /etc/profile.d/loki-aliases.sh
 source /etc/profile.d/extra-loki-scripts.sh
 
 # Process the input arguments
-ARGS=$(getopt -o p:t:h --long target:,path:,srcfile:,help,ignore-appname,dry-run,backup,restore -n 'loki_update' -- "$@")
+ARGS=$(getopt -o t:p:d:f:h --long target:,source-path:,source-dev:,source-file:,help,ignore-appname,dry-run,backup,restore -n 'loki-update' -- "$@")
 eval set -- "$ARGS"
+
+# Hard-coded locations used throughout the script
+EMMC_MOUNTPOINT=/mnt/sd-mmcblk0p1
+SD_MOUNTPOINT=/mnt/sd-mmcblk1p1
 
 # Defaults
 TARGET=emmc
 SOURCEPATH=.
-SRCFILE=
+SOURCEDEVICE=
+SOURCEFILE=
 IGNORE_APPNAME=false
 DRYRUN=false
 BACKUP=false
@@ -21,25 +26,35 @@ function usage() {
 	echo "
 LOKI Update:
 ============
-loki_update is used to upload the boot.scr, BOOT.BIN and image.ub boot files for LOKI systems to the
+loki-update is used to upload the boot.scr, BOOT.BIN and image.ub boot files for LOKI systems to the
 various availble boot devices.
 
 Usage:
 ------
-	- t | --target <targetname>	(required)	Specify the target where boot files will end up.
-							Should be flash, emmc or sd. Default is emmc.
-	- p | --path <path>		(optional)	Give a path to the boot files you are uploading,
-							if they are not in your current working dir.
-	--srcfile			(optional)	Give the absolute filename of a target instead
-							of a path, to just upload one of the three.
-	--ignore-appname		(optional)	Not yet implemented
-	--dry-run			(optional)	Simply print out the intended actions without
-							carrying them out.
-	--backup			(optional)	Instead of uploading to <target>, backup the
-							contents of the image found there.
-	--restore			(optional)	Path and srcfile will be ignored, the image from
-							backup will be written to the desired <target>.
-	-h | --help			(optional)	Display this usage message.
+
+Required unless backing up:
+    - t | --target <targetname>	(required)  Specify the target where boot files will end up.
+                                            Should be flash, emmc or sd. Default is emmc.
+
+One of the following required: (-d will override -p)
+    - p | --source-path <path>	(optional)  Give a path to the boot files you are uploading,
+                                            if they are not in your current working dir.
+    - d | --source-dev          (optional)  Give the name of a source device rather than a
+                                            path. Should be emmc or sd if uploading. flash is
+                                            is allowed only if you are using --backup.
+
+Optional:
+    - f | --source-filename     (optional)  Give the filename of a single target (not the path),
+                                            so that just that will be uploaded instead of all
+                                            three. Compatible with both -p and -d.
+    --ignore-appname            (optional)  Not yet implemented
+    --dry-run                   (optional)  Simply print out the intended actions without
+                                            carrying them out.
+    --backup                    (optional)  Backup the contents of the image at the source device,
+                                            not compatible with -p.
+    --restore                   (optional)  Path and srcfile will be ignored, the image from
+                                            backup will be written to the desired <target>.
+    -h | --help                 (optional)  Display this usage message.
 
 Examples:
 ---------
@@ -47,19 +62,27 @@ Examples:
 1) Update all files (boot.scr, BOOT.BIN, image.ub) to eMMC from the current directory,
 	assuming that they are all present.
 
-	loki_update.sh
+	loki-update.sh --source-path .
 
-1) Update all files on the eMMC from a full set copied to the LOKI home directory:
+2) Update all files on the eMMC from a full set copied to the LOKI home directory:
 
-	loki_update.sh --target emmc -path /home/loki/
+	loki-update.sh --target emmc --source-path /home/loki/
 
-2) Clone an installation from the SD card to the flash as a recovery image:
+3) Clone an installation from the SD card to the flash as a recovery image:
 
-	loki_update.sh --target flash -path /mnt/sd-mmcblk1p1/
+	loki-update.sh --target flash --source-path /mnt/sd-mmcblk1p1/
 
-3) Update only the eMMC kernel image from a file in the current working directory:
+        or
 
-	loki_update.sh --target emmc --srcfile image.ub
+	loki-update.sh --target flash --source-dev sd
+
+4) Update only the eMMC kernel image from a file in the current working directory:
+
+	loki-update.sh --target emmc --source-file image.ub --source-path .
+
+5) Update the recovery image in flash with the current one from eMMC:
+
+    loki-update.sh --target flash
 
 "
 }
@@ -73,8 +96,9 @@ fi
 while true; do
 	case "$1" in
 		-t | --target ) TARGET=$2; shift 2 ;;
-		-p | --path ) SOURCEPATH=$2; shift 2 ;;
-		--srcfile ) SRCFILE="$2"; shift 2 ;;
+		-p | --source-path ) SOURCEPATH=$2; shift 2 ;;
+		-d | --source-dev ) SOURCEDEV=$2; shift 2 ;;
+		-f | --source-file ) SOURCEFILE="$2"; shift 2 ;;
 		--ignore-appname ) IGNORE_APPNAME=true; shift ;;
 		--dry-run ) DRYRUN=true; shift ;;
 		--backup ) BACKUP=true; shift ;;
@@ -85,7 +109,28 @@ while true; do
 	esac
 done
 
-#echo "TARGET ${TARGET}, PATH ${SOURCEPATH}, SRCFILE ${SRCFILE}, IGNORE_APPNAME ${IGNORE_APPNAME}"
+# Process / check arguments (especially those that depend on each other)
+if [ ! -z $BACKUP ] ; then
+    # Check that a valid device has been chosen to back up, paths are not allowed. By
+    # default (if no device is supplied), we will backup the image in eMMC, the default
+    # boot device.
+    if [ -z $SOURCEDEV ] ; then
+        echo "No device specified, will back up the eMMC image"
+        SOURCEDEV='emmc'
+    fi
+fi
+if [ ! -z $SOURCEDEV ] ; then
+    # If there is a device specified as the source, replace the path with it the device
+    if [ $SOURCEDEV = 'emmc' ] || [ $SOURCEDEV = 'eMMC' ]; then
+        SOURCEPATH=$EMMC_MOUNTPOINT
+    elif [ $SOURCEDEV = 'sd' ] || [ $SOURCEDEV = 'SD' ]; then
+        SOURCEPATH=$SD_MOUNTPOINT
+    else
+        echo "Unrecognised source device $SOURCEDEV"
+        exit 1
+    fi
+fi
+
 
 function update_mmc() {
 	# Update an MMC target with a file
@@ -98,11 +143,11 @@ function update_mmc() {
 	if [ ! -e $TARGET ] ; then
 		echo "Mountpoint for $1 $TARGET could not be found"
 		exit 1
-	fi	
+    fi
 
 	# Copy the file over (for mmc devices, they all just go in the root directory)
 	local command="cp $2 $(mmc_name_to_mountpoint $1)/"
-	
+
 	if $DRYRUN ; then
 		echo "DRYRUN: $command"
 	else
@@ -138,7 +183,7 @@ function update_flash() {
 			echo "File with unexpected name ${FILE_NAME} treated as BOOT.BIN"
 			#TODO somehow rename the destination file
 		fi
-		
+
 		local command="flashcp -v $1 $(mtd_label_to_device boot)"
 
 	elif [ $FILE_EXTENSION = "scr" ] ; then
@@ -168,25 +213,25 @@ function update_flash() {
 # Check that the source file(s) exist. If not specified, assume that we're copying image.ub, boot.scr and BOOT.BIN
 if [ "$TARGET" = "emmc" ] || [ "$TARGET" = "sd" ] ; then
 	# We are flashing eMMC or the SD card, both mmc devices
-	
+
 	# If we have supplied a specfic file, simply update this. Otherwise, all three
-	if [ -z $SRCFILE ] ; then
+	if [ -z $SOURCEFILE ] ; then
 		update_mmc $TARGET $SOURCEPATH/image.ub
 		update_mmc $TARGET $SOURCEPATH/BOOT.BIN
 		update_mmc $TARGET $SOURCEPATH/boot.scr
 	else
-		update_mmc $TARGET $SRCFILE
+		update_mmc $TARGET $SOURCEFILE
 	fi
 elif [ "$TARGET" = "flash" ] ; then
 	# We are flashing the recovery image to flash
 
 	# If we have supplied a specific file, simply update this. Otherwise, all three
-	if [ -z $SRCFILE ] ; then
+	if [ -z $SOURCEFILE ] ; then
 		update_flash $SOURCEPATH/boot.scr
 		update_flash $SOURCEPATH/BOOT.BIN
 		update_flash $SOURCEPATH/image.ub
 	else
-		update_flash $SRCFILE
+		update_flash $SOURCEFILE
 	fi
 else
 	echo "Unrecognised target $TARGET"

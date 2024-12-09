@@ -9,6 +9,8 @@ SRC_URI = "file://lokiinfo/application-version \
     file://lokiinfo/platform \
     file://lokiinfo/version \
     file://loki-aliases.sh \
+    file://extra-loki-scripts.sh \
+    file://loki-update.sh \
     "
 
 # Ensure that if any recipe intends to include this directory that it has DEPENDS += "loki-user".
@@ -58,10 +60,17 @@ do_install_append() {
     # Create a directory for system commands to be sourced automatically by interactive shells
     install -d ${D}${base_prefix}/etc/profile.d/
 	install -m 0755 '${WORKDIR}/loki-aliases.sh' '${D}${base_prefix}/etc/profile.d/loki-aliases.sh'
+	install -m 0755 '${WORKDIR}/extra-loki-scripts.sh' '${D}${base_prefix}/etc/profile.d/extra-loki-scripts.sh'
+
+    # Install parametric script for updating LOKI system images so that all users can access it (commands
+    # that require root will still fail if executed as an unprivileged user).
+    install -d ${D}${base_prefix}/usr/bin/
+	install -m 0755 '${WORKDIR}/loki-update.sh' '${D}${base_prefix}/usr/bin/loki-update.sh'
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
 FILES_${PN} += "${base_prefix}${LOKI_INSTALL_DIRECTORY}"
 FILES_${PN} += "${base_prefix}/etc/loki"
 FILES_${PN} += "${base_prefix}/etc/profile.d/*"
+FILES_${PN} += "${base_prefix}/usr/bin/*"
 FILES_${PN} += "${base_prefix}/etc/udev/rules.d/*"

@@ -13,6 +13,8 @@ SRC_URI = "file://lokiinfo/application-version \
     file://loki-update.sh \
     "
 
+RDEPENDS_${PN} += "bash"
+
 # Ensure that if any recipe intends to include this directory that it has DEPENDS += "loki-user".
 LOKI_INSTALL_DIRECTORY = "/opt/loki-detector/"
 SYSROOT_DIRS += "${LOKI_INSTALL_DIRECTORY}"

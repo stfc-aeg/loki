@@ -15,7 +15,7 @@ SD_MOUNTPOINT=/mnt/sd-mmcblk1p1
 # Defaults
 TARGET=emmc
 SOURCEPATH=.
-SOURCEDEVICE=
+SOURCEDEV=
 SOURCEFILE=
 IGNORE_APPNAME=false
 DRYRUN=false
@@ -110,12 +110,12 @@ while true; do
 done
 
 # Process / check arguments (especially those that depend on each other)
-if [ ! -z $BACKUP ] ; then
+if $BACKUP ; then
     # Check that a valid device has been chosen to back up, paths are not allowed. By
     # default (if no device is supplied), we will backup the image in eMMC, the default
     # boot device.
     if [ -z $SOURCEDEV ] ; then
-        echo "No device specified, will back up the eMMC image"
+        echo "No device specified while backing up, will back up the eMMC image"
         SOURCEDEV='emmc'
     fi
 fi
@@ -172,27 +172,27 @@ function update_flash() {
 		# We're assuming this is image.ub
 		if [ ! $FILE_NAME = "image.ub" ] ; then
 			echo "File with unexpected name ${FILE_NAME} treated as image.ub"
-			#TODO somehow rename the destination file
 		fi
 
+        echo "Updating the kernel image"
 		local command="flashcp -v $1 $(mtd_label_to_device kernel)"
 
 	elif [ $FILE_EXTENSION = "bin" ] || [ $FILE_EXTENSION = "BIN" ] ; then
 		# We're assuming this is BOOT.BIN
 		if [ ! $FILE_NAME = "BOOT.BIN" ] ; then
 			echo "File with unexpected name ${FILE_NAME} treated as BOOT.BIN"
-			#TODO somehow rename the destination file
 		fi
 
+        echo "Updating the bootloader"
 		local command="flashcp -v $1 $(mtd_label_to_device boot)"
 
 	elif [ $FILE_EXTENSION = "scr" ] ; then
 		# We're assuming this is boot.scr
 		if [ ! $FILE_NAME = "boot.scr" ] ; then
 			echo "File with unexpected name ${FILE_NAME} treated as boot.scr"
-			#TODO somehow rename the destination file
 		fi
 
+        echo "Updating the bootscript"
 		local command="flashcp -v $1 $(mtd_label_to_device bootscr)"
 	else
 		echo "Could not determine where to put file $1, exiting..."
@@ -234,6 +234,7 @@ elif [ "$TARGET" = "flash" ] ; then
 		update_flash $SOURCEFILE
 	fi
 else
+    #TODO handle backing up and restoring
 	echo "Unrecognised target $TARGET"
 	exit 1
 fi

@@ -4,11 +4,7 @@ inherit useradd
 
 LICENSE = "CLOSED"
 
-SRC_URI = "file://lokiinfo/application-version \
-    file://lokiinfo/application-name \
-    file://lokiinfo/platform \
-    file://lokiinfo/version \
-    file://loki-aliases.sh \
+SRC_URI = "file://loki-aliases.sh \
     file://extra-loki-scripts.sh \
     file://loki-update.sh \
     "
@@ -54,10 +50,6 @@ do_install_append() {
     # Install a new 'loki' directory in /etc/ that will contain information about the installation for introspection
     # Applications should .bbappend this to install additional information into the directory
     install -d ${D}${base_prefix}/etc/loki
-	install -m 0755 '${WORKDIR}/lokiinfo/version' '${D}${base_prefix}/etc/loki/version'
-	install -m 0755 '${WORKDIR}/lokiinfo/platform' '${D}${base_prefix}/etc/loki/platform'
-	install -m 0755 '${WORKDIR}/lokiinfo/application-name' '${D}${base_prefix}/etc/loki/application-name'
-	install -m 0755 '${WORKDIR}/lokiinfo/application-version' '${D}${base_prefix}/etc/loki/application-version'
 
     # Create a directory for system commands to be sourced automatically by interactive shells
     install -d ${D}${base_prefix}/etc/profile.d/

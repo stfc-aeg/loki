@@ -327,25 +327,25 @@ class LokiCarrier(ABC):
         self._logger = logging.getLogger('LokiCarrier')
 
         try:
-            with open('/etc/loki/version') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/loki-version') as info:
                 self.__lokiinfo_version = info.read()
         except FileNotFoundError:
             self.__lokiinfo_version = 'unknown'
 
         try:
-            with open('/etc/loki/platform') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/platform') as info:
                 self.__lokiinfo_platform = info.read()
         except FileNotFoundError:
             self.__lokiinfo_platform = 'unknown'
 
         try:
-            with open('/etc/loki/application-version') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/application-version') as info:
                 self.__lokiinfo_application_version = info.read()
         except FileNotFoundError:
             self.__lokiinfo_application_version = 'unknown'
 
         try:
-            with open('/etc/loki/application-name') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/application-name') as info:
                 self.__lokiinfo_application_name = info.read()
         except FileNotFoundError:
             self.__lokiinfo_application_name = 'unknown'

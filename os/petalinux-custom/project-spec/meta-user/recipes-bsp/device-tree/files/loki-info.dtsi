@@ -1,0 +1,8 @@
+/ {
+    loki-metadata {
+        application-name = "testapp";
+        application-version = "test-app-version";
+        loki-version = "loki-core-version";
+        platform = "test-platform";
+    };
+};

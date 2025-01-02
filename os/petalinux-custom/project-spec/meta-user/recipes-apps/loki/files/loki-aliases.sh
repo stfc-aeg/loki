@@ -1,7 +1,7 @@
 # Comamands and Aliases for Generic LOKI Systems
 
 # Aliases
-alias loki_info='cat /etc/loki/*'
+alias loki_info='loki-update.sh --info all --target runtime'
 alias loki_system_id='cat /etc/loki/system-id'
 
 # Functions

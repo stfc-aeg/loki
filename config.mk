@@ -19,8 +19,8 @@ CONF_HW_INTPUTS= design/Makefile.in design/design_basic_settings.sh.in
 CONF_SW_OUTPUTS= 
 CONF_SW_INPUTS= 
 
-CONF_OS_OUTPUTS= os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config
-CONF_OS_INPUTS= os/petalinux-custom/Makefile.in os/petalinux-custom/project-spec/configs/config.in
+CONF_OS_OUTPUTS= os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config os/petalinux-custom/project-spec/configs/config os/petalinux-custom/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi
+CONF_OS_INPUTS= os/petalinux-custom/Makefile.in os/petalinux-custom/project-spec/configs/config.in os/petalinux-custom/project-spec/configs/config.in os/petalinux-custom/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi.in
 
 # Make these paths relative to the calling makefile's location
 CONF_OUTPUTS_PF=$(addprefix ${LOKI_DIR}, ${CONF_OUTPUTS})

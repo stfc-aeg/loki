@@ -11,6 +11,7 @@ eval set -- "$ARGS"
 # Hard-coded locations used throughout the script
 EMMC_MOUNTPOINT=/mnt/sd-mmcblk0p1
 SD_MOUNTPOINT=/mnt/sd-mmcblk1p1
+BACKUP_PATH=$EMMC_MOUNTPOINT/backup
 
 # Defaults
 TARGET=emmc
@@ -39,7 +40,7 @@ Required unless backing up:
 
                                             When used with --info, this is the target to be
                                             inspected. In this mode only, you can also supply
-                                            'runtime' or a direct filepath for image.ub.
+                                            'runtime', 'backup' or a direct filepath for image.ub.
 
 One of the following required: (-d will override -p)
     - p | --source-path <path>	(optional)  Give a path to the boot files you are uploading,
@@ -58,7 +59,7 @@ Optional:
     --backup                    (optional)  Backup the contents of the image at the source device,
                                             not compatible with -p.
     --restore                   (optional)  Path and srcfile will be ignored, the image from
-                                            backup will be written to the desired <target>.
+                                            backup will be written to eMMC.
     --info <field>              (optional)  Return information about the image installed in the
                                             location specified in --target. <field> can be one of:
                                                 app-name        Application name
@@ -67,10 +68,11 @@ Optional:
                                                 time            Timestamp when image was packaged
                                                 humantime           ^ but human readable
                                                 all             Summarise everything
+                                                alljson         Summarise everything, JSON format
 
                                             For --info only, the --target can be specified as
                                             'runtime' to get information about the currently booted
-                                            image.
+                                            image, or 'backup' for the backup image.
     -h | --help                 (optional)  Display this usage message.
 
 Examples:
@@ -147,6 +149,7 @@ function storage_device_to_path() {
 }
 
 # Process / check arguments (especially those that depend on each other)
+# For backing up, the default source is eMMC
 if $BACKUP ; then
     # Check that a valid device has been chosen to back up, paths are not allowed. By
     # default (if no device is supplied), we will backup the image in eMMC, the default
@@ -156,6 +159,8 @@ if $BACKUP ; then
         SOURCEDEV='emmc'
     fi
 fi
+
+# If a source device is supplied, convert it to a known path
 if [ ! -z $SOURCEDEV ] ; then
     # If there is a device specified as the source, replace the path with it the device
     SOURCEPATH=$(storage_device_to_path $SOURCEDEV && echo $SD_PATH)
@@ -235,6 +240,8 @@ if [ ! -z $INFO ] ; then
     elif [ $TARGET = 'emmc' ] || [ $TARGET = 'sd' ]; then
         # Must be emmc or sd
         get_filesystem_image_metadata $(storage_device_to_path $TARGET && echo $SD_PATH)/image.ub
+    elif [ $TARGET = 'backup' ]; then
+        get_filesystem_image_metadata $BACKUP_PATH/image.ub
     elif [ $TARGET = 'runtime' ] ; then
         # Extract information about the currently booted image from the live devicetree
         get_runtime_image_metadata
@@ -271,6 +278,9 @@ if [ ! -z $INFO ] ; then
         echo -e "\tApplication version: $METADATA_APPLICATION_VERSION"
         echo -e "\tLOKI core version: $METADATA_LOKI_VERSION"
         echo -e "\tHardware Platform: $METADATA_PLATFORM"
+        exit 0
+    elif [ $INFO = 'alljson' ]; then
+        printf '{"time":%i,"app-name":"%s","app-version":"%s","loki-version":"%s","platform":"%s"}\n' "$METADATA_TIMESTAMP" "$METADATA_APPLICATION_NAME" "$METADATA_APPLICATION_VERSION" "$METADATA_LOKI_VERSION" "$METADATA_PLATFORM"
         exit 0
     fi
 fi
@@ -354,8 +364,34 @@ function update_flash() {
 	fi
 }
 
-# Check that the source file(s) exist. If not specified, assume that we're copying image.ub, boot.scr and BOOT.BIN
-if [ "$TARGET" = "emmc" ] || [ "$TARGET" = "sd" ] ; then
+# Handle backup, restore or typical programming
+if $BACKUP ; then
+    # Copy each anticipated part from the eMMC to the backup location. This supports
+    # only eMMC and SD.
+
+    # Create the directory if it does not exist
+    mkdir -p $BACKUP_PATH
+
+    # Copy each file in turn - process will complete if there are errors unless image.ub fails.
+    cp ${SOURCEPATH}/boot.scr ${BACKUP_PATH}/boot.scr || echo "Failed to copy boot.scr, continuing anyway" 1>&2
+    cp ${SOURCEPATH}/BOOT.BIN ${BACKUP_PATH}/BOOT.BIN || echo "Failed to copy BOOT.BIN, continuing anyway" 1>&2
+    cp ${SOURCEPATH}/image.ub ${BACKUP_PATH}/image.ub
+
+    echo "Completed backup of ${SOURCEDEV} image"
+elif $RESTORE ; then
+    # Copy each part present in the backup over to the eMMC (no other device can be specified).
+
+    # Check that the backup directory is present, and that there is at least an image.ub file
+    if [ -f $BACKUP_PATH/image.ub ] ; then
+        # Restore each file in turn - process will complete if there are errors unless image.ub fails.
+        update_mmc "emmc" $BACKUP_PATH/boot.scr || echo "Failed to restore boot.scr, continuing anyway" 1>&2
+        update_mmc "emmc" $BACKUP_PATH/BOOT.BIN || echo "Failed to restore BOOT.BIN, continuing anyway" 1>&2
+        update_mmc "emmc" $BACKUP_PATH/image.ub
+    else
+        echo "Could not restore backup; no image at ${BACKUP_PATH}/image.ub" 1>&2
+        exit 1
+    fi
+elif [ "$TARGET" = "emmc" ] || [ "$TARGET" = "sd" ] ; then
 	# We are flashing eMMC or the SD card, both mmc devices
 
 	# If we have supplied a specfic file, simply update this. Otherwise, all three
@@ -378,7 +414,6 @@ elif [ "$TARGET" = "flash" ] ; then
 		update_flash $SOURCEFILE
 	fi
 else
-    #TODO handle backing up and restoring
 	echo "Unrecognised target $TARGET"
 	exit 1
 fi

@@ -27,14 +27,6 @@ function loki_remount_host {
     /etc/init.d/loki-connect-control-host.sh restart
 }
 
-function loki_update_image_flash {
-    flashcp -v "$1" /dev/mtd2
-}
-
-function loki_update_image_emmc {
-    cp "$1" /mnt/sd-mmcblk0p1/image.ub
-}
-
 function loki_set_static_ip {
 	mkdir -p /mnt/sd-mmcblk0p1/interfaces-mmc
 	echo "

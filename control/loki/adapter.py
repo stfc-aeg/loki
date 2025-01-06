@@ -356,6 +356,13 @@ class LokiCarrier(ABC):
             self.__lokiinfo_odin_version = 'unknown'
             self._logger.error('Failed to get odin server version: {}'.format(e))
 
+        try:
+            with open('/etc/loki/system-id') as info:
+                self.__lokiinfo_system_id = info.read()
+        except Exception as e:
+            self.__lokiinfo_system_id = 'unknown'
+            self._logger.error('Failed to get LOKI System ID: {}'.format(e))
+
         self._supported_extensions = []
         self._change_callbacks = {}
 
@@ -518,6 +525,7 @@ class LokiCarrier(ABC):
 
         base_tree_dict = {
             'carrier_info': {
+                'system_id': (lambda: self.__lokiinfo_system_id, None, {"description": "Unique System ID, stored in eMMC"}),
                 'odin_control_version': (lambda: self.__lokiinfo_odin_version, None, {"description": "odin-control version"}),
                 'version': (lambda: self.__lokiinfo_version, None, {"description": "LOKI system image repo tag"}),
                 'application_version': (lambda: self.__lokiinfo_application_version, None, {"description": "Application version"}),

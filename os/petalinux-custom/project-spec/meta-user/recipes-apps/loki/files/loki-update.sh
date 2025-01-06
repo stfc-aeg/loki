@@ -259,7 +259,6 @@ if [ ! -z $INFO ] ; then
         exit 0
     elif [ $INFO = 'loki-version' ]; then
         echo $METADATA_LOKI_VERSION
-        echo "Not yet supported"
         exit 1
     elif [ $INFO = 'all' ]; then
         echo "image info in $TARGET:"

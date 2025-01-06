@@ -7,6 +7,7 @@ LICENSE = "CLOSED"
 SRC_URI = "file://loki-aliases.sh \
     file://extra-loki-scripts.sh \
     file://loki-update.sh \
+    file://welcome.sh \
     "
 
 RDEPENDS_${PN} += "bash"
@@ -55,6 +56,7 @@ do_install_append() {
     install -d ${D}${base_prefix}/etc/profile.d/
 	install -m 0755 '${WORKDIR}/loki-aliases.sh' '${D}${base_prefix}/etc/profile.d/loki-aliases.sh'
 	install -m 0755 '${WORKDIR}/extra-loki-scripts.sh' '${D}${base_prefix}/etc/profile.d/extra-loki-scripts.sh'
+	install -m 0755 '${WORKDIR}/welcome.sh' '${D}${base_prefix}/etc/profile.d/welcome.sh'
 
     # Install parametric script for updating LOKI system images so that all users can access it (commands
     # that require root will still fail if executed as an unprivileged user).

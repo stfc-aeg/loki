@@ -327,25 +327,25 @@ class LokiCarrier(ABC):
         self._logger = logging.getLogger('LokiCarrier')
 
         try:
-            with open('/etc/loki/version') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/loki-version') as info:
                 self.__lokiinfo_version = info.read()
         except FileNotFoundError:
             self.__lokiinfo_version = 'unknown'
 
         try:
-            with open('/etc/loki/platform') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/platform') as info:
                 self.__lokiinfo_platform = info.read()
         except FileNotFoundError:
             self.__lokiinfo_platform = 'unknown'
 
         try:
-            with open('/etc/loki/application-version') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/application-version') as info:
                 self.__lokiinfo_application_version = info.read()
         except FileNotFoundError:
             self.__lokiinfo_application_version = 'unknown'
 
         try:
-            with open('/etc/loki/application-name') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/application-name') as info:
                 self.__lokiinfo_application_name = info.read()
         except FileNotFoundError:
             self.__lokiinfo_application_name = 'unknown'
@@ -355,6 +355,13 @@ class LokiCarrier(ABC):
         except Exception as e:
             self.__lokiinfo_odin_version = 'unknown'
             self._logger.error('Failed to get odin server version: {}'.format(e))
+
+        try:
+            with open('/etc/loki/system-id') as info:
+                self.__lokiinfo_system_id = info.read()
+        except Exception as e:
+            self.__lokiinfo_system_id = 'unknown'
+            self._logger.error('Failed to get LOKI System ID: {}'.format(e))
 
         self._supported_extensions = []
         self._change_callbacks = {}
@@ -518,6 +525,7 @@ class LokiCarrier(ABC):
 
         base_tree_dict = {
             'carrier_info': {
+                'system_id': (lambda: self.__lokiinfo_system_id, None, {"description": "Unique System ID, stored in eMMC"}),
                 'odin_control_version': (lambda: self.__lokiinfo_odin_version, None, {"description": "odin-control version"}),
                 'version': (lambda: self.__lokiinfo_version, None, {"description": "LOKI system image repo tag"}),
                 'application_version': (lambda: self.__lokiinfo_application_version, None, {"description": "Application version"}),

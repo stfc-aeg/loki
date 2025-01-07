@@ -1,7 +1,7 @@
 # Comamands and Aliases for Generic LOKI Systems
 
 # Aliases
-alias loki_info='cat /etc/loki/*'
+alias loki_info='loki-update.sh --info all --target runtime'
 alias loki_system_id='cat /etc/loki/system-id'
 
 # Functions
@@ -25,14 +25,6 @@ function loki_stop_app {
 
 function loki_remount_host {
     /etc/init.d/loki-connect-control-host.sh restart
-}
-
-function loki_update_image_flash {
-    flashcp -v "$1" /dev/mtd2
-}
-
-function loki_update_image_emmc {
-    cp "$1" /mnt/sd-mmcblk0p1/image.ub
 }
 
 function loki_set_static_ip {

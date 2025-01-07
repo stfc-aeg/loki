@@ -24,10 +24,7 @@ AC_CONFIG_FILES([
  design/design_basic_settings.sh
  os/petalinux-custom/Makefile
  os/petalinux-custom/project-spec/configs/config
- os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/application-version
- os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/application-name
- os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/platform
- os/petalinux-custom/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/version
+ os/petalinux-custom/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi
  ])
 
 AC_OUTPUT

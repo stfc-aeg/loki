@@ -370,7 +370,7 @@ class LokiCarrier(ABC):
         self._config_pin_defaults(kwargs)
 
         # Request all pins configured for the device, including those for extension classes, using options
-        self._pin_handler = PinHandler(self._variant, kwargs.get('zynqmp_base_gpio_chip_num', 0))
+        self._pin_handler = PinHandler(self._variant, int(kwargs.get('zynqmp_base_gpio_chip_num', 0)))
         self._pin_handler.add_pins_from_options(kwargs)
 
         # Map pinhandler functions to class functions for easier external use
@@ -638,34 +638,39 @@ class LokiCarrier(ABC):
 
                     # If the thread is monitored, check it has kicked the watchdog recently enough
                     watchdog_status = 'N/A'
-                    if threadname in self._watchdog_threads.keys():
-                        interval_s, callback = self._watchdog_threads[threadname]
-                        checktime = time.time()
-                        lastkick = self._watchdog_kicks[threadname]
-                        if (checktime - lastkick) < interval_s or checktime < lastkick:
-                            # Check passed
-                            watchdog_status = 'OK'
-                            logging.debug('Watchdog received kick in time for thread {}: kick {} was within {} seconds'.format(
-                                threadname, (checktime - lastkick), interval_s
-                            ))
-                        else:
-                            # Watchdog triggered
-                            watchdog_status = 'Triggered'
 
-                            # Report to console
-                            logging.error('Watchdog did not receive kick from thread {} within {}s (last kick {}s ago)'.format(
-                                threadname, interval_s, (checktime - lastkick)
-                            ))
+                    # If there is an error checking a thread, I don't want it to prevent checking other threads
+                    try:
+                        if threadname in self._watchdog_threads.keys():
+                            interval_s, callback = self._watchdog_threads[threadname]
+                            checktime = time.time()
+                            lastkick = self._watchdog_kicks[threadname]
+                            if (checktime - lastkick) < interval_s or checktime < lastkick:
+                                # Check passed
+                                watchdog_status = 'OK'
+                                logging.debug('Watchdog received kick in time for thread {}: kick {} was within {} seconds'.format(
+                                    threadname, (checktime - lastkick), interval_s
+                                ))
+                            else:
+                                # Watchdog triggered
+                                watchdog_status = 'Triggered'
 
-                            # Record in loop status
+                                # Report to console
+                                logging.error('Watchdog did not receive kick from thread {} within {}s (last kick {}s ago)'.format(
+                                    threadname, interval_s, (checktime - lastkick)
+                                ))
 
-                            # If there has been a registered callback, execute it
-                            if callback:
-                                logging.error('Watchdog calling callback for thread {}: {}'.format(threadname, callback))
-                                try:
-                                    callback()
-                                except Exception as e:
-                                    raise Exception('Error during watchdog callback for thread {}: {}'.format(threadname, e))
+                                # Record in loop status
+
+                                # If there has been a registered callback, execute it
+                                if callback:
+                                    logging.error('Watchdog calling callback for thread {}: {}'.format(threadname, callback))
+                                    try:
+                                        callback()
+                                    except Exception as e:
+                                        raise Exception('Error during watchdog callback for thread {}: {}'.format(threadname, e))
+                    except Exception as e:
+                        logging.error('Watchdog: failed to check kicks for thread{}: {}'.format(threadname, e))
 
                     # Update the thread information for any thread running, regardless of whether
                     # it kicks the watchdog
@@ -692,7 +697,7 @@ class LokiCarrier(ABC):
         self.watchdog_kick(thread_name=threadname)
 
         # Add the thread name to the monitored threads
-        self._watchdog_threads.update({threadname: (max_interval_s, callback_function)})
+        self._watchdog_threads.update({threadname: (float(max_interval_s), callback_function)})
 
     def watchdog_pause_thread(self, threadname=None):
         # Stop reporting if the given thread does not meet watchdog requirements. This can be used
@@ -1298,7 +1303,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
     def __init__(self, **kwargs):
         self._env_cached_readings = {}
 
-        self._env_reading_sync_period_s = kwargs.get('env_reading_sync_period_s', 5)
+        self._env_reading_sync_period_s = float(kwargs.get('env_reading_sync_period_s', 5))
 
         # Call next in MRO / Base Class
         super(LokiCarrierEnvmonitor, self).__init__(**kwargs)
@@ -1388,7 +1393,7 @@ class LokiCarrierPowerMonitor(LokiCarrier, ABC):
     def __init__(self, **kwargs):
         self._psu_cached_readings = {}
 
-        self._psu_reading_sync_period_s = kwargs.get('psu_reading_sync_period_s', 5)
+        self._psu_reading_sync_period_s = float(kwargs.get('psu_reading_sync_period_s', 5))
 
         # Call next in MRO / Base Class
         super(LokiCarrierPowerMonitor, self).__init__(**kwargs)
@@ -2019,13 +2024,13 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
         # Gather settings for MAX5306 DAC
         self._max5306 = DeviceHandler(device_type_name='MAX5306')
-        self._max5306.vref = kwargs.get('max5306_reference', 2.048)
-        self._max5306.spidev = kwargs.get('max5306_spidev', (1, 1))
+        self._max5306.vref = float(kwargs.get('max5306_reference', 2.048))
+        self._max5306.spidev = tuple([int(x) for x in kwargs.get('max5306_spidev', "1,1").split(',')])
 
         # Gather settings for LTC2986
         self._ltc2986 = DeviceHandler(device_type_name='LTC2986')
-        self._ltc2986.spidev = kwargs.get('ltc2986_spidev', (1, 0))
-        self._ltc2986.rsense_ohms = kwargs.get('ltc2986_rsense_ohms', 2000)
+        self._ltc2986.spidev = tuple([int(x) for x in kwargs.get('ltc2986_spidev', "1,0").split(',')])
+        self._ltc2986.rsense_ohms = int(kwargs.get('ltc2986_rsense_ohms', 2000))
         self._ltc2986.pt100_channel = 6
 
         # Define the reset pin for the ltc2986 (requested below after super init)
@@ -2041,18 +2046,18 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         # Gather settings for the PAC1921 power monitors
         self._pac1921_u3 = DeviceHandler(device_type_name='PAC1921')
         self._pac1921_u3.railname = 'VDDD_CNTRL'
-        self._pac1921_u3.di_gain = kwargs.get('pac1921_vdddcntrl_di_gain', 1)
-        self._pac1921_u3.dv_gain = kwargs.get('pac1921_vdddcntrl_dv_gain', 8)
+        self._pac1921_u3.di_gain = int(kwargs.get('pac1921_vdddcntrl_di_gain', 1))
+        self._pac1921_u3.dv_gain = int(kwargs.get('pac1921_vdddcntrl_dv_gain', 8))
 
         self._pac1921_u2 = DeviceHandler(device_type_name='PAC1921')
         self._pac1921_u2.railname = 'VDDD'
-        self._pac1921_u2.di_gain = kwargs.get('pac1921_vddd_di_gain', 1)
-        self._pac1921_u2.dv_gain = kwargs.get('pac1921_vddd_dv_gain', 1)
+        self._pac1921_u2.di_gain = int(kwargs.get('pac1921_vddd_di_gain', 1))
+        self._pac1921_u2.dv_gain = int(kwargs.get('pac1921_vddd_dv_gain', 1))
 
         self._pac1921_u1 = DeviceHandler(device_type_name='PAC1921')
         self._pac1921_u1.railname = 'VDDA'
-        self._pac1921_u1.di_gain = kwargs.get('pac1921_vdda_di_gain', 1)
-        self._pac1921_u1.dv_gain = kwargs.get('pac1921_vdda_dv_gain', 1)
+        self._pac1921_u1.di_gain = int(kwargs.get('pac1921_vdda_di_gain', 1))
+        self._pac1921_u1.dv_gain = int(kwargs.get('pac1921_vdda_dv_gain', 1))
 
         self._pac1921_array = [self._pac1921_u3, self._pac1921_u2, self._pac1921_u1]
 

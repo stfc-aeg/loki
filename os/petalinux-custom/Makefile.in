@@ -26,7 +26,9 @@ BUILD_DEPS = $(shell find -L ${PL_ROOT}/components/yocto/workspace/ -type f)
 #project-spec contains main user recipes and config.
 BUILD_DEPS += $(shell find -L ${PL_ROOT}/project-spec/ -type f)
 #optional user layer for recipes
+ifdef YOCTO_USER_LAYER_0
 BUILD_DEPS += $(shell find -L ${YOCTO_USER_LAYER_0} -type f)
+endif
 
 .PHONY: default all build package rootfs simulate clean mostlyclean distclean clobber
 

@@ -1,0 +1,63 @@
+all: os
+
+# This makefile requires a LOKI Makefile project
+
+LOKI_DIR=./
+APPLICATION_DIR=./loki-recovery/
+
+# Include project autoconf params here:
+
+# Any machine-specific params (such as the Yocto tmpdir) should be in machine.env
+# This file will be ignored by git.
+ifneq (,$(wildcard ${APPLICATION_DIR}/machine.env))
+	include ${APPLICATION_DIR}/machine.env
+	export
+endif
+
+# Any repo-specific params (such as nested directories) should be in repo.env
+# This file will be included in the repo
+ifneq (,$(wildcard ${APPLICATION_DIR}/repo.env))
+	include ${APPLICATION_DIR}/repo.env
+	export
+endif
+
+# Run the configuration using the autoconf params
+include ${LOKI_DIR}/config.mk
+
+block_design=${LOKI_DIR}/design/block_design/zusys_bd.tcl
+
+.PHONY: all os hardware software project constraints
+
+constraints_src_dir=${APPLICATION_DIR}/constraints/
+constraints_filename=$(wildcard *.xdc)
+constraints_dst_dir=${LOKI_DIR}/design/constraints/${platform_module_shortname}/
+
+constraints: loki-configure-hw ${constraints_src_dir}/${constraints_filename}
+	$(info Adding project constraints from ${constraints_src_dir}/${constraints_filename} to ${constraints_dst_dir}/${constraints_filename})
+	$(info pwd $(shell pwd))
+	$(shell cp ${constraints_src_dir}/${constraints_filename} ${constraints_dst_dir}/)
+
+project: loki-configure-hw constraints
+	# Instead of actually building the hardware, just make the project in Vivado and stop
+	$(MAKE) -C ${LOKI_DIR} project
+
+hardware: project
+	$(MAKE) -C ${LOKI_DIR} hardware
+
+software: loki-configure-sw hardware
+	$(MAKE) -C ${LOKI_DIR} software
+
+os: loki-configure-os software
+	$(MAKE) -C ${LOKI_DIR} os
+
+mostlyclean:
+	$(MAKE) -C ${LOKI_DIR} mostlyclean
+
+clean:
+	$(MAKE) -C ${LOKI_DIR} clean
+
+distclean:
+	$(MAKE) -C ${LOKI_DIR} distclean
+
+clobber:
+	$(MAKE) -C ${LOKI_DIR} clobber

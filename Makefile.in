@@ -43,7 +43,7 @@ distclean:
 	$(MAKE) -C ${OS_PATH} distclean
 
 	$(warning Attempting to remove any untracked files from loki)
-	git clean -x --force --exclude pre-built .
+	git clean -x --force --exclude pre-built --exclude loki-recovery  .
 
 clobber:
 	# Command sub-makefiles to clobber their directories, then manually delete

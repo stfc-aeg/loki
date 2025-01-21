@@ -4,11 +4,11 @@ SHELL := /bin/bash
 
 LOKI_ROOT_ABS = @abs_top_builddir@
 PLATFORM = @platform_module_shortname@
-HW_EXPORT_DIR = ${LOKI_ROOT_ABS}/design/prebuilt/hardware/${PLATFORM}
-HW_XSA_FILENAME = design_${PLATFORM}.xsa
-SW_EXPORT_DIR = ${LOKI_ROOT_ABS}/design/prebuilt/software/${PLATFORM}
-SW_FSBL_FILENAME = fsbl.elf
-SW_PMUFW_FILENAME = pmufw.elf
+HW_EXPORT_DIR := ${LOKI_ROOT_ABS}/design/prebuilt/hardware/${PLATFORM}
+HW_XSA_FILENAME := design_${PLATFORM}.xsa
+SW_EXPORT_DIR := ${LOKI_ROOT_ABS}/design/prebuilt/software/${PLATFORM}
+SW_FSBL_FILENAME := fsbl.elf
+SW_PMUFW_FILENAME := pmufw.elf
 PL_ROOT = .
 OUTPUT_DIR = ${PL_ROOT}/images/linux
 
@@ -23,8 +23,8 @@ YOCTO_USER_LAYER_0 = @yocto_user_layer_0@
 
 # The yocto workspace contains recipes brought into the workspace under modification.
 BUILD_DEPS = $(shell find -L ${PL_ROOT}/components/yocto/workspace/ -type f)
-#project-spec contains main user recipes and config.
-BUILD_DEPS += $(shell find -L ${PL_ROOT}/project-spec/ -type f)
+#project-spec contains main user recipes and config, hw-description is excluded as this is handled by the bitstream
+BUILD_DEPS += $(shell find -L ${PL_ROOT}/project-spec/ -path ${PL_ROOT}/project-spec/hw-description -prune -o -type f)
 #optional user layer for recipes
 ifdef YOCTO_USER_LAYER_0
 BUILD_DEPS += $(shell find -L ${YOCTO_USER_LAYER_0} -type f)

@@ -4,24 +4,10 @@ all: os
 
 LOKI_DIR=./
 APPLICATION_DIR=./loki-recovery/
+LOKI_ENV_DIR=./loki-recovery/
 
-# Include project autoconf params here:
-
-# Any machine-specific params (such as the Yocto tmpdir) should be in machine.env
-# This file will be ignored by git.
-ifneq (,$(wildcard ${APPLICATION_DIR}/machine.env))
-	include ${APPLICATION_DIR}/machine.env
-	export
-endif
-
-# Any repo-specific params (such as nested directories) should be in repo.env
-# This file will be included in the repo
-ifneq (,$(wildcard ${APPLICATION_DIR}/repo.env))
-	include ${APPLICATION_DIR}/repo.env
-	export
-endif
-
-# Run the configuration using the autoconf params
+# Include recipes to take the environment and run the configuration using the autoconf params
+# Provides loki-configure-hw, loki-configure-sw, loki-configure-os
 include ${LOKI_DIR}/config.mk
 
 block_design=${LOKI_DIR}/design/block_design/zusys_bd.tcl
@@ -41,7 +27,7 @@ project: loki-configure-hw constraints
 	# Instead of actually building the hardware, just make the project in Vivado and stop
 	$(MAKE) -C ${LOKI_DIR} project
 
-hardware: project
+hardware:
 	$(MAKE) -C ${LOKI_DIR} hardware
 
 software: loki-configure-sw hardware

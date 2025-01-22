@@ -8,6 +8,24 @@
 #
 # This file will generate the main LOKI project Makefile from Makefile.in
 
+# Process the LOKI environment files, only if the environment directory has been set
+ifneq (${LOKI_ENV_DIR}, )
+$(info LOKI will search for environment files in ${LOKI_ENV_DIR})
+ifneq (,$(wildcard ${LOKI_ENV_DIR}/machine.env))
+$(info Found machine environment file)
+include ${LOKI_ENV_DIR}/machine.env
+export
+endif
+ifneq (,$(wildcard ${LOKI_ENV_DIR}/repo.env))
+$(info Found repo environment file)
+include ${LOKI_ENV_DIR}/repo.env
+export
+endif
+endif
+ifeq (${LOKI_ENV_DIR}, )
+$(error Did not specify LOKI_ENV_DIR, this is required to locate the machine.env and repo.env files)
+endif
+
 CONF_OUTPUTS= Makefile
 CONF_INPUTS= Makefile.in configure
 

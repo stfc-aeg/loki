@@ -10,8 +10,6 @@ LOKI_ENV_DIR=./loki-recovery/
 # Provides loki-configure-hw, loki-configure-sw, loki-configure-os
 include ${LOKI_DIR}/config.mk
 
-block_design=${LOKI_DIR}/design/block_design/zusys_bd.tcl
-
 .PHONY: all os hardware software project constraints
 
 constraints: loki-configure-hw

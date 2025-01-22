@@ -14,14 +14,8 @@ block_design=${LOKI_DIR}/design/block_design/zusys_bd.tcl
 
 .PHONY: all os hardware software project constraints
 
-constraints_src_dir=${APPLICATION_DIR}/constraints/
-constraints_filename=$(wildcard *.xdc)
-constraints_dst_dir=${LOKI_DIR}/design/constraints/${platform_module_shortname}/
-
-constraints: loki-configure-hw ${constraints_src_dir}/${constraints_filename}
-	$(info Adding project constraints from ${constraints_src_dir}/${constraints_filename} to ${constraints_dst_dir}/${constraints_filename})
-	$(info pwd $(shell pwd))
-	$(shell cp ${constraints_src_dir}/${constraints_filename} ${constraints_dst_dir}/)
+constraints: loki-configure-hw
+	$(MAKE) -C ${LOKI_DIR} constraints CONSTRAINTS_SOURCE_DIR=$(shell pwd)/loki-recovery/
 
 project: loki-configure-hw constraints
 	# Instead of actually building the hardware, just make the project in Vivado and stop

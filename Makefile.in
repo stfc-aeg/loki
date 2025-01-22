@@ -2,7 +2,7 @@
 
 SHELL := /bin/bash
 
-.PHONY: all mostlyclean clean hardware software os project
+.PHONY: all mostlyclean clean hardware software os project constraints
 
 LOKI_ROOT_ABS = @abs_top_builddir@
 HWSW_PATH=${LOKI_ROOT_ABS}/design/
@@ -20,7 +20,23 @@ XSA_OUTPUT = ${HW_EXPORT_DIR}/${XSA_FILENAME}
 
 all: os
 
-project:
+# Constraints source directory supplied by the application repo will copy all .xsa files
+CONSTRAINTS_SOURCE_DIR := .
+CONSTRAINTS_TARGET_DIR = ${HWSW_PATH}/constraints/${PLATFORM}/
+#CONSTRAINTS_FILENAMES = $(shell find -maxdepth 2 -L ${CONSTRAINTS_SOURCE_DIR} -name '*.xdc' -type f -printf "%f\n")
+CONSTRAINTS_FILENAMES = $(notdir $(wildcard ${CONSTRAINTS_SOURCE_DIR}/*.xdc))
+CONSTRAINTS_SOURCES = $(addprefix ${CONSTRAINTS_SOURCE_DIR}/, ${CONSTRAINTS_FILENAMES})
+CONSTRAINTS_TARGETS = $(addprefix ${CONSTRAINTS_TARGET_DIR}/, ${CONSTRAINTS_FILENAMES})
+$(info Application constraints files found: ${CONSTRAINTS_FILENAMES})
+
+${CONSTRAINTS_TARGETS}: ${CONSTRAINTS_SOURCES}
+	# Copy Files over
+	cp ${CONSTRAINTS_SOURCE_DIR}/*.xdc ${CONSTRAINTS_TARGET_DIR}/
+	$(info copied constraints ${CONSTRAINTS_FILENAMES} from ${CONSTRAINTS_SOURCE_DIR})
+
+constraints: ${CONSTRAINTS_TARGETS} ;
+
+project: ${CONSTRAINTS_TARGETS}
 	$(MAKE) -C ${HWSW_PATH} project
 
 #How to build the internal hardware

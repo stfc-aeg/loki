@@ -38,6 +38,8 @@ To upload these files to a board, see [Booting, Configuring and Updating Systems
 3. Create a basic application configuration using `loki-recovery` as a reference:
 
 Copy the base configuration environment files to your top-level directory.
+The `machine.env` is used to define machine-specific settings, such as toolchain location and will not be comitted to the repo.
+The `repo.env` contains definitions that will be updated on the repo, such as the application name built into teh image.
 ```bash
 cp ./loki/loki-recovery/machine.env.example ./
 cp ./loki/loki-recovery/repo.env ./
@@ -59,13 +61,19 @@ cp ./loki/MakefileRecovery ./Makefile
 
 Update the Makefile to suit your application:
 - Set `LOKI_DIR` to the submodule location, most likely `./loki/`
-- Set `APPLICATION_DIR` to the location of your `.env` files, most likely `./`
+- Set the `APPLICATION_DIR` to your application's top-level directory. This is currently unused.
+- Set `LOKI_ENV_DIR` to the location of your `.env` files, most likely `./`
 
 4. Populate your application-specifics
-	- Add any constraints to the `constraints` directory in a file with name `_l_<whatever>.xdc
+	- Add any constraints to the `constraints` directory in a file with name `_l_<whatever>.xdc. This prefix means they will override other definitions.
+        - You must set CONSTRAINTS_SOURCE_DIR in your makefile so that they are automatically included.
 	- If using one, define a Yocto layer in `meta-<whatever>`. See [Odin Control Yocto Layer Creation](https://github.com/stfc-aeg/loki/wiki/Yocto-Layer-for-Odin-Control) for more information.
+        - Add the location to `repo.env`
+    - If you are using a pre-built (or externally built) XSA (HW), FSBL & PMUFW (SW), set the location they are exported to in variables `HW_EXPORT_DIR` and `SW_EXPORT_DIR` in your Makefile.
 
 5. Build the project
 ```bash
 make
 ```
+
+For more detailed information on how you might want to customise your application repository, see the [LOKI Wiki](https://github.com/stfc-aeg/loki/wiki).

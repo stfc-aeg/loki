@@ -42,12 +42,12 @@ project: ${CONSTRAINTS_TARGETS}
 #How to build the internal hardware
 ${XSA_OUTPUT}:
 	$(info Building in-project XSA to ${XSA_OUTPUT})
-	$(MAKE) -C ${OS_PATH} hardware
+	$(MAKE) -C ${HWSW_PATH} hardware
 
 #How to build the internal software
 ${FSBL_OUTPUT} ${PMUFW_OUTPUT}:
 	$(info Building in-project FSBL and PMUFW)
-	$(MAKE) -C ${OS_PATH} software
+	$(MAKE) -C ${HWSW_PATH} software
 
 hardware: ${XSA_OUTPUT} ;
 

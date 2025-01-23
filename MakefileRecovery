@@ -1,10 +1,20 @@
 all: os
 
-# This makefile requires a LOKI Makefile project
-
+# Update LOKI_DIR to the loki submodule root
 LOKI_DIR=./
+
+# Update APPLICATION_DIR to your application root
 APPLICATION_DIR=./loki-recovery/
+
+# Update LOKI_ENV_DIR to the location of repo.env and machine.env
 LOKI_ENV_DIR=./loki-recovery/
+
+# If using custom constraints, set the absolute path here
+#CONSTRAINTS_SOURCE_DIR=$(shell pwd)/CUSTOM-constraints
+
+# If using a pre-build hardware file (XSA) or software (FSBL, PMUFW), set the absolute export path
+#HW_EXPORT_DIR=$(shell pwd)/prebuilt
+#SW_EXPORT_DIR=$(shell pwd)/prebuilt
 
 # Include recipes to take the environment and run the configuration using the autoconf params
 # Provides loki-configure-hw, loki-configure-sw, loki-configure-os
@@ -13,20 +23,20 @@ include ${LOKI_DIR}/config.mk
 .PHONY: all os hardware software project constraints
 
 constraints: loki-configure-hw
-	$(MAKE) -C ${LOKI_DIR} constraints CONSTRAINTS_SOURCE_DIR=$(shell pwd)/loki-recovery/
+	$(MAKE) -C ${LOKI_DIR} constraints CONSTRAINTS_SOURCE_DIR=${CONSTRAINTS_SOURCE_DIR}
 
 project: loki-configure-hw constraints
 	# Instead of actually building the hardware, just make the project in Vivado and stop
 	$(MAKE) -C ${LOKI_DIR} project
 
 hardware:
-	$(MAKE) -C ${LOKI_DIR} hardware
+	$(MAKE) -C ${LOKI_DIR} hardware HW_EXPORT_DIR=${HW_EXPORT_DIR} SW_EXPORT_DIR=${SW_EXPORT_DIR}
 
 software: loki-configure-sw hardware
-	$(MAKE) -C ${LOKI_DIR} software
+	$(MAKE) -C ${LOKI_DIR} software HW_EXPORT_DIR=${HW_EXPORT_DIR} SW_EXPORT_DIR=${SW_EXPORT_DIR}
 
 os: loki-configure-os software
-	$(MAKE) -C ${LOKI_DIR} os
+	$(MAKE) -C ${LOKI_DIR} os HW_EXPORT_DIR=${HW_EXPORT_DIR} SW_EXPORT_DIR=${SW_EXPORT_DIR}
 
 mostlyclean:
 	$(MAKE) -C ${LOKI_DIR} mostlyclean

@@ -37,7 +37,7 @@ CONF_HW_INTPUTS= design/Makefile.in design/design_basic_settings.sh.in
 CONF_SW_OUTPUTS= 
 CONF_SW_INPUTS= 
 
-CONF_OS_OUTPUTS= os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config os/petalinux-custom/project-spec/configs/config os/petalinux-custom/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi
+CONF_OS_OUTPUTS= os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config os/petalinux-custom/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi
 CONF_OS_INPUTS= os/petalinux-custom/Makefile.in os/petalinux-custom/project-spec/configs/config.in os/petalinux-custom/project-spec/configs/config.in os/petalinux-custom/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi.in
 
 # Make these paths relative to the calling makefile's location
@@ -53,6 +53,8 @@ CONF_OS_INPUTS_PF=$(addprefix ${LOKI_DIR}, ${CONF_OS_INPUTS})
 $(info autoconf configuring LOKI project at $$LOKI_DIR: ${LOKI_DIR})
 $(info $$AUTOCONF_PARAMS are ${AUTOCONF_PARAMS})
 $(info $$CONF_HW_OUTPUTS are ${CONF_HW_OUTPUTS_PF})
+$(info $$CONF_SW_OUTPUTS are ${CONF_SW_OUTPUTS_PF})
+$(info $$CONF_OS_OUTPUTS are ${CONF_OS_OUTPUTS_PF})
 
 .PHONY: loki-configure-hw loki-configure-sw loki-configure-os loki-configure-help
 

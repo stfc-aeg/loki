@@ -1,14 +1,14 @@
 # Generated with autoconf from @configure_input@
 
-SHELL := /bin/bash
+SHELL ?= /bin/bash
 
 LOKI_ROOT_ABS = @abs_top_builddir@
 PLATFORM = @platform_module_shortname@
-HW_EXPORT_DIR := ${LOKI_ROOT_ABS}/design/prebuilt/hardware/${PLATFORM}
-HW_XSA_FILENAME := design_${PLATFORM}.xsa
-SW_EXPORT_DIR := ${LOKI_ROOT_ABS}/design/prebuilt/software/${PLATFORM}
-SW_FSBL_FILENAME := fsbl.elf
-SW_PMUFW_FILENAME := pmufw.elf
+HW_EXPORT_DIR ?= ${LOKI_ROOT_ABS}/design/prebuilt/hardware/${PLATFORM}
+HW_XSA_FILENAME ?= design_${PLATFORM}.xsa
+SW_EXPORT_DIR ?= ${LOKI_ROOT_ABS}/design/prebuilt/software/${PLATFORM}
+SW_FSBL_FILENAME ?= fsbl.elf
+SW_PMUFW_FILENAME ?= pmufw.elf
 PL_ROOT = .
 OUTPUT_DIR = ${PL_ROOT}/images/linux
 

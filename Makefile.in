@@ -45,7 +45,7 @@ project: ${CONSTRAINTS_TARGETS}
 	$(MAKE) -C ${HWSW_PATH} project
 
 #How to build the internal hardware
-${XSA_OUTPUT_INTERNAL}:
+${XSA_OUTPUT_INTERNAL}: constraints
 	$(info Building in-project XSA to ${XSA_OUTPUT})
 	$(MAKE) -C ${HWSW_PATH} hardware
 

@@ -65,11 +65,18 @@ ${AUTOCONF_OUTPUT}: ${AUTOCONF_INPUT_AC}
 	echo "Creating configure from configure.ac"
 	cd ${LOKI_DIR}; autoconf
 
+# EXPERIMENTAL SECTION
+# This will re-configure the project if any branch of the parent repo or the LOKI repo changes
+# reference, so that the correct 'git describe' always makes its way into the image on OS
+# compilation. The intention is that this will not trigger a re-build of the hardware.
+# To remove this, just comment out the following line.
+GIT_DESCRIBE_DEPS =  ${APPLICATION_DIR}/.git/HEAD $(wildcard ${APPLICATION_DIR}/.git/refs/*) ${APPLICATION_DIR}/.git/modules/loki/HEAD $(wildcard ${APPLICATION_DIR}/.git/modules/loki/refs/*)
+
 # Rules relate to HW/SW/OS specifically. This way, if only one has changed,
 # the autoconf will rebuild that target file and will not rebuild the unrelated
 # outputs of the ./configure, preventing unnecessary rebuilding of other parts
 # of the project that haven't actually been reconfigured.
-$(CONF_HW_OUTPUTS_PF) ${CONF_SW_OUTPUTS_PF} ${CONF_OS_OUTPUTS_PF} $(CONF_OUTPUTS_PF): $(CONF_HW_INPUTS_PF) ${CONF_SW_INPUTS_PF} ${CONF_OS_INPUTS_PF} $(CONF_INPUTS_PF)
+$(CONF_HW_OUTPUTS_PF) ${CONF_SW_OUTPUTS_PF} ${CONF_OS_OUTPUTS_PF} $(CONF_OUTPUTS_PF): $(CONF_HW_INPUTS_PF) ${CONF_SW_INPUTS_PF} ${CONF_OS_INPUTS_PF} $(CONF_INPUTS_PF) ${LOKI_DIR}/share/config.site ${GIT_DESCRIBE_DEPS}
 	echo "Configuring LOKI with parameters: ${AUTOCONF_PARAMS}"
 	# Generate the configure
 	cd ${LOKI_DIR}; autoconf configure.ac

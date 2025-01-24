@@ -28,13 +28,7 @@ LOKI_CONTROLHOST_DESTINATION="/controlhost"
 
 # Application name of this device, derived from name embedded in filesystem image. Should not
 # generally need to be overridden
-if [ -f /etc/loki/application-name ]
-then
-    LOKI_APPNAME="$(cat /etc/loki/application-name)"
-else
-    echo "WARNING: there is no valid application name built into the image, using NOAPP"
-    LOKI_APPNAME="NOAPP"
-fi
+LOKI_APPNAME=$(loki-update.sh --info app-name --target runtime)
 
 # Recover System ID (unique to the lOKI carrier, and therefore typically the detector system itself), which should
 # have been added by the for-purpose init script. This can be overridden, see loki-get-system-id.sh init script.

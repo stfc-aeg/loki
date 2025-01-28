@@ -1,0 +1,55 @@
+all: os
+
+# Update LOKI_DIR to the loki submodule root
+LOKI_DIR=./
+
+# Update APPLICATION_DIR to your application root
+APPLICATION_DIR=./loki-recovery/
+
+# Update LOKI_ENV_DIR to the location of repo.env and machine.env
+LOKI_ENV_DIR=./loki-recovery/
+
+# If using custom constraints, set the absolute path here
+export CONSTRAINTS_SOURCE_DIR
+undefine CONSTRAINTS_SOURCE_DIR
+#CONSTRAINTS_SOURCE_DIR=$(shell pwd)/CUSTOM-constraints
+
+# If using a pre-build hardware file (XSA) or software (FSBL, PMUFW), set the absolute export path
+export HW_EXPORT_DIR
+export SW_EXPORT_DIR
+undefine HW_EXPORT_DIR
+undefine SW_EXPORT_DIR
+
+# Include recipes to take the environment and run the configuration using the autoconf params
+# Provides loki-configure-hw, loki-configure-sw, loki-configure-os
+include ${LOKI_DIR}/config.mk
+
+.PHONY: all os hardware software project constraints
+
+constraints: loki-configure-hw
+	$(MAKE) -C ${LOKI_DIR} constraints
+
+project: loki-configure-hw constraints
+	# Instead of actually building the hardware, just make the project in Vivado and stop
+	$(MAKE) -C ${LOKI_DIR} project
+
+hardware:
+	$(MAKE) -C ${LOKI_DIR} hardware
+
+software: loki-configure-sw hardware
+	$(MAKE) -C ${LOKI_DIR} software
+
+os: loki-configure-os software
+	$(MAKE) -C ${LOKI_DIR} os
+
+mostlyclean:
+	$(MAKE) -C ${LOKI_DIR} mostlyclean
+
+clean:
+	$(MAKE) -C ${LOKI_DIR} clean
+
+distclean:
+	$(MAKE) -C ${LOKI_DIR} distclean
+
+clobber:
+	$(MAKE) -C ${LOKI_DIR} clobber

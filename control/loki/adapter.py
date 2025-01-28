@@ -103,23 +103,53 @@ class PinHandler():
     # This driver can coexist with any other gpiod handling of pins, so is kept simple by only using the
     # flag for active_low. If additional functionality is required (e.g. events) implement separately.
 
-    def __init__(self, consumername='LOKI'):
+    def __init__(self, consumername='LOKI', zynqmp_base_gpiochip_num=0):
+        # The base gpiochip number in /dev/gpiochip* is always 0 unless more GPIO buses have been added with
+        # AXI in the hardware design.
         self._pins = {}
         self._pin_states_cached = {}
         self._consumername = consumername
+        self._zynqmp_base_gpiochip_num = int(zynqmp_base_gpiochip_num)
+        self._logger = logging.getLogger('{}-pinhandler'.format(consumername))
+        self._logger.debug('Created pin handler for {} with base GPIO chip number {}'.format(consumername, zynqmp_base_gpiochip_num))
 
     # If id is a string, use gpiod.find_line to get the pin, otherwise use typical gpiod.get_line.
-    @staticmethod
-    def _gpiod_line_from_id(line_id):
+    def _gpiod_line_from_id(self, line_id, chip_number=None):
 
         if line_id is None:
             return None
 
+        # First, attempt using a direct pin number on a known GPIO chip. If this fails, just search the
+        # identified in the hope that it is unique.
         try:
-            # gpiochip0 is assumed since it is the only available chip on the ZynqMP platform
-            chip = gpiod.Chip('gpiochip0')
-            return chip.get_line(int(line_id))
+            pin_number_int = int(line_id)
+            self._logger.debug('Line ID {} matched as numerical, will use gpiochip->line-number identifiacation method'.format(line_id))
+
+            # The chip number by default is the one for the standard GPIO bus provided by ZynqMP. Only change
+            # this if you know you are using a different bus (e.g. an AXI one). If you are using a unique pin
+            # 'name', find_line() should find it without specifying a chip at all.
+            if chip_number is None:
+                chip_number = self._zynqmp_base_gpiochip_num
+                self._logger.warning('A GPIO chip (bus) number was not provided for pin {}, using the default bus'.format(line_id))
+
+            try:
+                self._logger.debug('Seaching for a GPIO chip (bus) with ID {}'.format(chip_number))
+                chip = gpiod.Chip('gpiochip{}'.format(chip_number))
+
+                try:
+                    self._logger.debug('Seaching for line number {}'.format(pin_number_int))
+                    return chip.get_line(pin_number_int)
+                except OSError:
+                    raise OSError('Line number {} does not exist for GPIO chip (bus) {}'.format(pin_number_int, chip_number))
+
+            except FileNotFoundError:
+                # This chip number does not exist.
+                raise FileNotFoundError('GPIO (bus) number {} does not exist'.format(chip_number))
+
         except ValueError:
+            # The pin_id must not be numerical, so search for it by name. This does not require a specific
+            # chip number.
+            self._logger.debug('Line ID {} not numerical, will search by name'.format(line_id))
             return gpiod.find_line(line_id)
 
     def get_pin(self, friendly_name):
@@ -171,30 +201,34 @@ class PinHandler():
         else:
             raise Exception('Cannot set an input pin')
 
-    def add_pin(self, friendly_name, pin_id, is_input, is_active_low=False, default_value=0, extra_flags=0):
-        # Check if the name is already in use
-        if self._pins.get(friendly_name) is not None:
-            raise RuntimeError('pin friendly name {} already exists for {}, cannot use again for ID {}'.format(
-                friendly_name, self._pins[friendly_name], pin_id))
-
-        # Find the line from its id
-        line = self._gpiod_line_from_id(pin_id)
-        if line is None:
-            raise RuntimeError('could not find matching gpiod line for id {} (for pin name {})'.format(
-                pin_id, friendly_name))
-
-        # Request the pin with given settings
+    def add_pin(self, friendly_name, pin_id, is_input, is_active_low=False, default_value=0, extra_flags=0, chip_number=None):
         try:
-            line.request(
-                consumer=self._consumername,
-                type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
-                flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0) | extra_flags,
-                default_val=default_value)
-        except Exception as e:
-            raise RuntimeError('could not request line {}: {}'.format(line, e))
+            # Check if the name is already in use
+            if self._pins.get(friendly_name) is not None:
+                raise RuntimeError('pin friendly name {} already exists for {}, cannot use again for ID {}'.format(
+                    friendly_name, self._pins[friendly_name], pin_id))
 
-        # Store the pin by friendly name
-        self._pins[friendly_name] = line
+            # Find the line from its id
+            line = self._gpiod_line_from_id(pin_id, chip_number=chip_number)
+            if line is None:
+                raise RuntimeError('could not find matching gpiod line for id {} (for pin name {})'.format(
+                    pin_id, friendly_name))
+
+            # Request the pin with given settings
+            try:
+                line.request(
+                    consumer=self._consumername,
+                    type=(gpiod.LINE_REQ_DIR_IN if is_input else gpiod.LINE_REQ_DIR_OUT),
+                    flags=(gpiod.LINE_REQ_FLAG_ACTIVE_LOW if is_active_low else 0) | extra_flags,
+                    default_val=default_value)
+            except Exception as e:
+                raise RuntimeError('could not request line {}: {}'.format(line, e))
+
+            # Store the pin by friendly name
+            self._pins[friendly_name] = line
+
+        except Exception as e:
+            raise RuntimeError('Failed to add pin {}: {}'.format(friendly_name, e))
 
     @staticmethod
     def _sort_options_per_pin(options):
@@ -209,7 +243,7 @@ class PinHandler():
 
         # Separate options by the pin friendly name they refer to
         config_by_pin = {}
-        allowed_settings = ['id', 'active_low', 'nc', 'is_input', 'default_value', 'bias_pull_down', 'bias_pull_up', 'bias_disable', 'open_source', 'open_drain']
+        allowed_settings = ['id', 'chipnum', 'active_low', 'nc', 'is_input', 'default_value', 'bias_pull_down', 'bias_pull_up', 'bias_disable', 'open_source', 'open_drain']
         for key in pin_config_options.keys():
             # Settings not in the list are ignored
             for allowed_setting in allowed_settings:
@@ -243,6 +277,7 @@ class PinHandler():
                 pin_is_input = pin_info.get('is_input')
                 pin_not_connected = pin_info.get('nc', False)   # This is optional, assumed pins are connected
                 pin_default = pin_info.get('default_value', 1 if pin_active_low else 0)   # De-assert by default
+                pin_chipnum = pin_info.get('chipnum', None)     # Optional, will use base ZynqMP GPIO bus by default
 
                 # Additional Config Flags - optional
                 pin_flag_bias_pull_down = gpiod.LINE_REQ_FLAG_BIAS_PULL_DOWN if pin_info.get('bias_pull_down', False) else 0
@@ -263,6 +298,7 @@ class PinHandler():
                     is_active_low=pin_active_low,
                     default_value=pin_default,
                     extra_flags=(pin_flag_bias_pull_down | pin_flag_bias_pull_up | pin_flag_bias_disable | pin_flag_open_drain | pin_flag_open_source),
+                    chip_number=pin_chipnum,
                 )
 
     def pinmap(self):
@@ -291,25 +327,25 @@ class LokiCarrier(ABC):
         self._logger = logging.getLogger('LokiCarrier')
 
         try:
-            with open('/etc/loki/version') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/loki-version') as info:
                 self.__lokiinfo_version = info.read()
         except FileNotFoundError:
             self.__lokiinfo_version = 'unknown'
 
         try:
-            with open('/etc/loki/platform') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/platform') as info:
                 self.__lokiinfo_platform = info.read()
         except FileNotFoundError:
             self.__lokiinfo_platform = 'unknown'
 
         try:
-            with open('/etc/loki/application-version') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/application-version') as info:
                 self.__lokiinfo_application_version = info.read()
         except FileNotFoundError:
             self.__lokiinfo_application_version = 'unknown'
 
         try:
-            with open('/etc/loki/application-name') as info:
+            with open('/sys/firmware/devicetree/base/loki-metadata/application-name') as info:
                 self.__lokiinfo_application_name = info.read()
         except FileNotFoundError:
             self.__lokiinfo_application_name = 'unknown'
@@ -320,6 +356,13 @@ class LokiCarrier(ABC):
             self.__lokiinfo_odin_version = 'unknown'
             self._logger.error('Failed to get odin server version: {}'.format(e))
 
+        try:
+            with open('/etc/loki/system-id') as info:
+                self.__lokiinfo_system_id = info.read()
+        except Exception as e:
+            self.__lokiinfo_system_id = 'unknown'
+            self._logger.error('Failed to get LOKI System ID: {}'.format(e))
+
         self._supported_extensions = []
         self._change_callbacks = {}
 
@@ -327,7 +370,7 @@ class LokiCarrier(ABC):
         self._config_pin_defaults(kwargs)
 
         # Request all pins configured for the device, including those for extension classes, using options
-        self._pin_handler = PinHandler(self._variant)
+        self._pin_handler = PinHandler(self._variant, int(kwargs.get('zynqmp_base_gpio_chip_num', 0)))
         self._pin_handler.add_pins_from_options(kwargs)
 
         # Map pinhandler functions to class functions for easier external use
@@ -482,6 +525,7 @@ class LokiCarrier(ABC):
 
         base_tree_dict = {
             'carrier_info': {
+                'system_id': (lambda: self.__lokiinfo_system_id, None, {"description": "Unique System ID, stored in eMMC"}),
                 'odin_control_version': (lambda: self.__lokiinfo_odin_version, None, {"description": "odin-control version"}),
                 'version': (lambda: self.__lokiinfo_version, None, {"description": "LOKI system image repo tag"}),
                 'application_version': (lambda: self.__lokiinfo_application_version, None, {"description": "Application version"}),
@@ -594,34 +638,39 @@ class LokiCarrier(ABC):
 
                     # If the thread is monitored, check it has kicked the watchdog recently enough
                     watchdog_status = 'N/A'
-                    if threadname in self._watchdog_threads.keys():
-                        interval_s, callback = self._watchdog_threads[threadname]
-                        checktime = time.time()
-                        lastkick = self._watchdog_kicks[threadname]
-                        if (checktime - lastkick) < interval_s or checktime < lastkick:
-                            # Check passed
-                            watchdog_status = 'OK'
-                            logging.debug('Watchdog received kick in time for thread {}: kick {} was within {} seconds'.format(
-                                threadname, (checktime - lastkick), interval_s
-                            ))
-                        else:
-                            # Watchdog triggered
-                            watchdog_status = 'Triggered'
 
-                            # Report to console
-                            logging.error('Watchdog did not receive kick from thread {} within {}s (last kick {}s ago)'.format(
-                                threadname, interval_s, (checktime - lastkick)
-                            ))
+                    # If there is an error checking a thread, I don't want it to prevent checking other threads
+                    try:
+                        if threadname in self._watchdog_threads.keys():
+                            interval_s, callback = self._watchdog_threads[threadname]
+                            checktime = time.time()
+                            lastkick = self._watchdog_kicks[threadname]
+                            if (checktime - lastkick) < interval_s or checktime < lastkick:
+                                # Check passed
+                                watchdog_status = 'OK'
+                                logging.debug('Watchdog received kick in time for thread {}: kick {} was within {} seconds'.format(
+                                    threadname, (checktime - lastkick), interval_s
+                                ))
+                            else:
+                                # Watchdog triggered
+                                watchdog_status = 'Triggered'
 
-                            # Record in loop status
+                                # Report to console
+                                logging.error('Watchdog did not receive kick from thread {} within {}s (last kick {}s ago)'.format(
+                                    threadname, interval_s, (checktime - lastkick)
+                                ))
 
-                            # If there has been a registered callback, execute it
-                            if callback:
-                                logging.error('Watchdog calling callback for thread {}: {}'.format(threadname, callback))
-                                try:
-                                    callback()
-                                except Exception as e:
-                                    raise Exception('Error during watchdog callback for thread {}: {}'.format(threadname, e))
+                                # Record in loop status
+
+                                # If there has been a registered callback, execute it
+                                if callback:
+                                    logging.error('Watchdog calling callback for thread {}: {}'.format(threadname, callback))
+                                    try:
+                                        callback()
+                                    except Exception as e:
+                                        raise Exception('Error during watchdog callback for thread {}: {}'.format(threadname, e))
+                    except Exception as e:
+                        logging.error('Watchdog: failed to check kicks for thread{}: {}'.format(threadname, e))
 
                     # Update the thread information for any thread running, regardless of whether
                     # it kicks the watchdog
@@ -648,7 +697,7 @@ class LokiCarrier(ABC):
         self.watchdog_kick(thread_name=threadname)
 
         # Add the thread name to the monitored threads
-        self._watchdog_threads.update({threadname: (max_interval_s, callback_function)})
+        self._watchdog_threads.update({threadname: (float(max_interval_s), callback_function)})
 
     def watchdog_pause_thread(self, threadname=None):
         # Stop reporting if the given thread does not meet watchdog requirements. This can be used
@@ -1254,7 +1303,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
     def __init__(self, **kwargs):
         self._env_cached_readings = {}
 
-        self._env_reading_sync_period_s = kwargs.get('env_reading_sync_period_s', 5)
+        self._env_reading_sync_period_s = float(kwargs.get('env_reading_sync_period_s', 5))
 
         # Call next in MRO / Base Class
         super(LokiCarrierEnvmonitor, self).__init__(**kwargs)
@@ -1344,7 +1393,7 @@ class LokiCarrierPowerMonitor(LokiCarrier, ABC):
     def __init__(self, **kwargs):
         self._psu_cached_readings = {}
 
-        self._psu_reading_sync_period_s = kwargs.get('psu_reading_sync_period_s', 5)
+        self._psu_reading_sync_period_s = float(kwargs.get('psu_reading_sync_period_s', 5))
 
         # Call next in MRO / Base Class
         super(LokiCarrierPowerMonitor, self).__init__(**kwargs)
@@ -1511,10 +1560,13 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         kwargs.setdefault('pin_config_id_led1', 'LED1')
         kwargs.setdefault('pin_config_id_led2', 'LED2')
         kwargs.setdefault('pin_config_id_led3', 'LED3')
+        kwargs.setdefault('pin_config_id_leds_enable', 'LED Dark')
         kwargs.setdefault('pin_config_active_low_led0', False)      # User LEDs on this board are active high
         kwargs.setdefault('pin_config_active_low_led1', False)      # User LEDs on this board are active high
         kwargs.setdefault('pin_config_active_low_led2', False)      # User LEDs on this board are active high
         kwargs.setdefault('pin_config_active_low_led3', False)      # User LEDs on this board are active high
+        kwargs.setdefault('pin_config_active_low_leds_enable', False)
+        kwargs.setdefault('pin_config_default_value_leds_enable', True) # LEDs are enabled by default
 
         kwargs.setdefault('pin_config_id_button0', 'BUTTON0')
         kwargs.setdefault('pin_config_active_low_button0', False)   # These buttons are active high
@@ -1583,6 +1635,13 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         self._config_zl30266()
         if self._zl30266.initialised:
             self._zl30266.lock.release()
+
+    def leds_enable(self, enable=True):
+        self.set_pin_value('leds_enable', bool(enable))
+        self._logger.info('LOKI LEDs {}abled'.format('En' if enable else 'Dis'))
+
+    def leds_enabled(self):
+        return bool(self.get_pin_value('leds_enable'))
 
     def _config_bme280(self):
         try:
@@ -1899,13 +1958,23 @@ class DeviceHandler():
             # Grab the lock with the supplied settings
             result = self.lock.acquire(blocking=blocking, timeout=timeout)
 
-            # Allow the caller to execute their 'with'. 'result' is needed so that
-            # if the lock cannot be grabbed the user can handle it.
-            yield result
+            try:
+                # Allow the caller to execute their 'with'. 'result' is needed so that
+                # if the lock cannot be grabbed the user can handle it.
+                yield result
 
-            # Release the lock, if it was actually acquired
-            if result:
-                self.lock.release()
+            except:
+                # Pass through any exception
+                raise
+
+            finally:
+                # Even if there is an exception, release the lock so that it doesn't lock up
+                # the system for other attempted accesses to this device. This will only release
+                # the lock if it was actually gained in the first place.
+
+                # Release the lock, if it was actually acquired
+                if result:
+                    self.lock.release()
 
     def critical_error(self, message=''):
         # Mark the device not to be used, and record the error in log and paramtree status
@@ -1955,13 +2024,13 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
 
         # Gather settings for MAX5306 DAC
         self._max5306 = DeviceHandler(device_type_name='MAX5306')
-        self._max5306.vref = kwargs.get('max5306_reference', 2.048)
-        self._max5306.spidev = kwargs.get('max5306_spidev', (1, 1))
+        self._max5306.vref = float(kwargs.get('max5306_reference', 2.048))
+        self._max5306.spidev = tuple([int(x) for x in kwargs.get('max5306_spidev', "1,1").split(',')])
 
         # Gather settings for LTC2986
         self._ltc2986 = DeviceHandler(device_type_name='LTC2986')
-        self._ltc2986.spidev = kwargs.get('ltc2986_spidev', (1, 0))
-        self._ltc2986.rsense_ohms = kwargs.get('ltc2986_rsense_ohms', 2000)
+        self._ltc2986.spidev = tuple([int(x) for x in kwargs.get('ltc2986_spidev', "1,0").split(',')])
+        self._ltc2986.rsense_ohms = int(kwargs.get('ltc2986_rsense_ohms', 2000))
         self._ltc2986.pt100_channel = 6
 
         # Define the reset pin for the ltc2986 (requested below after super init)
@@ -1977,18 +2046,18 @@ class LokiCarrier_TEBF0808_MERCURY(LokiCarrierPowerMonitor, LokiCarrierEnvmonito
         # Gather settings for the PAC1921 power monitors
         self._pac1921_u3 = DeviceHandler(device_type_name='PAC1921')
         self._pac1921_u3.railname = 'VDDD_CNTRL'
-        self._pac1921_u3.di_gain = kwargs.get('pac1921_vdddcntrl_di_gain', 1)
-        self._pac1921_u3.dv_gain = kwargs.get('pac1921_vdddcntrl_dv_gain', 8)
+        self._pac1921_u3.di_gain = int(kwargs.get('pac1921_vdddcntrl_di_gain', 1))
+        self._pac1921_u3.dv_gain = int(kwargs.get('pac1921_vdddcntrl_dv_gain', 8))
 
         self._pac1921_u2 = DeviceHandler(device_type_name='PAC1921')
         self._pac1921_u2.railname = 'VDDD'
-        self._pac1921_u2.di_gain = kwargs.get('pac1921_vddd_di_gain', 1)
-        self._pac1921_u2.dv_gain = kwargs.get('pac1921_vddd_dv_gain', 1)
+        self._pac1921_u2.di_gain = int(kwargs.get('pac1921_vddd_di_gain', 1))
+        self._pac1921_u2.dv_gain = int(kwargs.get('pac1921_vddd_dv_gain', 1))
 
         self._pac1921_u1 = DeviceHandler(device_type_name='PAC1921')
         self._pac1921_u1.railname = 'VDDA'
-        self._pac1921_u1.di_gain = kwargs.get('pac1921_vdda_di_gain', 1)
-        self._pac1921_u1.dv_gain = kwargs.get('pac1921_vdda_dv_gain', 1)
+        self._pac1921_u1.di_gain = int(kwargs.get('pac1921_vdda_di_gain', 1))
+        self._pac1921_u1.dv_gain = int(kwargs.get('pac1921_vdda_dv_gain', 1))
 
         self._pac1921_array = [self._pac1921_u3, self._pac1921_u2, self._pac1921_u1]
 

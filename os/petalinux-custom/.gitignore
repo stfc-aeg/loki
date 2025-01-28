@@ -13,7 +13,4 @@ pre-built/linux/
 /project-spec/hw-description/*
 /Makefile
 /project-spec/configs/config
-/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/application-name
-/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/application-version
-/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/version
-/project-spec/meta-user/recipes-apps/loki/files/lokiinfo/platform
+/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi

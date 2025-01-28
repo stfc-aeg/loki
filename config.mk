@@ -8,6 +8,24 @@
 #
 # This file will generate the main LOKI project Makefile from Makefile.in
 
+# Process the LOKI environment files, only if the environment directory has been set
+ifneq (${LOKI_ENV_DIR}, )
+$(info LOKI will search for environment files in ${LOKI_ENV_DIR})
+ifneq (,$(wildcard ${LOKI_ENV_DIR}/machine.env))
+$(info Found machine environment file)
+include ${LOKI_ENV_DIR}/machine.env
+export
+endif
+ifneq (,$(wildcard ${LOKI_ENV_DIR}/repo.env))
+$(info Found repo environment file)
+include ${LOKI_ENV_DIR}/repo.env
+export
+endif
+endif
+ifeq (${LOKI_ENV_DIR}, )
+$(error Did not specify LOKI_ENV_DIR, this is required to locate the machine.env and repo.env files)
+endif
+
 CONF_OUTPUTS= Makefile
 CONF_INPUTS= Makefile.in configure
 
@@ -19,7 +37,7 @@ CONF_HW_INTPUTS= design/Makefile.in design/design_basic_settings.sh.in
 CONF_SW_OUTPUTS= 
 CONF_SW_INPUTS= 
 
-CONF_OS_OUTPUTS= os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config os/petalinux-custom/project-spec/configs/config os/petalinux-custom/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi
+CONF_OS_OUTPUTS= os/petalinux-custom/Makefile os/petalinux-custom/project-spec/configs/config os/petalinux-custom/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi
 CONF_OS_INPUTS= os/petalinux-custom/Makefile.in os/petalinux-custom/project-spec/configs/config.in os/petalinux-custom/project-spec/configs/config.in os/petalinux-custom/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi.in
 
 # Make these paths relative to the calling makefile's location
@@ -35,6 +53,8 @@ CONF_OS_INPUTS_PF=$(addprefix ${LOKI_DIR}, ${CONF_OS_INPUTS})
 $(info autoconf configuring LOKI project at $$LOKI_DIR: ${LOKI_DIR})
 $(info $$AUTOCONF_PARAMS are ${AUTOCONF_PARAMS})
 $(info $$CONF_HW_OUTPUTS are ${CONF_HW_OUTPUTS_PF})
+$(info $$CONF_SW_OUTPUTS are ${CONF_SW_OUTPUTS_PF})
+$(info $$CONF_OS_OUTPUTS are ${CONF_OS_OUTPUTS_PF})
 
 .PHONY: loki-configure-hw loki-configure-sw loki-configure-os loki-configure-help
 
@@ -49,7 +69,7 @@ ${AUTOCONF_OUTPUT}: ${AUTOCONF_INPUT_AC}
 # the autoconf will rebuild that target file and will not rebuild the unrelated
 # outputs of the ./configure, preventing unnecessary rebuilding of other parts
 # of the project that haven't actually been reconfigured.
-$(CONF_HW_OUTPUTS_PF) ${CONF_SW_OUTPUTS_PF} ${CONF_OS_OUTPUTS_PF} $(CONF_OUTPUTS_PF): $(CONF_HW_INPUTS_PF) ${CONF_SW_INPUTS_PF} ${CONF_OS_INPUTS_PF} $(CONF_INPUTS_PF)
+$(CONF_HW_OUTPUTS_PF) ${CONF_SW_OUTPUTS_PF} ${CONF_OS_OUTPUTS_PF} $(CONF_OUTPUTS_PF): $(CONF_HW_INPUTS_PF) ${CONF_SW_INPUTS_PF} ${CONF_OS_INPUTS_PF} $(CONF_INPUTS_PF) ${LOKI_DIR}/share/config.site
 	echo "Configuring LOKI with parameters: ${AUTOCONF_PARAMS}"
 	# Generate the configure
 	cd ${LOKI_DIR}; autoconf configure.ac

@@ -2,25 +2,64 @@
 
 SHELL := /bin/bash
 
-.PHONY: all mostlyclean clean hardware software os project
+.PHONY: all mostlyclean clean hardware software os project constraints
 
 LOKI_ROOT_ABS = @abs_top_builddir@
 HWSW_PATH=${LOKI_ROOT_ABS}/design/
 OS_PATH=@os_path@
 
+# By default, build these using the internal project. If they are overridden,
+# they must be supplied.
+PLATFORM = @platform_module_shortname@
+HW_EXPORT_DIR_INTERNAL = ${HWSW_PATH}/prebuilt/hardware/${PLATFORM}/
+HW_EXPORT_DIR ?= ${HW_EXPORT_DIR_INTERNAL}
+SW_EXPORT_DIR_INTERNAL = ${HWSW_PATH}/prebuilt/software/${PLATFORM}/
+SW_EXPORT_DIR ?= ${HWSW_PATH}/prebuilt/software/${PLATFORM}/
+XSA_FILENAME ?= design_${PLATFORM}.xsa
+FSBL_OUTPUT_INTERNAL = ${SW_EXPORT_DIR_INTERNAL}/fsbl.elf
+FSBL_OUTPUT = ${SW_EXPORT_DIR}/fsbl.elf
+PMUFW_OUTPUT_INTERNAL = ${SW_EXPORT_DIR_INTERNAL}/pmufw.elf
+PMUFW_OUTPUT = ${SW_EXPORT_DIR}/pmufw.elf
+XSA_OUTPUT_INTERNAL = ${HW_EXPORT_DIR_INTERNAL}/${XSA_FILENAME}
+XSA_OUTPUT = ${HW_EXPORT_DIR}/${XSA_FILENAME}
+$(info Using hardware from ${XSA_OUTPUT} and software from ${PMUFW_OUTPUT} and ${FSBL_OUTPUT})
+
 all: os
 
-project:
+# Constraints source directory supplied by the application repo will copy all .xsa files
+CONSTRAINTS_SOURCE_DIR ?= .
+CONSTRAINTS_TARGET_DIR = ${HWSW_PATH}/constraints/${PLATFORM}/
+CONSTRAINTS_FILENAMES = $(notdir $(wildcard ${CONSTRAINTS_SOURCE_DIR}/*.xdc))
+CONSTRAINTS_SOURCES = $(addprefix ${CONSTRAINTS_SOURCE_DIR}/, ${CONSTRAINTS_FILENAMES})
+CONSTRAINTS_TARGETS = $(addprefix ${CONSTRAINTS_TARGET_DIR}/, ${CONSTRAINTS_FILENAMES})
+$(info Application constraints files found: ${CONSTRAINTS_FILENAMES})
+
+${CONSTRAINTS_TARGETS}: ${CONSTRAINTS_SOURCES}
+	# Copy Files over
+	cp ${CONSTRAINTS_SOURCE_DIR}/*.xdc ${CONSTRAINTS_TARGET_DIR}/
+	$(info copied constraints ${CONSTRAINTS_FILENAMES} from ${CONSTRAINTS_SOURCE_DIR})
+
+constraints: ${CONSTRAINTS_TARGETS} ;
+
+project: ${CONSTRAINTS_TARGETS}
 	$(MAKE) -C ${HWSW_PATH} project
 
-hardware:
+#How to build the internal hardware
+${XSA_OUTPUT_INTERNAL}: constraints
+	$(info Building in-project XSA to ${XSA_OUTPUT})
 	$(MAKE) -C ${HWSW_PATH} hardware
 
-software: hardware
+#How to build the internal software
+${FSBL_OUTPUT_INTERNAL} ${PMUFW_OUTPUT_INTERNAL}: ${XSA_OUTPUT_INTERNAL}
+	$(info Building in-project FSBL and PMUFW)
 	$(MAKE) -C ${HWSW_PATH} software
 
+hardware: ${XSA_OUTPUT} ;
+
+software: hardware ${FSBL_OUTPUT} ${PMUFW_OUTPUT} ;
+
 os: hardware software
-	$(MAKE) -C ${OS_PATH} all
+	$(MAKE) -C ${OS_PATH} all HW_EXPORT_DIR=${HW_EXPORT_DIR} SW_EXPORT_DIR=${SW_EXPORT_DIR} HW_XSA_FILENAME=${XSA_FILENAME}
 
 mostlyclean:
 	$(info mostlycleaning HW/SW files)
@@ -43,7 +82,7 @@ distclean:
 	$(MAKE) -C ${OS_PATH} distclean
 
 	$(warning Attempting to remove any untracked files from loki)
-	git clean -x --force --exclude pre-built .
+	git clean -x --force --exclude pre-built --exclude loki-recovery  .
 
 clobber:
 	# Command sub-makefiles to clobber their directories, then manually delete

@@ -62,9 +62,9 @@ ${VIVADO_LIVE_DESIGN}: | ${VIVADO_PROJ_PATH}
 # Build hardware if TCL design changes or if intermiediate block design
 # has been updated. However, block design should be extracted so that
 # changes can be committed with 'export_tcl'
-HARDWARE_DEPS = $(shell find ./block_design/)
-HARDWARE_DEPS := $(shell find ./constraints/)
-HARDWARE_DEPS := ${VIVADO_LIVE_DESIGN}
+HARDWARE_DEPS = $(shell find -L ./block_design -type f)
+HARDWARE_DEPS := ${HARDWARE_DEPS} $(shell find -L ./constraints -type f)
+HARDWARE_DEPS := ${HARDWARE_DEPS} ${VIVADO_LIVE_DESIGN}
 ${HARDWARE_OUTPUT}: ${HARDWARE_DEPS} | ${VIVADO_PROJ_PATH}
 	$(info Modified hardware synth dependencies: $?)
 	LOKI_AUTO_BUILD="HW"; \

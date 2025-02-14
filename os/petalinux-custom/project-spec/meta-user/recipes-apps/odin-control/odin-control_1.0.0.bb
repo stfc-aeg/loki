@@ -1,10 +1,10 @@
 SUMMARY = "This is a recipe to build odin-control on PetaLinux"
 
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
-RDEPENDS_${PN} += "python3-tornado (>=4.3)"
-RDEPENDS_${PN} += "python3-setuptools"
-RDEPENDS_${PN} += "python3-fcntl"
-RDEPENDS_${PN} += "python3-future"
+RDEPENDS:${PN} += "python3-tornado (>=4.3)"
+RDEPENDS:${PN} += "python3-setuptools"
+RDEPENDS:${PN} += "python3-fcntl"
+RDEPENDS:${PN} += "python3-future"
 
 SRC_URI = "git://github.com/odin-detector/odin-control.git;tag=${PV} \
 		file://odin-control-fix-non-required-dependencies.patch"

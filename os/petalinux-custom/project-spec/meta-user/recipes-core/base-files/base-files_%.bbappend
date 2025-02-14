@@ -1,7 +1,7 @@
 DESCRIPTION = "Allows to customize the fstab"
 PR = "r0"
 
-do_install_append(){
+do_install:append(){
     # Create the mountpoint
     mkdir ${D}/mnt/flashmtd1
 

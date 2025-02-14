@@ -1,6 +1,6 @@
 SUMMARY = "Installer for generic LOKI setup script, which facilitates the configuration of a non-volatile debug setup."
 
-RDEPENDS_${PN} += "loki-config"
+RDEPENDS:${PN} += "loki-config"
 
 # Repo URL.
 SRC_URI = "file://loki-config.sh \
@@ -31,7 +31,7 @@ CONTROLHOST_SCRIPT_RUNLEVEL = "5"
 SYSID_SCRIPT_NAME = "loki-get-system-id.sh"
 SYSID_SCRIPT_RUNLEVEL = "5"
 
-do_install_append() {
+do_install:append() {
     # Create the init.d directory for startup scripts
 	install -d ${D}${base_prefix}/etc/init.d
 
@@ -58,6 +58,6 @@ do_install_append() {
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
-FILES_${PN} += "${base_prefix}/etc/init.d/*"
-FILES_${PN} += "${base_prefix}/opt/loki-update/"
-FILES_${PN} += "${base_prefix}/etc/conf.d/loki-config/*"
+FILES:${PN} += "${base_prefix}/etc/init.d/*"
+FILES:${PN} += "${base_prefix}/opt/loki-update/"
+FILES:${PN} += "${base_prefix}/etc/conf.d/loki-config/*"

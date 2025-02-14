@@ -1,14 +1,14 @@
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
-RDEPENDS_${PN} += "python3-setuptools"
-RDEPENDS_${PN} += "odin-control (>=1.3.0)"
-RDEPENDS_${PN} += "odin-sequencer (=0.2.0)"
-RDEPENDS_${PN} += "odin-devices (=1.1.0)"
-RDEPENDS_${PN} += "python3-msgpack"
-RDEPENDS_${PN} += "python3-matplotlib"
-RDEPENDS_${PN} += "python3-pillow"
-RDEPENDS_${PN} += "loki-config"
-RDEPENDS_${PN} += "loki-user"
-RDEPENDS_${PN} += "python-loki-adapter"
+RDEPENDS:${PN} += "python3-setuptools"
+RDEPENDS:${PN} += "odin-control (>=1.3.0)"
+RDEPENDS:${PN} += "odin-sequencer (=0.2.0)"
+RDEPENDS:${PN} += "odin-devices (=1.1.0)"
+RDEPENDS:${PN} += "python3-msgpack"
+RDEPENDS:${PN} += "python3-matplotlib"
+RDEPENDS:${PN} += "python3-pillow"
+RDEPENDS:${PN} += "loki-config"
+RDEPENDS:${PN} += "loki-user"
+RDEPENDS:${PN} += "python-loki-adapter"
 DEPENDS += "loki-user"
 
 
@@ -27,7 +27,7 @@ LOKI_USERNAME = "loki"
 
 inherit setuptools3
 
-do_configure_prepend() {
+do_configure:prepend() {
 	cd ${S}/${DISTUTILS_SETUP_PATH}
 	bbdebug 2 "Current working directory (pwd):" ${pwd}
 	bbdebug 2 "Build Directory:" ${B}
@@ -36,7 +36,7 @@ do_configure_prepend() {
 	bbdebug 2 "setup.py location:" ${S}/${DISTUTILS_SETUP_PATH}
 }
 
-do_compile_prepend() {
+do_compile:prepend() {
 	cd ${S}/${DISTUTILS_SETUP_PATH}
 	bbdebug 2 "Current working directory (pwd):" ${pwd}
 	bbdebug 2 "Build Directory:" ${B}
@@ -45,7 +45,7 @@ do_compile_prepend() {
 	bbdebug 2 "setup.py location:" ${S}/${DISTUTILS_SETUP_PATH}
 }
 
-do_install_prepend() {
+do_install:prepend() {
 	# Change directory to setup.py location when not in repository root
 	cd ${S}/${DISTUTILS_SETUP_PATH}
 }
@@ -81,7 +81,7 @@ loki_mkdir() {
     install -d ${D}${base_prefix}${LOKI_RESOURCES_INSTALL_PATH}/$1
 }
 
-do_install_append() {
+do_install:append() {
 	# With the python module installed, the static resources need to be installed into rootfs
 
 	# Create the base install directory

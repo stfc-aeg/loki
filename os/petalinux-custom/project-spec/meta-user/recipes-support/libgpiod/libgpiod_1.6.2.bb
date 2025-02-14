@@ -16,6 +16,6 @@ PACKAGECONFIG[python3] = "--enable-bindings-python,--disable-bindings-python,pyt
 inherit python3native
 
 PACKAGES =+ "${PN}-python"
-FILES_${PN}-python = "${PYTHON_SITEPACKAGES_DIR}"
+FILES:${PN}-python = "${PYTHON_SITEPACKAGES_DIR}"
 RRECOMMENDS_PYTHON = "${@bb.utils.contains('PACKAGECONFIG', 'python3', '${PN}-python', '',d)}"
-RRECOMMENDS_${PN}-python += "${RRECOMMENDS_PYTHON}"
+RRECOMMENDS:${PN}-python += "${RRECOMMENDS_PYTHON}"

@@ -1,4 +1,4 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 SRC_URI += "file://system-user.dtsi"
 SRC_URI += "file://loki-info.dtsi"
@@ -9,7 +9,7 @@ python () {
 }
 
 export PETALINUX
-do_configure_append () {
+do_configure:append () {
 	script="${PETALINUX}/etc/hsm/scripts/petalinux_hsm_bridge.tcl"
 	data=${PETALINUX}/etc/hsm/data/
 	eval xsct -sdx -nodisp ${script} -c ${WORKDIR}/config \

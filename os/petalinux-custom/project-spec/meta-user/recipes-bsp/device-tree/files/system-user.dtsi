@@ -26,14 +26,14 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 
 
 &dwc3_0 {
-    status = "okay";
+    //status = "okay";
     dr_mode = "host";
-    snps,usb3_lpm_capable;
-    snps,dis_u3_susphy_quirk;
-    snps,dis_u2_susphy_quirk;
-    phy-names = "usb2-phy","usb3-phy";
-    phys = <&lane1 4 0 2 100000000>;
-    maximum-speed = "super-speed";
+    //snps,usb3_lpm_capable;
+    //snps,dis_u3_susphy_quirk;
+    //snps,dis_u2_susphy_quirk;
+    //phy-names = "usb2-phy","usb3-phy";
+    //phys = <&lane1 4 0 2 100000000>;
+    //maximum-speed = "super-speed";
 };
 
 /* ETH PHY */

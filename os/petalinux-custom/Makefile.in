@@ -10,7 +10,7 @@ SW_EXPORT_DIR ?= ${LOKI_ROOT_ABS}/design/prebuilt/software/${PLATFORM}
 SW_FSBL_FILENAME ?= fsbl.elf
 SW_PMUFW_FILENAME ?= pmufw.elf
 PL_ROOT = .
-OUTPUT_DIR = ${PL_ROOT}/images/linux
+OUTPUT_DIR = ${PL_ROOT}/build/images/linux
 
 DESIGN_BITSTREAM = ${PL_ROOT}/${HW_XSA_FILENAME}
 PL_PROJ_BITSTREAM = ${PL_ROOT}/project-spec/hw-description/system.xsa

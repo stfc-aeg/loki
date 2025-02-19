@@ -2,11 +2,11 @@ SUMMARY = "This is a recipe to build odin-control on PetaLinux"
 
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
 RDEPENDS:${PN} += "python3-setuptools"
-RDEPENDS:${PN} += "python3-tornado (<6.0)"
+RDEPENDS:${PN} += "python3-tornado (>=4.3)"
 RDEPENDS:${PN} += "python3-fcntl"
 RDEPENDS:${PN} += "python3-future"
-RDEPENDS:${PN} += "python3-pyzmq (>=17.0)"
-RDEPENDS:${PN} += "python3-psutil"
+RDEPENDS:${PN} += "python3-pyzmq (>=17.1.0)"
+RDEPENDS:${PN} += "python3-psutil (>=5.0)"
 
 
 # To build to a tag, update the tag here as well as the commit hash below.

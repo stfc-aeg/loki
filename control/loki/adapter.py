@@ -771,7 +771,8 @@ class LokiCarrier(ABC):
             # Use default list
             disk_info_directories = [
                 '/mnt/flashmtd1',
-                '/mnt/sd-mmcblk1p1',
+                '/mnt/sd',
+                '/mnt/emmc',
                 '/opt/loki-detector/exports',
             ]
         else:

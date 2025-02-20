@@ -9,7 +9,7 @@
 
 ### END INIT INFO
 
-LOKI_CONFIG_DIR=/mnt/sd-mmcblk0p1/loki-config
+LOKI_CONFIG_DIR=/mnt/emmc/loki-config
 
 # Settings from this file will be sourced, and will override default values in this file
 REMOTE_CONFIGURATION_LOCATION=${LOKI_CONFIG_DIR}/loki-host.conf

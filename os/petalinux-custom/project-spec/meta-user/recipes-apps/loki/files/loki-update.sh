@@ -9,8 +9,8 @@ ARGS=$(getopt -o t:p:df:hi: --long target:,source-path:,source-dev:,source-file:
 eval set -- "$ARGS"
 
 # Hard-coded locations used throughout the script
-EMMC_MOUNTPOINT=/mnt/sd-mmcblk0p1
-SD_MOUNTPOINT=/mnt/sd-mmcblk1p1
+EMMC_MOUNTPOINT=/mnt/emmc
+SD_MOUNTPOINT=/mnt/sd
 BACKUP_PATH=$EMMC_MOUNTPOINT/backup
 
 # Defaults

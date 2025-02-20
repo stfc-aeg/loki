@@ -13,7 +13,7 @@ EMMC_DEVICE_NAME=mmcblk0
 EMMC_PARTITION_NAME=${EMMC_DEVICE_NAME}p1
 EMMC_ROOT_DEV=/dev/${EMMC_DEVICE_NAME}
 EMMC_PARTITION_LOC=/dev/${EMMC_PARTITION_NAME}
-EMMC_AUTOMOUNT_LOC=/mnt/sd-${EMMC_PARTITION_NAME}
+EMMC_AUTOMOUNT_LOC=/mnt/emmc
 
 function find_device {
         # Check if the eMMC device has been created at all

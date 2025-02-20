@@ -6,5 +6,5 @@ do_install:append(){
     mkdir ${D}/mnt/flashmtd1
 
     # Add fstab entry for jffs2 filesystem mount for mtd flash 'bootenv' partition
-    echo "/dev/mtdblock1       /mnt/flashmtd1          jffs2           rw      0  0" >> ${D}${sysconfdir}/fstab
+    echo "/dev/mtdblock1       /mnt/flashmtd1          jffs2           rw,nofail      0  0" >> ${D}${sysconfdir}/fstab
 }

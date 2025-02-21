@@ -1,0 +1,1 @@
+loki ALL=(ALL) NOPASSWD: /usr/bin/loki-update.sh --source-path /home/loki/ --target emmc

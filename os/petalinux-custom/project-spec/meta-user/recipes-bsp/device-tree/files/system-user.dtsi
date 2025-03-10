@@ -39,7 +39,10 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 /* ETH PHY */
 
 &gem3 {
+    /delete-property/ local-mac-address;
 	phy-handle = <&phy0>;
+    nvmem-cells = <&eth0_addr>;
+    nvmem-cells-names = "mac-address";
 	phy0: phy0@1 {
 		device_type = "ethernet-phy";
 		reg = <0>;
@@ -69,46 +72,52 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
         #address-cells = <1>;
         #size-cells = <0>;
         reg = <0x73>;
-        i2c@0 { // MCLK TEBF0808 SI5338A, 570FBB000290DG_unassembled
+        i2c@0 { // Application External bus 1
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <0>;
         };
-        i2c@1 { // SFP TEBF0808 PCF8574DWR
+        i2c@1 { // Application External Bus 2
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <1>;
         };
-        i2c@2 { // PCIe
+        i2c@2 { // Application Management Bus
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <2>;
         };
-        i2c@3 { // SFP1 TEBF0808
+        i2c@3 { // NC
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <3>;
         };
-        i2c@4 {// SFP2 TEBF0808
+        i2c@4 {// PLL LOOP (+ SoM EEPROM)
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <4>;
-        };
-        i2c@5 { // TEBF0808 EEPROM
-            #address-cells = <1>;
-            #size-cells = <0>;
-            reg = <5>;
             eeprom: eeprom@50 {
 	            compatible = "atmel,24c08";
 	            reg = <0x50>;
+
+                #address-cells = <1>;
+                #size-cells = <1>;
+                eth0_addr: eth-mac-addr@FA {
+                    reg = <0xFA 0x06>;
+                };
 	          };
         };
-        i2c@6 { // TEBF0808 FMC  
+        i2c@5 { // Debug header 1
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <5>;
+        };
+        i2c@6 { // Debug header 2
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <6>;
         };
-        i2c@7 { // TEBF0808 USB HUB
+        i2c@7 { // NC
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <7>;
@@ -120,48 +129,42 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
         #size-cells = <0>;
         reg = <0x72>;
         i2c-mux-idle-disconnect;
-        i2c@0 { // TEBF0808 PMOD P1
+        i2c@0 { // Application device control (on LOKI)
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <0>;
         };
-        i2c@1 { // i2c Audio Codec
+        i2c@1 { // Application power management bus
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <1>;
-			/*
-            adau1761: adau1761@38 {
-                compatible = "adi,adau1761";
-                reg = <0x38>;
-            };
-			*/
         };
-        i2c@2 { // TEBF0808 Firefly A
+        i2c@2 { // NC
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <2>;
         };
-        i2c@3 { // TEBF0808 Firefly B
+        i2c@3 { // NC
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <3>;
         };
-        i2c@4 { //Module PLL Si5338 or SI5345
+        i2c@4 { // NC
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <4>;
         };
-        i2c@5 { //TEBF0808 CPLD
+        i2c@5 { // LOKI Carrier EEPROM
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <5>;
         };
-        i2c@6 { //TEBF0808 Firefly PCF8574DWR
+        i2c@6 { // NC
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <6>;
         };
-        i2c@7 { // TEBF0808 PMOD P3
+        i2c@7 { // NC
             #address-cells = <1>;
             #size-cells = <0>;
             reg = <7>;

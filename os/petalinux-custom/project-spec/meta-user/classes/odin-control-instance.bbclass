@@ -1,5 +1,4 @@
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
-RDEPENDS_${PN} += "python3-setuptools"
 RDEPENDS_${PN} += "odin-control (>=1.3.0)"
 RDEPENDS_${PN} += "odin-sequencer (=0.2.0)"
 RDEPENDS_${PN} += "odin-devices (=1.1.0)"
@@ -87,7 +86,4 @@ do_install_append() {
     loki_mkdir 'outputs'
     loki_chown 'outputs'
 
-    # Application-specific recipe could extend this function, and make use of the util
-    # functions above to install / configure additional directories within LOKI's
-    # resource path.
 }

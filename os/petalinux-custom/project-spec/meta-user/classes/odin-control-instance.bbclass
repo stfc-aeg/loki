@@ -25,29 +25,18 @@ LOKI_STATIC_DESTINATION = "static"
 
 LOKI_USERNAME = "loki"
 
-inherit setuptools3
-
 do_configure_prepend() {
-	cd ${S}/${DISTUTILS_SETUP_PATH}
 	bbdebug 2 "Current working directory (pwd):" ${pwd}
 	bbdebug 2 "Build Directory:" ${B}
 	bbdebug 2 "WORKDIR Directory:" ${WORKDIR}
 	bbdebug 2 "Source Directory:" ${S}
-	bbdebug 2 "setup.py location:" ${S}/${DISTUTILS_SETUP_PATH}
 }
 
 do_compile_prepend() {
-	cd ${S}/${DISTUTILS_SETUP_PATH}
 	bbdebug 2 "Current working directory (pwd):" ${pwd}
 	bbdebug 2 "Build Directory:" ${B}
 	bbdebug 2 "WORKDIR Directory:" ${WORKDIR}
 	bbdebug 2 "Source Directory:" ${S}
-	bbdebug 2 "setup.py location:" ${S}/${DISTUTILS_SETUP_PATH}
-}
-
-do_install_prepend() {
-	# Change directory to setup.py location when not in repository root
-	cd ${S}/${DISTUTILS_SETUP_PATH}
 }
 
 copy_resource_protected() {

@@ -32,4 +32,4 @@ LICENSE = "CLOSED"
 REPO_CONFIG_PATH = "${LOKI_UPDATE_REPO_CLONED_BASE}/test/config/loki-update.cfg"
 REPO_STATIC_PATH = "${REACT_SOURCE_PATH}"
 
-FILES_${PN} += "${base_prefix}/opt/loki-detector/*"
+FILES_${PN} += "${base_prefix}/opt/loki-detector/${PN}/*"

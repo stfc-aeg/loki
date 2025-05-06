@@ -3,12 +3,28 @@ EXECUTABLE_NAME="odin_control"
 PIDFILE="/var/run/detector.pid"
 INSTANCE_CONFIG_FILE_NAME="${2}-config.conf"
 
+# Source the defaults file
 source $CONFIG_DEFAULT_LOCATION
+
+# Source the override file
+source "/etc/conf.d/loki-config/${INSTANCE_CONFIG_FILE_NAME}"
+
+# Activate Python Virtual Environment
+if [ "$conf_ODIN_DETECTOR_PYVENV_ENABLE" = "1" ]; then
+    echo "Using Python virtual environment at $conf_ODIN_DETECTOR_PYVENV_PATH"
+    source "${conf_ODIN_DETECTOR_PYVENV_PATH}/bin/activate"
+
+    pip list
+else
+    echo "Using default Python environment"
+fi
+echo "Odin Server Binary Used: $(which odin_server)"
+
+#-------------------------------------------------------------------------------------------------------
+# Service Control
 
 function service_start {
     echo "Starting LOKI detector"
-
-    source "/etc/conf.d/loki-config/${INSTANCE_CONFIG_FILE_NAME}"
 
     echo "Executing from $conf_ODIN_DETECTOR_ROOT_LOC with config $conf_ODIN_DETECTOR_CONFIG_LOC"
     cd $conf_ODIN_DETECTOR_ROOT_LOC

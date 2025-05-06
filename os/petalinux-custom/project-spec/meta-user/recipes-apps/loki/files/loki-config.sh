@@ -104,15 +104,3 @@ if [ "$conf_INITIAL_SETUP_SCRIPT_ENABLE" = "1" ]; then
 else
     echo "No initial setup script in use"
 fi
-
-#--------------------------------------------------------------------------------------------------------
-# Activate Python Virtual Environment
-if [ "$conf_ODIN_DETECTOR_PYVENV_ENABLE" = "1" ]; then
-    echo "Using Python virtual environment at $conf_ODIN_DETECTOR_PYVENV_PATH"
-    source "${conf_ODIN_DETECTOR_PYVENV_PATH}/bin/activate"
-
-    pip list
-else
-    echo "Using default Python environment"
-fi
-echo "Odin Server Binary Used: $(which odin_server)"

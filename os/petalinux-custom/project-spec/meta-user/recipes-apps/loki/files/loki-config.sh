@@ -14,13 +14,10 @@ REMOTE_CONFIGURATION_LOCATION="/mnt/sd-mmcblk0p1/loki-config/"
 
 REMOTE_CONFIGURATION_FILENAME="loki-config.conf"
 CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
-LOKI_USERNAME="loki"
 SSHCONFDIR_EMMC="/mnt/sd-mmcblk0p1/.ssh"
 SSHCONFDIR_IMG="/home/${LOKI_USERNAME}/.ssh"
 STATIC_IP_INTERFACE_NAME="eth0"
 CONFIG_VERSION=1
-EXECUTABLE_NAME="odin_control"
-PIDFILE="/var/run/detector.pid"
 
 # Determine if the remote configuration can be found. If not, attempt to copy the default config
 # to the remote location, and otherwise start using the default config
@@ -119,85 +116,3 @@ else
     echo "Using default Python environment"
 fi
 echo "Odin Server Binary Used: $(which odin_server)"
-
-#-------------------------------------------------------------------------------------------------------
-# Service Control
-
-function service_start {
-    echo "Starting LOKI detector"
-
-    echo "Executing from $conf_ODIN_DETECTOR_ROOT_LOC with config $conf_ODIN_DETECTOR_CONFIG_LOC"
-    cd $conf_ODIN_DETECTOR_ROOT_LOC
-
-    echo "Logging to $conf_ODIN_DETECTOR_LOGDESTINATION"
-    # Create the default logging location directory with permission for the LOKI user to write.
-    mkdir -p /var/log/loki
-    chown $LOKI_USERNAME /var/log/loki
-
-    # Remove the old PID file
-    rm -rf $PIDFILE
-
-    set -x
-    start-stop-daemon -S \
-        -b \
-        -p $PIDFILE -m \
-        -c $LOKI_USERNAME \
-        -x "/bin/bash" \
-        -- -c "exec $EXECUTABLE_NAME \
-	--logging=$conf_ODIN_DETECTOR_LOGLEVEL \
-	--log_file_prefix=$conf_ODIN_DETECTOR_LOGDESTINATION \
-	--config=$conf_ODIN_DETECTOR_CONFIG_LOC \
-    --log_rotate_mode=size \
-    --log_file_max_size=$conf_ODIN_DETECTOR_LOG_FILE_SIZE \
-    --log_file_num_backups=$conf_ODIN_DETECTOR_LOG_FILE_NUM_BACKUPS \
-    $conf_ODIN_DETECTOR_ADDITIONAL_ARGUMENTS \
-	2>> $conf_ODIN_DETECTOR_STDERRDESTINATION"
-    set +x
-
-    echo "Launch complete"
-}
-
-function service_stop {
-    echo "Stopping LOKI detector"
-
-	if [ -f $PIDFILE ]; then
-
-        start-stop-daemon -K \
-            -p $PIDFILE
-
-        while [ -d /proc/$(cat $PIDFILE) ]; do
-            sleep 1
-            echo "waiting..."
-        done
-
-        rm -rf $PIDFILE
-
-        echo "Service stopped"
-    else
-        echo "Service was not running"
-    fi
-}
-
-echo "Called with run argument ${1}"
-case "$1" in
-    start)
-        service_start
-        ;;
-    stop)
-        service_stop
-        ;;
-    restart|force-reload)
-        service_stop
-        service_start
-        ;;
-    *)
-        N=/etc/init.d/$NAME
-        echo "Usage: $N {start|stop|restart|force-reload}" >&2
-        ;;
-esac
-
-# Deactivate python virtual environment if currently in one
-if [[ "$VIRTUAL_ENV" != "" ]]
-then
-    deactivate
-fi

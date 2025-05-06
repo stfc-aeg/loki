@@ -22,6 +22,7 @@ PV = "0.0+git${SRCPV}"
 
 SRC_URI = "git://git@github.com/stfc-aeg/loki-update.git;protocol=ssh;branch=main \
            https://github.com/stfc-aeg/loki-update/releases/download/${REACT_UI_TAG}/build.zip;subdir=${REACT_SOURCE_PATH};name=react-build-zip \
+           file://loki-update-config.conf \
            "
 
 # Checksum specifically for the react UI
@@ -32,4 +33,10 @@ LICENSE = "CLOSED"
 REPO_CONFIG_PATH = "${LOKI_UPDATE_REPO_CLONED_BASE}/test/config/loki-update.cfg"
 REPO_STATIC_PATH = "${REACT_SOURCE_PATH}"
 
+do_install_append() {
+    install -d ${D}${base_prefix}/etc/conf.d/loki-config
+    install -m 0644 '${WORKDIR}/loki-update-config.conf' '${D}${base_prefix}/etc/conf.d/loki-config/loki-update-config.conf'
+}
+
 FILES_${PN} += "${base_prefix}/opt/loki-detector/${PN}/*"
+FILES_${PN} += "${base_prefix}/etc/conf.d/loki-config/*"

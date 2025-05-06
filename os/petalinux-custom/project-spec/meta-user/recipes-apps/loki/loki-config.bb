@@ -8,6 +8,7 @@ SRC_URI = "file://loki-config.sh \
     file://loki-connect-control-host.sh \
     file://loki-get-system-id.sh \
     file://config-default.conf \
+    file://odin-control-instance.sh \
     "
 
 # This has to be in the format expected in Yocto's license list...
@@ -30,6 +31,9 @@ CONTROLHOST_SCRIPT_RUNLEVEL = "5"
 # Start-up script to determine the board-unique System ID, and store it in /etc/loki/system-id
 SYSID_SCRIPT_NAME = "loki-get-system-id.sh"
 SYSID_SCRIPT_RUNLEVEL = "5"
+
+# Script to start odin-control instances
+ODIN_CONTROL_INSTANCE_SCRIPT_NAME = "odin-control-instance.sh"
 
 do_install_append() {
     # Create the init.d directory for startup scripts
@@ -55,9 +59,14 @@ do_install_append() {
 
     # Create an empty directory to stage LOKI image updates
     install -d ${D}${base_prefix}/opt/loki-update
+
+    # Install script for starting odin-control instances
+    install -d ${D}${base_prefix}/bin
+    install -m 0755 '${WORKDIR}/${ODIN_CONTROL_INSTANCE_SCRIPT_NAME}' '${D}${base_prefix}/bin/${ODIN_CONTROL_INSTANCE_SCRIPT_NAME}'
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
 FILES_${PN} += "${base_prefix}/etc/init.d/*"
 FILES_${PN} += "${base_prefix}/opt/loki-update/"
 FILES_${PN} += "${base_prefix}/etc/conf.d/loki-config/*"
+FILES_${PN} += "${base_prefix}/bin/${ODIN_CONTROL_INSTANCE_SCRIPT_NAME}"

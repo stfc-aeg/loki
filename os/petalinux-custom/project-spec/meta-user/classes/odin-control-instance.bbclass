@@ -15,7 +15,7 @@ DEPENDS += "loki-user"
 # the files packaged.
 DIRFILES = "1"
 
-LOKI_RESOURCES_INSTALL_PATH = "/opt/loki-detector/${PN}/"
+LOKI_RESOURCES_INSTALL_PATH = "/opt/loki-detector/instances/${PN}/"
 
 # Destinations relative to resource install path
 LOKI_CONFIG_DESTINATION = "config.cfg"

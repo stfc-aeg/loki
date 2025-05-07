@@ -38,5 +38,5 @@ do_install_append() {
     install -m 0644 '${WORKDIR}/loki-update-config.conf' '${D}${base_prefix}/etc/conf.d/loki-config/loki-update-config.conf'
 }
 
-FILES_${PN} += "${base_prefix}/opt/loki-detector/${PN}/*"
+FILES_${PN} += "${base_prefix}/opt/loki-detector/instances/${PN}/*"
 FILES_${PN} += "${base_prefix}/etc/conf.d/loki-config/*"

@@ -1,7 +1,10 @@
 CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
 EXECUTABLE_NAME="odin_control"
-PIDFILE="/var/run/detector.pid"
+PIDFILE_NAME="${2}.pid"
+PIDFILE_PATH="/var/run/"
+PIDFILE=$PIDFILE_PATH$PIDFILE_NAME
 INSTANCE_CONFIG_FILE_NAME="${2}-config.conf"
+INSTANCE_INSTALL_DIR="${2}"
 
 # Source the defaults file
 source $CONFIG_DEFAULT_LOCATION
@@ -26,8 +29,8 @@ echo "Odin Server Binary Used: $(which odin_server)"
 function service_start {
     echo "Starting LOKI detector"
 
-    echo "Executing from $conf_ODIN_DETECTOR_ROOT_LOC with config $conf_ODIN_DETECTOR_CONFIG_LOC"
-    cd $conf_ODIN_DETECTOR_ROOT_LOC
+    echo "Executing from $conf_ODIN_DETECTOR_ROOT_LOC$INSTANCE_INSTALL_DIR with config $conf_ODIN_DETECTOR_ROOT_LOC$INSTANCE_INSTALL_DIR/config.cfg"
+    cd $conf_ODIN_DETECTOR_ROOT_LOC$INSTANCE_INSTALL_DIR
 
     echo "Logging to $conf_ODIN_DETECTOR_LOGDESTINATION"
     # Create the default logging location directory with permission for the LOKI user to write.
@@ -45,8 +48,8 @@ function service_start {
         -x "/bin/bash" \
         -- -c "exec $EXECUTABLE_NAME \
 	--logging=$conf_ODIN_DETECTOR_LOGLEVEL \
-	--log_file_prefix=$conf_ODIN_DETECTOR_LOGDESTINATION \
-	--config=$conf_ODIN_DETECTOR_CONFIG_LOC \
+	--log_file_prefix=$conf_ODIN_DETECTOR_LOGDESTINATION$2 \
+	--config=$conf_ODIN_DETECTOR_ROOT_LOC$2/$INSTANCE_INSTALL_DIR/config.cfg \
     --log_rotate_mode=size \
     --log_file_max_size=$conf_ODIN_DETECTOR_LOG_FILE_SIZE \
     --log_file_num_backups=$conf_ODIN_DETECTOR_LOG_FILE_NUM_BACKUPS \

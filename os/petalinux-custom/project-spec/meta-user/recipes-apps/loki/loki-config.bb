@@ -9,6 +9,7 @@ SRC_URI = "file://loki-config.sh \
     file://loki-get-system-id.sh \
     file://config-default.conf \
     file://odin-control-instance.sh \
+    file://odin-control-instances-manager.sh \
     "
 
 # This has to be in the format expected in Yocto's license list...
@@ -35,6 +36,10 @@ SYSID_SCRIPT_RUNLEVEL = "5"
 # Script to start odin-control instances
 ODIN_CONTROL_INSTANCE_SCRIPT_NAME = "odin-control-instance.sh"
 
+# odin-control instances manager init script
+ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME = "odin-control-instances-manager.sh"
+ODIN_CONTROL_INSATNCES_MANAGER_SCRIPT_RUNLEVEL = "5"
+
 do_install_append() {
     # Create the init.d directory for startup scripts
 	install -d ${D}${base_prefix}/etc/init.d
@@ -44,7 +49,8 @@ do_install_append() {
 	install -m 0755 '${WORKDIR}/${EMMC_SCRIPT_NAME}' '${D}${base_prefix}/etc/init.d/${EMMC_SCRIPT_NAME}'
 	install -m 0755 '${WORKDIR}/${CONTROLHOST_SCRIPT_NAME}' '${D}${base_prefix}/etc/init.d/${CONTROLHOST_SCRIPT_NAME}'
 	install -m 0755 '${WORKDIR}/${SYSID_SCRIPT_NAME}' '${D}${base_prefix}/etc/init.d/${SYSID_SCRIPT_NAME}'
-
+    install -m 0755 '${WORKDIR}/${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}' '${D}${base_prefix}/etc/init.d/${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}'
+    
     # Set the scripts to run at startup by symlinking in to startup runlevel
     install -d ${D}${sysconfdir}/rc5.d
     install -d ${D}${sysconfdir}/rcS.d
@@ -52,6 +58,7 @@ do_install_append() {
     ln -sf ../init.d/${EMMC_SCRIPT_NAME}  ${D}${sysconfdir}/rc${EMMC_SCRIPT_RUNLEVEL}.d/S80${EMMC_SCRIPT_NAME}
     ln -sf ../init.d/${CONTROLHOST_SCRIPT_NAME}  ${D}${sysconfdir}/rc${CONTROLHOST_SCRIPT_RUNLEVEL}.d/S90${CONTROLHOST_SCRIPT_NAME}
     ln -sf ../init.d/${SYSID_SCRIPT_NAME}  ${D}${sysconfdir}/rc${SYSID_SCRIPT_RUNLEVEL}.d/S85${SYSID_SCRIPT_NAME}
+    ln -sf ../init.d/${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}  ${D}${sysconfdir}/rc${ODIN_CONTROL_INSATNCES_MANAGER_SCRIPT_RUNLEVEL}.d/S75${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}
 
     # Install default configuration file into conf.d with execute permissions
     install -d ${D}${base_prefix}/etc/conf.d/loki-config

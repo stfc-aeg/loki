@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: hardware software all os mostlyclean clean distclean clobber export_bd_tcl platform_configure project
+.PHONY: hardware software all os mostlyclean clean distclean clobber export_bd_tcl platform_configure project platform
 
 VIVADO_PROJ_PATH = vivado
 
@@ -31,8 +31,11 @@ endif
 	ln -sfT ./carrier_support/${CARRIER}/sw_lib/${PLATFORM} sw_lib
 
 	touch .platform_configured
+platform: .platform_configured
 
 ${VIVADO_PROJ_PATH}: .platform_configured
+	# Above depends on .platform_configured rather than platform so that it
+	# does not just rebuild every time.
 	$(info Vivado Project Directory modified build dependencies: $?)
 	$(warning Vivado project does not exist, attempting to create it...)
 	LOKI_AUTO_CREATE="1"; \

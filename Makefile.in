@@ -34,14 +34,17 @@ CONSTRAINTS_SOURCES = $(addprefix ${CONSTRAINTS_SOURCE_DIR}/, ${CONSTRAINTS_FILE
 CONSTRAINTS_TARGETS = $(addprefix ${CONSTRAINTS_TARGET_DIR}/, ${CONSTRAINTS_FILENAMES})
 $(info Application constraints files found: ${CONSTRAINTS_FILENAMES})
 
-${CONSTRAINTS_TARGETS}: ${CONSTRAINTS_SOURCES} project
+platform:
+	$(MAKE) -C ${HWSW_PATH} platform
+
+${CONSTRAINTS_TARGETS}: ${CONSTRAINTS_SOURCES} platform
 	# Copy Files over
 	cp ${CONSTRAINTS_SOURCE_DIR}/*.xdc ${CONSTRAINTS_TARGET_DIR}/
 	$(info copied constraints ${CONSTRAINTS_FILENAMES} from ${CONSTRAINTS_SOURCE_DIR})
 
 constraints: ${CONSTRAINTS_TARGETS} ;
 
-project: ${CONSTRAINTS_TARGETS}
+project: constraints
 	$(MAKE) -C ${HWSW_PATH} project
 
 #How to build the internal hardware

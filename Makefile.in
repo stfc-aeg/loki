@@ -34,14 +34,21 @@ CONSTRAINTS_SOURCES = $(addprefix ${CONSTRAINTS_SOURCE_DIR}/, ${CONSTRAINTS_FILE
 CONSTRAINTS_TARGETS = $(addprefix ${CONSTRAINTS_TARGET_DIR}/, ${CONSTRAINTS_FILENAMES})
 $(info Application constraints files found: ${CONSTRAINTS_FILENAMES})
 
-${CONSTRAINTS_TARGETS}: ${CONSTRAINTS_SOURCES} project
-	# Copy Files over
+platform:
+	$(MAKE) -C ${HWSW_PATH} platform
+
+${CONSTRAINTS_TARGETS}: ${CONSTRAINTS_SOURCES}
+	$(info Constrainst have changed: $?)
+	$(info Copying source constraints into the project platform constraints directory...)
 	cp ${CONSTRAINTS_SOURCE_DIR}/*.xdc ${CONSTRAINTS_TARGET_DIR}/
 	$(info copied constraints ${CONSTRAINTS_FILENAMES} from ${CONSTRAINTS_SOURCE_DIR})
 
-constraints: ${CONSTRAINTS_TARGETS} ;
+constraints: ${CONSTRAINTS_TARGETS} platform;
+# This phony rule depends on the platform phony rule instead of the actual targets rule
+# so that the constraints are not just imported every time, which leads to re-compilation
+# of the hardware every time.
 
-project: ${CONSTRAINTS_TARGETS}
+project: constraints
 	$(MAKE) -C ${HWSW_PATH} project
 
 #How to build the internal hardware

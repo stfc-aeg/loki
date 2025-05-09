@@ -1,6 +1,5 @@
-# Temporary modification added to force support for LTC2986 before it is present in
-# the main branch.
-SRC_URI = "git://git@github.com/stfc-aeg/odin-devices.git;protocol=ssh;branch=add-ltc2986"
+# Temporary modification added to force support for out of mainline devices
+SRC_URI = "git://github.com/stfc-aeg/odin-devices.git;protocol=http;branch=loki-support"
 
 # Set revision to commit hash. Update manually when satisfied with compatibility
-SRCREV = "ca6868b4b3ae0c337f90a78d6d70df0fa4db2f50"
+SRCREV = "8c3883ae7384cb6079f81d6c49383ea2c83417f4"

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: hardware software all os mostlyclean clean distclean clobber export_bd_tcl platform_configure project platform
+.PHONY: hardware software all os mostlyclean clean distclean clobber export_bd_tcl project
 
 VIVADO_PROJ_PATH = vivado
 
@@ -31,7 +31,20 @@ endif
 	ln -sfT ./carrier_support/${CARRIER}/sw_lib/${PLATFORM} sw_lib
 
 	touch .platform_configured
-platform: .platform_configured
+
+# Constraints source directory supplied by the application repo will copy all .xsa files
+CONSTRAINTS_SOURCE_DIR ?= .
+CONSTRAINTS_TARGET_DIR = constraints/${PLATFORM}/
+CONSTRAINTS_FILENAMES = $(notdir $(wildcard ${CONSTRAINTS_SOURCE_DIR}/*.xdc))
+$(info Application constraints files found: ${CONSTRAINTS_FILENAMES})
+CONSTRAINTS_SOURCES = $(addprefix ${CONSTRAINTS_SOURCE_DIR}/, ${CONSTRAINTS_FILENAMES})
+CONSTRAINTS_TARGETS = $(addprefix ${CONSTRAINTS_TARGET_DIR}/, ${CONSTRAINTS_FILENAMES})
+
+${CONSTRAINTS_TARGETS}: ${CONSTRAINTS_SOURCES} .platform_configured
+	$(info Constrainst have changed: $?)
+	$(info Copying source constraints into the project platform constraints directory...)
+	cp ${CONSTRAINTS_SOURCE_DIR}/*.xdc ${CONSTRAINTS_TARGET_DIR}/
+	$(info copied constraints ${CONSTRAINTS_FILENAMES} from ${CONSTRAINTS_SOURCE_DIR})
 
 ${VIVADO_PROJ_PATH}: .platform_configured
 	# Above depends on .platform_configured rather than platform so that it
@@ -44,7 +57,9 @@ ${VIVADO_PROJ_PATH}: .platform_configured
 
 	# Update timestamp
 	touch ${VIVADO_PROJ_PATH}
-project: ${VIVADO_PROJ_PATH} ;
+	
+# Special rule to build the project without actually executing the build
+project: ${VIVADO_PROJ_PATH} ${CONSTRAINTS_TARGETS} ;
 
 # Up-to-date TCL files are exported from the existing Vivado design
 export_bd_tcl:
@@ -66,7 +81,7 @@ ${VIVADO_LIVE_DESIGN}: | ${VIVADO_PROJ_PATH}
 # has been updated. However, block design should be extracted so that
 # changes can be committed with 'export_tcl'
 HARDWARE_DEPS = $(shell find -L ./block_design -type f)
-HARDWARE_DEPS := ${HARDWARE_DEPS} $(shell find -L ./constraints -type f)
+HARDWARE_DEPS := ${CONSTRAINTS_TARGETS}
 HARDWARE_DEPS := ${HARDWARE_DEPS} ${VIVADO_LIVE_DESIGN}
 ${HARDWARE_OUTPUT}: ${HARDWARE_DEPS} | ${VIVADO_PROJ_PATH}
 	$(info Modified hardware synth dependencies: $?)

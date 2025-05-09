@@ -55,8 +55,8 @@ ${VIVADO_PROJ_PATH}: .platform_configured
 	source ./vivado_create_project_guimode.sh
 	$(info Finished creating new project...)
 
-	# Update timestamp
-	touch ${VIVADO_PROJ_PATH}
+	# Update timestamp, without creating it if there are errors
+	touch ${VIVADO_PROJ_PATH} --no-create
 	
 # Special rule to build the project without actually executing the build
 project: ${VIVADO_PROJ_PATH} ${CONSTRAINTS_TARGETS} ;

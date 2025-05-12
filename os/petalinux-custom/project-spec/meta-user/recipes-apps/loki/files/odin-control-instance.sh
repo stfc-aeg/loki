@@ -4,13 +4,16 @@ PIDFILE_NAME="${2}.pid"
 PIDFILE_PATH="/var/run/"
 PIDFILE=$PIDFILE_PATH$PIDFILE_NAME
 INSTANCE_CONFIG_FILE_NAME="${2}-config.conf"
+INSTANCE_CONFIG_FILE_PATH="/etc/conf.d/loki-config/${INSTANCE_CONFIG_FILE_NAME}"
 INSTANCE_INSTALL_DIR="${2}"
 
 # Source the defaults file
 source $CONFIG_DEFAULT_LOCATION
 
 # Source the override file
-source "/etc/conf.d/loki-config/${INSTANCE_CONFIG_FILE_NAME}"
+if test -f $INSTANCE_CONFIG_FILE_PATH; then
+    source $INSTANCE_CONFIG_FILE_PATH
+fi
 
 # Activate Python Virtual Environment
 if [ "$conf_ODIN_DETECTOR_PYVENV_ENABLE" = "1" ]; then

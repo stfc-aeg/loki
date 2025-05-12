@@ -17,10 +17,11 @@ for DIR in $INSTANCES_PATH/*/; do
 
     INSTANCE_NAME=$(basename $DIR)
     INSTANCE_CONFIG_FILE_NAME="${INSTANCE_NAME}-config.conf"
+    INSTANCE_CONFIG_FILE_PATH="/etc/conf.d/loki-config/${INSTANCE_CONFIG_FILE_NAME}"
 
     # Source the override file
-    if test -f "/etc/conf.d/loki-config/${INSTANCE_CONFIG_FILE_NAME}"; then
-        source "/etc/conf.d/loki-config/${INSTANCE_CONFIG_FILE_NAME}"
+    if test -f $INSTANCE_CONFIG_FILE_PATH; then
+        source $INSTANCE_CONFIG_FILE_PATH
     fi
 
     case "$1" in

@@ -6,6 +6,7 @@ PIDFILE=$PIDFILE_PATH$PIDFILE_NAME
 INSTANCE_CONFIG_FILE_NAME="${2}-config.conf"
 INSTANCE_CONFIG_FILE_PATH="/etc/conf.d/loki-config/${INSTANCE_CONFIG_FILE_NAME}"
 INSTANCE_INSTALL_DIR="${2}"
+LOGFILE="${2}.log"
 
 # Source the defaults file
 source $CONFIG_DEFAULT_LOCATION
@@ -51,13 +52,13 @@ function service_start {
         -x "/bin/bash" \
         -- -c "exec $EXECUTABLE_NAME \
 	--logging=$conf_ODIN_DETECTOR_LOGLEVEL \
-	--log_file_prefix=$conf_ODIN_DETECTOR_LOGDESTINATION$2 \
-	--config=$conf_ODIN_DETECTOR_ROOT_LOC$2/$INSTANCE_INSTALL_DIR/config.cfg \
+	--log_file_prefix=$conf_ODIN_DETECTOR_LOGDESTINATION$LOGFILE \
+	--config=$conf_ODIN_DETECTOR_ROOT_LOC/$INSTANCE_INSTALL_DIR/config.cfg \
     --log_rotate_mode=size \
     --log_file_max_size=$conf_ODIN_DETECTOR_LOG_FILE_SIZE \
     --log_file_num_backups=$conf_ODIN_DETECTOR_LOG_FILE_NUM_BACKUPS \
     $conf_ODIN_DETECTOR_ADDITIONAL_ARGUMENTS \
-	2>> $conf_ODIN_DETECTOR_STDERRDESTINATION"
+	2>> $conf_ODIN_DETECTOR_STDERRDESTINATION$LOGFILE"
     set +x
 
     echo "Launch complete"

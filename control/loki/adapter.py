@@ -1360,7 +1360,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
         self.watchdog_add_thread('env', self._env_reading_sync_period_s * 2)
 
     def env_get_sensor_cached(self, name, sType):
-        return self._env_cached_readings[sType].get(name, 'No Reading')
+        return self._env_cached_readings[sType].get(name, None)
 
     def _env_loop_readingsync(self):
         while not self.TERMINATE_THREADS:
@@ -1492,7 +1492,7 @@ class LokiCarrierPowerMonitor(LokiCarrier, ABC):
 
     # Return the cached value of the rail reading specified
     def psu_get_rail_cached(self, name, reading_type):
-        return self._psu_cached_readings[name].get(reading_type, 'No Reading')
+        return self._psu_cached_readings[name].get(reading_type, None)
 
     # list, see above
     @property

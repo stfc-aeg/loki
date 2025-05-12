@@ -6,7 +6,7 @@ RDEPENDS_${PN} += "odin-control"
 RDEPENDS_${PN} += "python3-spidev"
 RDEPENDS_${PN} += "python3-smbus2"
 
-SRC_URI = "git://git@github.com/stfc-aeg/odin-devices.git;protocol=ssh;tag=${PV}"
+SRC_URI = "git://github.com/stfc-aeg/odin-devices.git;protocol=http;tag=${PV}"
 
 # This has to be in the format expected in Yocto's license list...
 LICENSE = "CLOSED"

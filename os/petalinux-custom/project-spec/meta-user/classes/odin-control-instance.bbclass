@@ -1,5 +1,4 @@
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
-RDEPENDS_${PN} += "python3-setuptools"
 RDEPENDS_${PN} += "odin-control (>=1.3.0)"
 RDEPENDS_${PN} += "odin-sequencer (=0.2.0)"
 RDEPENDS_${PN} += "odin-devices (=1.1.0)"
@@ -16,7 +15,7 @@ DEPENDS += "loki-user"
 # the files packaged.
 DIRFILES = "1"
 
-LOKI_RESOURCES_INSTALL_PATH = "/opt/loki-detector/"
+LOKI_RESOURCES_INSTALL_PATH = "/opt/loki-detector/instances/${PN}/"
 
 # Destinations relative to resource install path
 LOKI_CONFIG_DESTINATION = "config.cfg"
@@ -25,29 +24,18 @@ LOKI_STATIC_DESTINATION = "static"
 
 LOKI_USERNAME = "loki"
 
-inherit setuptools3
-
 do_configure_prepend() {
-	cd ${S}/${DISTUTILS_SETUP_PATH}
 	bbdebug 2 "Current working directory (pwd):" ${pwd}
 	bbdebug 2 "Build Directory:" ${B}
 	bbdebug 2 "WORKDIR Directory:" ${WORKDIR}
 	bbdebug 2 "Source Directory:" ${S}
-	bbdebug 2 "setup.py location:" ${S}/${DISTUTILS_SETUP_PATH}
 }
 
 do_compile_prepend() {
-	cd ${S}/${DISTUTILS_SETUP_PATH}
 	bbdebug 2 "Current working directory (pwd):" ${pwd}
 	bbdebug 2 "Build Directory:" ${B}
 	bbdebug 2 "WORKDIR Directory:" ${WORKDIR}
 	bbdebug 2 "Source Directory:" ${S}
-	bbdebug 2 "setup.py location:" ${S}/${DISTUTILS_SETUP_PATH}
-}
-
-do_install_prepend() {
-	# Change directory to setup.py location when not in repository root
-	cd ${S}/${DISTUTILS_SETUP_PATH}
 }
 
 copy_resource_protected() {
@@ -90,7 +78,7 @@ do_install_append() {
 	# gnu install does not work well for recursive directories, so copy recursively the standardised
     # paths. These should be defined in the application code. If one of these is not in use, just don't
     # define it in the application recipe; it will be ignored.
-    [ ! -z ${REPO_STATIC_PATH} ] && copy_resource_protected '${REPO_STATIC_PATH}' '${LOKI_STATIC_DESTINATION}'
+    [ ! -z ${REPO_STATIC_PATH_${PN}} ] && copy_resource_protected '${REPO_STATIC_PATH_${PN}}' '${LOKI_STATIC_DESTINATION}'
     [ ! -z ${REPO_SEQUENCES_PATH} ] && copy_resource_protected '${REPO_SEQUENCES_PATH}' '${LOKI_SEQUENCES_DESTINATION}'
     [ ! -z ${REPO_CONFIG_PATH} ] && copy_resource_protected '${REPO_CONFIG_PATH}' '${LOKI_CONFIG_DESTINATION}'
 
@@ -98,7 +86,4 @@ do_install_append() {
     loki_mkdir 'outputs'
     loki_chown 'outputs'
 
-    # Application-specific recipe could extend this function, and make use of the util
-    # functions above to install / configure additional directories within LOKI's
-    # resource path.
 }

@@ -78,7 +78,7 @@ do_install_append() {
 	# gnu install does not work well for recursive directories, so copy recursively the standardised
     # paths. These should be defined in the application code. If one of these is not in use, just don't
     # define it in the application recipe; it will be ignored.
-    [ ! -z ${REPO_STATIC_PATH} ] && copy_resource_protected '${REPO_STATIC_PATH}' '${LOKI_STATIC_DESTINATION}'
+    [ ! -z ${REPO_STATIC_PATH_${PN}} ] && copy_resource_protected '${REPO_STATIC_PATH_${PN}}' '${LOKI_STATIC_DESTINATION}'
     [ ! -z ${REPO_SEQUENCES_PATH} ] && copy_resource_protected '${REPO_SEQUENCES_PATH}' '${LOKI_SEQUENCES_DESTINATION}'
     [ ! -z ${REPO_CONFIG_PATH} ] && copy_resource_protected '${REPO_CONFIG_PATH}' '${LOKI_CONFIG_DESTINATION}'
 

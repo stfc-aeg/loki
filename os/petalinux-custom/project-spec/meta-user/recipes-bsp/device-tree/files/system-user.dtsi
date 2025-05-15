@@ -2,6 +2,7 @@
 /include/ "loki-info.dtsi"
 / {
   chosen {
+    bootargs = "earlycon clk_ignore_unused   uio_pdrv_genirq.of_id=generic-uio";
     xlnx,eeprom = &eeprom;
   };
 };

@@ -8,12 +8,13 @@ RDEPENDS_${PN} += "python3-pillow"
 RDEPENDS_${PN} += "loki-config"
 RDEPENDS_${PN} += "loki-user"
 RDEPENDS_${PN} += "python-loki-adapter"
+DEPENDS += "unzip-native"
 DEPENDS += "loki-user"
 
 
 # Special function line that will cause package not to own parent directories of
 # the files packaged.
-DIRFILES = "1"
+# DIRFILES = "1"
 
 LOKI_RESOURCES_INSTALL_PATH = "/opt/loki-detector/instances/${PN}/"
 
@@ -71,6 +72,7 @@ loki_mkdir() {
 
 do_install_append() {
 	# With the python module installed, the static resources need to be installed into rootfs
+    [ ! -z ${REACT_SOURCE_URL} ] && wget ${REACT_SOURCE_URL} -O ${REPO_STATIC_PATH}.zip && unzip ${REPO_STATIC_PATH}.zip -d ${REPO_STATIC_PATH} && rm ${REPO_STATIC_PATH}.zip
 
 	# Create the base install directory
     install -d ${D}${base_prefix}${LOKI_RESOURCES_INSTALL_PATH}
@@ -78,7 +80,7 @@ do_install_append() {
 	# gnu install does not work well for recursive directories, so copy recursively the standardised
     # paths. These should be defined in the application code. If one of these is not in use, just don't
     # define it in the application recipe; it will be ignored.
-    [ ! -z ${REPO_STATIC_PATH_${PN}} ] && copy_resource_protected '${REPO_STATIC_PATH_${PN}}' '${LOKI_STATIC_DESTINATION}'
+    [ ! -z ${REPO_STATIC_PATH} ] && copy_resource_protected '${REPO_STATIC_PATH}' '${LOKI_STATIC_DESTINATION}'
     [ ! -z ${REPO_SEQUENCES_PATH} ] && copy_resource_protected '${REPO_SEQUENCES_PATH}' '${LOKI_SEQUENCES_DESTINATION}'
     [ ! -z ${REPO_CONFIG_PATH} ] && copy_resource_protected '${REPO_CONFIG_PATH}' '${LOKI_CONFIG_DESTINATION}'
 

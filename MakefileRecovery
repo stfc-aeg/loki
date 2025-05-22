@@ -24,12 +24,9 @@ undefine SW_EXPORT_DIR
 # Provides loki-configure-hw, loki-configure-sw, loki-configure-os
 include ${LOKI_DIR}/config.mk
 
-.PHONY: all os hardware software project constraints
+.PHONY: all os hardware software project
 
-constraints: loki-configure-hw
-	$(MAKE) -C ${LOKI_DIR} constraints
-
-project: loki-configure-hw constraints
+project: loki-configure-hw
 	# Instead of actually building the hardware, just make the project in Vivado and stop
 	$(MAKE) -C ${LOKI_DIR} project
 

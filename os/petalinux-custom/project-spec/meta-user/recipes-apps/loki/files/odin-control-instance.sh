@@ -46,8 +46,12 @@ function service_start {
     # Create the default logging location directory with permission for the LOKI user to write.
     mkdir -p $conf_LOKI_USERNAME $conf_ODIN_DETECTOR_LOGDESTINATION/
     mkdir -p $conf_LOKI_USERNAME $conf_ODIN_DETECTOR_STDERRDESTINATION/
-    chown $conf_LOKI_USERNAME $conf_ODIN_DETECTOR_LOGDESTINATION/$LOGFILE
-    chown $conf_LOKI_USERNAME $conf_ODIN_DETECTOR_STDERRDESTINATION/$LOGFILE
+
+    # We don't want to accidentally make this unwriteable by loki if this detector runs as root
+    chown 'loki' $conf_ODIN_DETECTOR_LOGDESTINATION/
+    chown 'loki' $conf_ODIN_DETECTOR_STDERRDESTINATION/
+    chmod a+w $conf_ODIN_DETECTOR_LOGDESTINATION/
+    chmod a+w $conf_ODIN_DETECTOR_STDERRDESTINATION/
 
     # Remove the old PID file
     rm -rf $PIDFILE

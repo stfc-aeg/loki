@@ -9,10 +9,11 @@
 
 ### END INIT INFO
 
-LOKI_CONFIG_DIR=/mnt/sd-mmcblk0p1/loki-config
+LOKI_CONFIG_VOLATILE_DIR=/etc/conf.d/loki-config/
+LOKI_CONFIG_NONVOLATILE_DIR=/mnt/sd-mmcblk0p1/loki-config/
 
 # Settings from this file will be sourced, and will override default values in this file
-REMOTE_CONFIGURATION_LOCATION=${LOKI_CONFIG_DIR}/loki-host.conf
+REMOTE_CONFIGURATION_LOCATION=${LOKI_CONFIG_NONVOLATILE_DIR}/loki-host.conf
 if [ -f ${REMOTE_CONFIGURATION_LOCATION} ]
 then
     echo "Found a LOKI host configuration override file at ${REMOTE_CONFIGURATION_LOCATION}, sourcing it"
@@ -43,7 +44,7 @@ fi
 # Places where the bind mounted locations end up
 LOKI_SEQUENCES_DESTINATION="/opt/loki-detector/sequences"
 LOKI_EXPORTS_DESTINATION="/opt/loki-detector/exports"
-LOKI_CONFIG_DESTINATION=${LOKI_CONFIG_DIR}/loki-config.conf
+LOKI_CONFIG_DESTINATION=${LOKI_CONFIG_VOLATILE_DIR}/config-default.conf
 LOKI_IMAGE_UPDATE_DESTINATION="/opt/loki-update"
 
 function resolve_host {
@@ -217,7 +218,8 @@ function create_bind_mounts {
         if [ -f ${MOUNTED_APPROOT}/${LOKI_CONFIG_FILENAME} ]
         then
             echo "loki config exists, bind mounting it"
-            mount --bind ${MOUNTED_APPROOT}/${LOKI_CONFIG_FILENAME} ${LOKI_CONFIG_DESTINATION}
+            touch ${LOKI_CONFIG_VOLATILE_DIR}/${LOKI_CONFIG_FILENAME}
+            mount --bind ${MOUNTED_APPROOT}/${LOKI_CONFIG_FILENAME} ${LOKI_CONFIG_VOLATILE_DIR}/${LOKI_CONFIG_FILENAME}
         else
             echo "Could not find loki config at ${MOUNTED_APPROOT}/${LOKI_CONFIG_FILENAME}, will not mount"
         fi

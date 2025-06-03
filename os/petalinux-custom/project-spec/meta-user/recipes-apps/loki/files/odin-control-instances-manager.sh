@@ -1,7 +1,7 @@
 #!/bin/sh
 ### BEGIN INIT INFO
 # Provides              odincontrolinstancesmanager
-# Required-Start        lokiconfig
+# Required-Start        lokiconfig lokicontrolhost
 # Required-Stop
 # Default-Start         S 1 2 3 4 5
 # Default-Stop          0 6

@@ -44,8 +44,8 @@ function service_start {
 
     echo "Logging to $conf_ODIN_DETECTOR_LOGDESTINATION/$LOGFILE"
     # Create the default logging location directory with permission for the LOKI user to write.
-    mkdir -p $conf_LOKI_USERNAME $conf_ODIN_DETECTOR_LOGDESTINATION/$LOGFILE
-    mkdir -p $conf_LOKI_USERNAME $conf_ODIN_DETECTOR_STDERRDESTINATION/$LOGFILE
+    mkdir -p $conf_LOKI_USERNAME $conf_ODIN_DETECTOR_LOGDESTINATION/
+    mkdir -p $conf_LOKI_USERNAME $conf_ODIN_DETECTOR_STDERRDESTINATION/
     chown $conf_LOKI_USERNAME $conf_ODIN_DETECTOR_LOGDESTINATION/$LOGFILE
     chown $conf_LOKI_USERNAME $conf_ODIN_DETECTOR_STDERRDESTINATION/$LOGFILE
 

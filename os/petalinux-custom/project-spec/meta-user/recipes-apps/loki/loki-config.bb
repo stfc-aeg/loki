@@ -7,7 +7,8 @@ SRC_URI = "file://loki-config.sh \
     file://loki-bootstrap-emmc.sh \
     file://loki-connect-control-host.sh \
     file://loki-get-system-id.sh \
-    file://config-default.conf \
+    file://loki-system-config-default.conf \
+    file://instance-config-default.conf \
     file://odin-control-instance.sh \
     file://odin-control-instances-manager.sh \
     "
@@ -15,7 +16,8 @@ SRC_URI = "file://loki-config.sh \
 # This has to be in the format expected in Yocto's license list...
 LICENSE = "CLOSED"
 
-DEFAULT_CONFIG_NAME = "config-default.conf"
+DEFAULT_CONFIG_NAME = "loki-system-config-default.conf"
+DEFAULT_INSTANCE_CONFIG_NAME = "instance-config-default.conf"
 
 # General LOKI startup script for odin-control
 STARTUP_SCRIPT_NAME = "loki-config.sh"
@@ -58,11 +60,12 @@ do_install_append() {
     ln -sf ../init.d/${EMMC_SCRIPT_NAME}  ${D}${sysconfdir}/rc${EMMC_SCRIPT_RUNLEVEL}.d/S80${EMMC_SCRIPT_NAME}
     ln -sf ../init.d/${CONTROLHOST_SCRIPT_NAME}  ${D}${sysconfdir}/rc${CONTROLHOST_SCRIPT_RUNLEVEL}.d/S90${CONTROLHOST_SCRIPT_NAME}
     ln -sf ../init.d/${SYSID_SCRIPT_NAME}  ${D}${sysconfdir}/rc${SYSID_SCRIPT_RUNLEVEL}.d/S85${SYSID_SCRIPT_NAME}
-    ln -sf ../init.d/${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}  ${D}${sysconfdir}/rc${ODIN_CONTROL_INSATNCES_MANAGER_SCRIPT_RUNLEVEL}.d/S75${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}
+    ln -sf ../init.d/${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}  ${D}${sysconfdir}/rc${ODIN_CONTROL_INSATNCES_MANAGER_SCRIPT_RUNLEVEL}.d/S97${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}
 
-    # Install default configuration file into conf.d with execute permissions
+    # Install default configuration files into conf.d with execute permissions
     install -d ${D}${base_prefix}/etc/conf.d/loki-config
     install -m 0644 '${WORKDIR}/${DEFAULT_CONFIG_NAME}' '${D}${base_prefix}/etc/conf.d/loki-config/${DEFAULT_CONFIG_NAME}'
+    install -m 0644 '${WORKDIR}/${DEFAULT_INSTANCE_CONFIG_NAME}' '${D}${base_prefix}/etc/conf.d/loki-config/${DEFAULT_INSTANCE_CONFIG_NAME}'
 
     # Create an empty directory to stage LOKI image updates
     install -d ${D}${base_prefix}/opt/loki-update

@@ -58,7 +58,7 @@ do_install_append() {
     ln -sf ../init.d/${EMMC_SCRIPT_NAME}  ${D}${sysconfdir}/rc${EMMC_SCRIPT_RUNLEVEL}.d/S80${EMMC_SCRIPT_NAME}
     ln -sf ../init.d/${CONTROLHOST_SCRIPT_NAME}  ${D}${sysconfdir}/rc${CONTROLHOST_SCRIPT_RUNLEVEL}.d/S90${CONTROLHOST_SCRIPT_NAME}
     ln -sf ../init.d/${SYSID_SCRIPT_NAME}  ${D}${sysconfdir}/rc${SYSID_SCRIPT_RUNLEVEL}.d/S85${SYSID_SCRIPT_NAME}
-    ln -sf ../init.d/${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}  ${D}${sysconfdir}/rc${ODIN_CONTROL_INSATNCES_MANAGER_SCRIPT_RUNLEVEL}.d/S75${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}
+    ln -sf ../init.d/${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}  ${D}${sysconfdir}/rc${ODIN_CONTROL_INSATNCES_MANAGER_SCRIPT_RUNLEVEL}.d/S97${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}
 
     # Install default configuration file into conf.d with execute permissions
     install -d ${D}${base_prefix}/etc/conf.d/loki-config

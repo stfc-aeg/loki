@@ -54,7 +54,7 @@ class xvc_driver():
 
         self.cfg = self._uio_device.map(_xvc_driver_Cfg)
         
-    def transfer_bits(self, tms_array: bytearray, tdi_array: bytearray):
+    def transfer_bits(self, tms_array: bytearray, tdi_array: bytearray, final_byte_length):
         
         if len(tms_array) != len(tdi_array):
             raise ByteLengthMismatchException(f"Byte arrays must be the same length. TMS: {len(tms_array)}. TDI: {len(tdi_array)}")
@@ -76,7 +76,8 @@ class xvc_driver():
             # then set it to number of bits left
             if (num_bits - current_bit < shift_num_bits):
                 shift_num_bits = num_bits - current_bit
-                self.cfg.LENGTH_REG = shift_num_bits
+                # Only write the bits we want without added 0s
+                self.cfg.LENGTH_REG = shift_num_bits - (8 - final_byte_length)
             
             shift_num_bytes = shift_num_bits // 8
             

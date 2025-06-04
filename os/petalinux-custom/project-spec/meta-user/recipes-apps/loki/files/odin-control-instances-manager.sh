@@ -9,7 +9,7 @@
 ### END INIT INFO
 
 INSTANCES_PATH="/opt/loki-detector/instances"
-CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
+CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/instance-config-default.conf"
 
 for DIR in $INSTANCES_PATH/*/; do
     # Source default config

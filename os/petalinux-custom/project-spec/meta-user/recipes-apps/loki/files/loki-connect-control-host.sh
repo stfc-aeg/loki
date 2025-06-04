@@ -44,8 +44,9 @@ fi
 # Places where the bind mounted locations end up
 LOKI_SEQUENCES_DESTINATION="/opt/loki-detector/sequences"
 LOKI_EXPORTS_DESTINATION="/opt/loki-detector/exports"
-LOKI_CONFIG_DESTINATION=${LOKI_CONFIG_VOLATILE_DIR}/config-default.conf
+LOKI_CONFIG_DESTINATION=${LOKI_CONFIG_NONVOLATILE_DIR}/loki-system-config.conf
 LOKI_IMAGE_UPDATE_DESTINATION="/opt/loki-update"
+LOKI_INSTANCE_CONFIG_DIR="/etc/conf.d/loki-config/"
 
 function resolve_host {
     printf "Scanning for control host at ${LOKI_CONTROLHOST_IP}..."
@@ -209,26 +210,45 @@ function create_bind_mounts {
     # Config File
     # The generic LOKI config file is a collection of misc settings defined in various variables,
     # by default located in the eMMC. This single file will be bind mounted if present, and is read
-    # on startup of the main LOKI detector process.
+    # by the loki-config.sh init script.
     if [ -z ${LOKI_CONFIG_FILENAME+x} ];
     then
-        echo "No loki config specified, using internal version"
+        echo "No loki system config specified, using internal version"
     else
-        echo "A loki config override has been specified at ${MOUNTED_APPROOT}/${LOKI_CONFIG_FILENAME}"
+        echo "A loki system config override has been specified at ${MOUNTED_APPROOT}/${LOKI_CONFIG_FILENAME}"
         if [ -f ${MOUNTED_APPROOT}/${LOKI_CONFIG_FILENAME} ]
         then
             echo "loki config exists, bind mounting it"
-            touch ${LOKI_CONFIG_VOLATILE_DIR}/${LOKI_CONFIG_FILENAME}
-            mount --bind ${MOUNTED_APPROOT}/${LOKI_CONFIG_FILENAME} ${LOKI_CONFIG_VOLATILE_DIR}/${LOKI_CONFIG_FILENAME}
+            touch ${LOKI_CONFIG_DESTINATION}
+            mount --bind ${MOUNTED_APPROOT}/${LOKI_CONFIG_FILENAME} ${LOKI_CONFIG_DESTINATION}
         else
             echo "Could not find loki config at ${MOUNTED_APPROOT}/${LOKI_CONFIG_FILENAME}, will not mount"
         fi
     fi
 
+    # For any instance-specific configuration files found, mount them over the originals in nonvolatile image.
+    if [ -z ${INSTANCE_CONFIG_FILENAMES+x} ];
+    then
+        echo "No instance configuration files were found, using internal versions"
+    else
+        echo "At least one instance configuration file has been specified (${INSTANCE_CONFIG_FILENAMES}), mounting..."
+        for i in "${INSTANCE_CONFIG_FILENAMES[@]}"
+        do
+            if [ -f ${MOUNTED_APPROOT}/$i ]
+            then
+                echo "loki config exists for ${i}, bind mounting it"
+                touch ${LOKI_INSTANCE_CONFIG_DIR}/${i}
+                mount --bind ${MOUNTED_APPROOT}/${i} ${LOKI_INSTANCE_CONFIG_DIR}/${i}
+            else
+                echo "Could not find the override file ${MOUNTED_APPROOT}/${i}, skipping to next..."
+            fi
+        done
+    fi
+
     # Image Update Directory
     # This directory is used to stage updates for the LOKI system. Images can be placed here by any
     # control system, but installing staged updates is handled elsewhere.
-    if [ -z ${LOKI_CONFIG_FILENAME+x} ];
+    if [ -z ${IMAGE_UPDATE_LOC+x} ];
     then
         echo "No image update directory specified, using internal version"
     else

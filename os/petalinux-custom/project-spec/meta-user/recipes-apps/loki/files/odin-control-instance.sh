@@ -1,4 +1,4 @@
-CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
+CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/instance-config-default.conf"
 EXECUTABLE_NAME="odin_control"
 PIDFILE_NAME="${2}.pid"
 PIDFILE_PATH="/var/run/"

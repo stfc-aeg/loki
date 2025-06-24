@@ -1,16 +1,38 @@
 /include/ "system-conf.dtsi"
 /include/ "loki-info.dtsi"
+
 / {
-  chosen {
-    xlnx,eeprom = &eeprom;
+  refclk3:psgtr_dp_clock {
+          compatible = "fixed-clock";
+          #clock-cells = <0x00>;
+          clock-frequency = <27000000>;
+  };
+
+  refclk2:psgtr_pcie_usb_clock {
+          compatible = "fixed-clock";
+          #clock-cells = <0x00>;
+          clock-frequency = <100000000>;
+  };
+
+  //refclk1:psgtr_unused_clock {
+  //        compatible = "fixed-clock";
+  //        #clock-cells = <0x00>;
+  //        clock-frequency = <100000000>;
+  //};
+
+  refclk0:psgtr_sata_clock {
+          compatible = "fixed-clock";
+          #clock-cells = <0x00>;
+          clock-frequency = <150000000>;
   };
 };
 
-/* notes:
-serdes: // PHY TYP see: dt-bindings/phy/phy.h
-*/
+&psgtr {
+  clocks = <&refclk0 &refclk2 &refclk3>;
+  /* ref clk instances used per lane */
+  clock-names = "ref0\0ref2\0ref3";
+};
 
-/* default */
 
 /* SD */
 
@@ -39,25 +61,33 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 /* ETH PHY */
 
 &gem3 {
-	phy-handle = <&phy0>;
-	phy0: phy0@1 {
-		device_type = "ethernet-phy";
-		reg = <0>;
-	};
+    /delete-property/ local-mac-address;
+    phy-handle = <&phy0>;
+    
+    nvmem-cells = <&eth0_addr>;
+    nvmem-cell-names = "mac-address";
+    
+    phy0: phy0@1 {
+        device_type = "ethernet-phy";
+        reg = <0>;
+    };
 };
 
 /* QSPI */
 
 &qspi {
-    #address-cells = <1>;
-    #size-cells = <0>;
-    status = "okay";
-    flash0: flash@0 {
+    num-cs = <2>;
+
+    flash@0 {
         compatible = "jedec,spi-nor";
-        reg = <0x0>;
+        reg = <0>, <1>;
+        parallel-memories = /bits/ 64  <0x1000000 0x1000000>; /* 2* 16MB --> dummy for all types of this QSPI type */
+        spi-rx-bus-width = <4>;
+        spi-tx-bus-width = <4>;
+        spi-max-frequency = <166000000>; //166MHz max. frequency for mt25qu512
+
         #address-cells = <1>;
         #size-cells = <1>;
-        spi-tx-bus-width = <0x01>;
     };
 };
 
@@ -69,101 +99,69 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
         #address-cells = <1>;
         #size-cells = <0>;
         reg = <0x73>;
-        i2c@0 { // MCLK TEBF0808 SI5338A, 570FBB000290DG_unassembled
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c-mux-idle-disconnect;
+        i2c@0 { // Application support devices
             reg = <0>;
         };
-        i2c@1 { // SFP TEBF0808 PCF8574DWR
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@1 { // Power monitoring
             reg = <1>;
         };
-        i2c@2 { // PCIe
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@2 { // NC
             reg = <2>;
         };
-        i2c@3 { // SFP1 TEBF0808
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@3 { // NC
             reg = <3>;
         };
-        i2c@4 {// SFP2 TEBF0808
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@4 {// NC
             reg = <4>;
         };
-        i2c@5 { // TEBF0808 EEPROM
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@5 { // User / MAC EEPROM
             reg = <5>;
-            eeprom: eeprom@50 {
-	            compatible = "atmel,24c08";
-	            reg = <0x50>;
-	          };
         };
-        i2c@6 { // TEBF0808 FMC  
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@6 { // NC
             reg = <6>;
         };
-        i2c@7 { // TEBF0808 USB HUB
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@7 { // NC
             reg = <7>;
         };
     };
     i2cswitch@72 { // u
         compatible = "nxp,pca9548";
-        #address-cells = <1>;
-        #size-cells = <0>;
         reg = <0x72>;
         i2c-mux-idle-disconnect;
-        i2c@0 { // TEBF0808 PMOD P1
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@0 { // Application Specific 1
             reg = <0>;
         };
-        i2c@1 { // i2c Audio Codec
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@1 { // Application Specific 2
             reg = <1>;
-			/*
-            adau1761: adau1761@38 {
-                compatible = "adi,adau1761";
-                reg = <0x38>;
-            };
-			*/
         };
-        i2c@2 { // TEBF0808 Firefly A
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@2 { // Application Management
             reg = <2>;
         };
-        i2c@3 { // TEBF0808 Firefly B
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@3 { // NC
             reg = <3>;
         };
-        i2c@4 { //Module PLL Si5338 or SI5345
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@4 { // On-module PLL Loopback
             reg = <4>;
+            eeprom: eeprom@50 {
+                //compatible = "microchip,24aa025", "atmel,24c02";
+                compatible = "atmel,24c08";
+                reg = <0x50>;
+                
+                #address-cells = <1>;
+                #size-cells = <1>;
+                eth0_addr: eth-mac-addr@FA {
+                  reg = <0xFA 0x06>;
+                };
+           };
         };
-        i2c@5 { //TEBF0808 CPLD
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@5 { // Debug Header 1
             reg = <5>;
         };
-        i2c@6 { //TEBF0808 Firefly PCF8574DWR
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@6 { // Debug Header 2
             reg = <6>;
         };
-        i2c@7 { // TEBF0808 PMOD P3
-            #address-cells = <1>;
-            #size-cells = <0>;
+        i2c@7 { // NC
             reg = <7>;
         };
     };
@@ -203,7 +201,7 @@ serdes: // PHY TYP see: dt-bindings/phy/phy.h
 	};
 	spidev@1 {
 		compatible = "spidev";
-		spi-max-frequency = <1000000>;
+        spi-max-frequency = <1000000>;
 		reg = <1>;
 	};
 	spidev@2 {

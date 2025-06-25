@@ -59,6 +59,7 @@ class tap_controller():
                 visited.append(state)
             
             if state == to_state:
+                seq = list(reversed(seq))
                 result = 0
                 for bit in seq:
                     result = (result << 1) | bit
@@ -91,43 +92,49 @@ class tap_controller():
         self.driver.transfer_bits(tms_bits, tdi_bits, length)
         self.current_state = "shift_ir"
     
-    def shift_ir(self, tdi_bits: bytearray, final_byte_length):
+    def shift_ir(self, tdi_bits: bytearray, num_bits):
         self.go_to_shift_ir()
         
         num_bytes = len(tdi_bits)
         tms_bits = bytearray([0] * num_bytes)
         tdi_bits = tdi_bits[:num_bytes]
         
-        if num_bytes > 0:
-            tms_bits[-1] = 1
+        if num_bits > 0:
+            last_bit = num_bits - 1
+            byte_index = last_bit // 8
+            bit_index = last_bit % 8
+            tms_bits[byte_index] |= (1 << bit_index)
             
-        self.driver.transfer_bits(tms_bits, tdi_bits, final_byte_length)
+        self.driver.transfer_bits(tms_bits, tdi_bits, num_bits)
         self.current_state = "exit1_ir"
     
     def go_to_shift_dr(self):
         tms_seq, length = self.get_tms_sequence("shift_dr")
         tms_bits = bytearray(tms_seq)
-        tdi_bits = bytearray([0b0000])
+        tdi_bits = bytearray([0b00000])
         self.driver.transfer_bits(tms_bits, tdi_bits, length)
         self.current_state = "shift_dr"
     
-    def shift_dr(self, tdi_bits: bytearray, final_byte_length):
+    def shift_dr(self, tdi_bits: bytearray, num_bits):
         self.go_to_shift_dr()
         
         num_bytes = len(tdi_bits)
         tms_bits = bytearray([0] * num_bytes)
         tdi_bits = tdi_bits[:num_bytes]
         
-        if num_bytes > 0:
-            tms_bits[-1] = 1
+        if num_bits > 0:
+            last_bit = num_bits - 1
+            byte_index = last_bit // 8
+            bit_index = last_bit % 8
+            tms_bits[byte_index] |= (1 << bit_index)
         
-        self.driver.transfer_bits(tms_bits, tdi_bits, final_byte_length)
+        self.driver.transfer_bits(tms_bits, tdi_bits, num_bits)
         self.current_state = "exit1_dr"
     
     def read_idcode(self):
         self.reset()
-        self.shift_ir(bytearray([0b01111111, 0b1]), 1)
+        self.shift_ir(bytearray([0b11111110, 0b1]), 9)
         self.go_to_idle()
-        self.shift_dr(bytearray([0b00000000] * 8) ,8)
-        
-        
+        self.shift_dr(bytearray([0b00000000] * 4), 32)
+        self.go_to_idle()
+        print(self.driver.get_tdo_string())

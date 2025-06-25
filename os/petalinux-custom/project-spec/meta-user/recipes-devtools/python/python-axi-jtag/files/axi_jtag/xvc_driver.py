@@ -53,44 +53,30 @@ class xvc_driver():
                 ))
 
         self.cfg = self._uio_device.map(_xvc_driver_Cfg)
+        self.tdo_output = []
         
-    def transfer_bits(self, tms_array: bytearray, tdi_array: bytearray, final_byte_length):
+    def transfer_bits(self, tms_array: bytearray, tdi_array: bytearray, num_bits):
         
         if len(tms_array) != len(tdi_array):
             raise ByteLengthMismatchException(f"Byte arrays must be the same length. TMS: {len(tms_array)}. TDI: {len(tdi_array)}")
         
-        num_bits = len(tdi_array) * 8
-        
-        tdo_output = []
         current_bit = 0
         while (current_bit < num_bits):
-            shift_num_bits = 32
-            tms_in = 0
-            tdi_in = 0
-            current_byte = current_bit // 8
+            shift_num_bits = min(32, num_bits - current_bit)
             
-            # Set LENGTH_REG to 32 by default
-            self.cfg.LENGTH_REG = 32
+            byte_start = current_bit // 8
+            byte_end = (current_bit + shift_num_bits + 7) // 8
             
-            # If there are less bits left to shift than the shift_num_bits
-            # then set it to number of bits left
-            if (num_bits - current_bit < shift_num_bits):
-                shift_num_bits = num_bits - current_bit
-                # Only write the bits we want without added 0s
-                self.cfg.LENGTH_REG = shift_num_bits - (8 - final_byte_length)
+            tms_chunk = tms_array[byte_start:byte_end]
+            tdi_chunk = tdi_array[byte_start:byte_end]
             
-            shift_num_bytes = shift_num_bits // 8
-            
-            # Get bytes to operate on from the array
-            tms_in: bytearray = tms_array[current_byte:current_byte + shift_num_bytes]
-            tdi_in: bytearray = tdi_array[current_byte:current_byte + shift_num_bytes]
+            self.cfg.LENGTH_REG = shift_num_bits
             
             # Perform shift and add output to the list
-            tdo_output.append(self.xil_xvc_shift_bits(tms_in, tdi_in))
+            tdo_val = self.xil_xvc_shift_bits(tms_chunk, tdi_chunk)
+            self.tdo_output.append((tdo_val, shift_num_bits))
             
             current_bit += shift_num_bits
-        
-        return tdo_output
         
     def xil_xvc_shift_bits(self, tms_bits: bytes, tdi_bits: bytes) -> bytes:
         tms_value = int.from_bytes(tms_bits, "little")
@@ -127,4 +113,11 @@ class xvc_driver():
         tdo_bits = self.cfg.TDO_REG
             
         return tdo_bits
-    
+
+    def get_tdo_string(self):
+        tdo_string = ""
+        for tdo_val, bits in self.tdo_output:
+            tdo_string += f"{tdo_val & ((1 << bits) - 1):0{bits}b}"
+        
+        return tdo_string
+        

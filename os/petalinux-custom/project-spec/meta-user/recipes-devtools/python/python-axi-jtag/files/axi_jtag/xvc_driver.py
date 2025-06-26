@@ -68,7 +68,7 @@ class xvc_driver():
             byte_end = (current_bit + shift_num_bits + 7) // 8
             
             tms_chunk = tms_array[byte_start:byte_end]
-            tdi_chunk = tdi_array[byte_start:byte_end]
+            tdi_chunk = tdi_array[byte_start:byte_end][::-1]
             
             self.cfg.LENGTH_REG = shift_num_bits
             

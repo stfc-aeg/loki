@@ -133,7 +133,7 @@ class tap_controller():
     
     def read_idcode(self):
         self.reset()
-        self.shift_ir(bytearray([0b11111110, 0b1]), 9)
+        self.shift_ir(bytearray([0b1, 0b11111110]), 9)
         self.go_to_idle()
         self.shift_dr(bytearray([0b00000000] * 4), 32)
         self.go_to_idle()

@@ -25,10 +25,18 @@ USERADD_PACKAGES = "${PN}"
 
 # Note: single quotes around LOKI_PASS_ENC are crucial
 USERADD_PARAM:${PN} = "-p '${LOKI_PASS_ENC}' -m -d /home/${LOKI_USERNAME} -r -s /bin/bash ${LOKI_USERNAME}"
-GROUPADD_PARAM:${PN} = "-r gpiod; -r spiuser; -r smbususer"
-GROUPMEMS_PARAM:${PN} = "--group gpiod --add ${LOKI_USERNAME}; \
-                            --group spiuser --add ${LOKI_USERNAME}; \
-                            --group smbususer --add ${LOKI_USERNAME}"
+GROUPADD_PARAM:${PN} = " \
+    -r gpiod; \
+    -r uiouser; \
+    -r spiuser; \
+    -r smbususer; \
+    "
+GROUPMEMS_PARAM:${PN} = " \
+    --group gpiod --add ${LOKI_USERNAME}; \
+    --group uiouser --add ${LOKI_USERNAME}; \
+    --group spiuser --add ${LOKI_USERNAME}; \
+    --group smbususer --add ${LOKI_USERNAME}; \
+    "
 
 do_install:append() {
     # Create  detector operational directory so that loki can execute from it
@@ -41,6 +49,9 @@ do_install:append() {
     # Allow loki to operate all GPIO lines
     install -d '${D}${base_prefix}/etc/udev/rules.d'
     echo -e 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpiod", MODE="0660"\n' >> '${D}${base_prefix}/etc/udev/rules.d/10-gpiod.rules'
+
+    # Allow loki to operate all UIO devices
+    echo -e 'SUBSYSTEM=="uio", KERNEL=="uio*", GROUP="uiouser", MODE="0660"\n' >> '${D}${base_prefix}/etc/udev/rules.d/10-uio.rules'
 
     # Allow loki to operate all spidev devices
     echo -e 'KERNEL=="spidev*", GROUP="spiuser", MODE="0660"' >> '${D}${base_prefix}/etc/udev/rules.d/10-spidev.rules'

@@ -271,20 +271,38 @@ class PinHandler():
 
             pin_info = config_by_pin[pin_name]
 
+            def forcebool(bool_or_str):
+                # The input argument is likely to be a string if it comes from the options file,
+                # so ensure that it is correctly interpreted (any string is regarded as True by
+                # default).
+                if type(bool_or_str) == bool:
+                    return bool_or_str
+                elif type(bool_or_str) == int:
+                    return bool(bool_or_str)
+                elif type(bool_or_str) == str:
+                    # Regarded as true if in this list, false otherwise
+                    return bool_or_str.strip() in [
+                        'true',
+                        'True',
+                        '1'
+                    ]
+                else:
+                    raise Exception('Unsupported type: {}'.format(type(bool_or_str)))
+
             try:
                 pin_id = pin_info.get('id')
-                pin_active_low = pin_info.get('active_low')
-                pin_is_input = pin_info.get('is_input')
-                pin_not_connected = pin_info.get('nc', False)   # This is optional, assumed pins are connected
-                pin_default = pin_info.get('default_value', 1 if pin_active_low else 0)   # De-assert by default
+                pin_active_low = forcebool(pin_info.get('active_low', False))
+                pin_is_input = forcebool(pin_info.get('is_input', True))
+                pin_not_connected = forcebool(pin_info.get('nc', False))   # This is optional, assumed pins are connected
+                pin_default = forcebool(pin_info.get('default_value', 1 if pin_active_low else 0))   # De-assert by default
                 pin_chipnum = pin_info.get('chipnum', None)     # Optional, will use base ZynqMP GPIO bus by default
 
                 # Additional Config Flags - optional
-                pin_flag_bias_pull_down = gpiod.LINE_REQ_FLAG_BIAS_PULL_DOWN if pin_info.get('bias_pull_down', False) else 0
-                pin_flag_bias_pull_up = gpiod.LINE_REQ_FLAG_BIAS_PULL_UP if pin_info.get('bias_pull_up', False) else 0
-                pin_flag_bias_disable = gpiod.LINE_REQ_FLAG_BIAS_DISABLE if pin_info.get('bias_disable', False) else 0
-                pin_flag_open_drain = gpiod.LINE_REQ_FLAG_OPEN_DRAIN if pin_info.get('open_drain', False) else 0
-                pin_flag_open_source = gpiod.LINE_REQ_FLAG_OPEN_SOURCE if pin_info.get('open_source', False) else 0
+                pin_flag_bias_pull_down = gpiod.LINE_REQ_FLAG_BIAS_PULL_DOWN if forcebool(pin_info.get('bias_pull_down', False)) else 0
+                pin_flag_bias_pull_up = gpiod.LINE_REQ_FLAG_BIAS_PULL_UP if forcebool(pin_info.get('bias_pull_up', False)) else 0
+                pin_flag_bias_disable = gpiod.LINE_REQ_FLAG_BIAS_DISABLE if forcebool(pin_info.get('bias_disable', False)) else 0
+                pin_flag_open_drain = gpiod.LINE_REQ_FLAG_OPEN_DRAIN if forcebool(pin_info.get('open_drain', False)) else 0
+                pin_flag_open_source = gpiod.LINE_REQ_FLAG_OPEN_SOURCE if forcebool(pin_info.get('open_source', False)) else 0
             except KeyError as e:
                 raise KeyError('Not enough information to register pin {}: {}'.format(pin_name, e))
 
@@ -1343,7 +1361,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
         self.watchdog_add_thread('env', self._env_reading_sync_period_s * 2)
 
     def env_get_sensor_cached(self, name, sType):
-        return self._env_cached_readings[sType].get(name, 'No Reading')
+        return self._env_cached_readings[sType].get(name, None)
 
     def _env_loop_readingsync(self):
         while not self.TERMINATE_THREADS:
@@ -1475,7 +1493,7 @@ class LokiCarrierPowerMonitor(LokiCarrier, ABC):
 
     # Return the cached value of the rail reading specified
     def psu_get_rail_cached(self, name, reading_type):
-        return self._psu_cached_readings[name].get(reading_type, 'No Reading')
+        return self._psu_cached_readings[name].get(reading_type, None)
 
     # list, see above
     @property

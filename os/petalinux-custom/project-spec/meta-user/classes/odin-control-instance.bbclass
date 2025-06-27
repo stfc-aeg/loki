@@ -1,5 +1,4 @@
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
-RDEPENDS:${PN} += "python3-setuptools"
 RDEPENDS:${PN} += "odin-control (>=1.3.0)"
 RDEPENDS:${PN} += "odin-sequencer (=0.2.0)"
 RDEPENDS:${PN} += "odin-devices (=1.1.0)"
@@ -9,14 +8,15 @@ RDEPENDS:${PN} += "python3-pillow"
 RDEPENDS:${PN} += "loki-config"
 RDEPENDS:${PN} += "loki-user"
 RDEPENDS:${PN} += "python-loki-adapter"
+DEPENDS += "unzip-native"
 DEPENDS += "loki-user"
 
 
 # Special function line that will cause package not to own parent directories of
 # the files packaged.
-DIRFILES = "1"
+# DIRFILES = "1"
 
-LOKI_RESOURCES_INSTALL_PATH = "/opt/loki-detector/"
+LOKI_RESOURCES_INSTALL_PATH = "/opt/loki-detector/instances/${PN}/"
 
 # Destinations relative to resource install path
 LOKI_CONFIG_DESTINATION = "config.cfg"
@@ -25,29 +25,18 @@ LOKI_STATIC_DESTINATION = "static"
 
 LOKI_USERNAME = "loki"
 
-inherit setuptools3
-
 do_configure:prepend() {
-	cd ${S}/${DISTUTILS_SETUP_PATH}
 	bbdebug 2 "Current working directory (pwd):" ${pwd}
 	bbdebug 2 "Build Directory:" ${B}
 	bbdebug 2 "WORKDIR Directory:" ${WORKDIR}
 	bbdebug 2 "Source Directory:" ${S}
-	bbdebug 2 "setup.py location:" ${S}/${DISTUTILS_SETUP_PATH}
 }
 
 do_compile:prepend() {
-	cd ${S}/${DISTUTILS_SETUP_PATH}
 	bbdebug 2 "Current working directory (pwd):" ${pwd}
 	bbdebug 2 "Build Directory:" ${B}
 	bbdebug 2 "WORKDIR Directory:" ${WORKDIR}
 	bbdebug 2 "Source Directory:" ${S}
-	bbdebug 2 "setup.py location:" ${S}/${DISTUTILS_SETUP_PATH}
-}
-
-do_install:prepend() {
-	# Change directory to setup.py location when not in repository root
-	cd ${S}/${DISTUTILS_SETUP_PATH}
 }
 
 copy_resource_protected() {
@@ -83,6 +72,7 @@ loki_mkdir() {
 
 do_install:append() {
 	# With the python module installed, the static resources need to be installed into rootfs
+    [ ! -z ${REACT_SOURCE_URL} ] && wget ${REACT_SOURCE_URL} -O ${REPO_STATIC_PATH}.zip && unzip ${REPO_STATIC_PATH}.zip -d ${REPO_STATIC_PATH} && rm ${REPO_STATIC_PATH}.zip
 
 	# Create the base install directory
     install -d ${D}${base_prefix}${LOKI_RESOURCES_INSTALL_PATH}
@@ -98,7 +88,4 @@ do_install:append() {
     loki_mkdir 'outputs'
     loki_chown 'outputs'
 
-    # Application-specific recipe could extend this function, and make use of the util
-    # functions above to install / configure additional directories within LOKI's
-    # resource path.
 }

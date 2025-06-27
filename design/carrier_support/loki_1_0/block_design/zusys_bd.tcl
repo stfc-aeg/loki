@@ -1,4 +1,4 @@
-catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4cg_1e_tebf0808:part0:2.0, FPGA: xczu4cg-sfvc784-1-e at 2024-02-15T10:50:38."}
+catch {TE::UTILS::te_msg TE_BD-0 INFO "This block design tcl-file was generate with Trenz Electronic GmbH Board Part:trenz.biz:te0803_4cg_1e_tebf0808:part0:2.0, FPGA: xczu4cg-sfvc784-1-e at 2025-05-08T17:05:06."}
 
 if { ![info exist TE::VERSION_CONTROL] } {
     set TE::VERSION_CONTROL true

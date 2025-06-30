@@ -130,17 +130,37 @@ class tap_controller():
         self.driver.transfer_bits(tms_bits, tdi_bits, num_bits)
         self.current_state = "exit1_dr"
     
-    def read_idcode(self):
+    def read_id_code(self):
         self.reset()
         self.go_to_shift_dr()
         self.shift_dr(bytearray([0b00000000] * 4), 32)
         
         id_code_count = 1
-        while self.driver.tdo_output[-1][0] != 0:
+        while True:
             self.shift_dr(bytearray([0b00000000] * 4), 32)
+            if self.driver.tdo_output[-1][0] == 0:
+                break
             id_code_count += 1
-            
+        
+        id_code_end_index = (32 * id_code_count) + 12
+        print(id_code_end_index)
+        id_codes = self.driver.get_tdo_string()[12:id_code_end_index]
+        print(id_codes)
+        id_code_array = []
+        
         self.go_to_idle()
-        for device in range(1, id_code_count):
-            print(f"Device {device} ID Code: {self.driver.get_tdo_string()[12:32+12]}")
+        for device in range(0, id_code_count):
+            start_index = device * 32
+            end_index = (device + 1) * 32
+            print(f"Device {device + 1} ID Code: {id_codes[start_index:end_index]}")
+            id_code_array.append(id_codes[start_index:end_index])
+        
+        return id_code_array
             
+    def decode_id_code(self):
+        id_codes = self.read_id_code()
+        for id_code in range(0, len(id_codes)):
+            print(f"=== Device {id_code + 1} ===")
+            print(f"Version: {id_codes[id_code][:4]}")
+            print(f"Part Number: {id_codes[id_code][4:20]}")
+            print(f"Manufacturer: {id_codes[id_code][20:31]}")

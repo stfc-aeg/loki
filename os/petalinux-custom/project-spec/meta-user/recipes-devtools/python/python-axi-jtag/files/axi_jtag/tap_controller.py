@@ -141,14 +141,13 @@ class tap_controller():
             if self.driver.tdo_output[-1][0] == 0:
                 break
             id_code_count += 1
+            
+        self.go_to_idle()
         
         id_code_end_index = (32 * id_code_count) + 12
-        print(id_code_end_index)
         id_codes = self.driver.get_tdo_string()[12:id_code_end_index]
-        print(id_codes)
         id_code_array = []
         
-        self.go_to_idle()
         for device in range(0, id_code_count):
             start_index = device * 32
             end_index = (device + 1) * 32

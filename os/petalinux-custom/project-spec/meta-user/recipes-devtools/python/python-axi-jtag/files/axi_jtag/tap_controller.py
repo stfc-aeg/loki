@@ -71,10 +71,10 @@ class tap_controller():
                     queue.append((next_state, seq + [tms]))
     
     def reset(self):
-        tms_bits = bytearray([0b11111])
-        tdi_bits = bytearray([0b00000])
+        tms_bits = bytearray([0b11111111])
+        tdi_bits = bytearray([0b00000000])
         
-        self.driver.transfer_bits(tms_bits, tdi_bits, 5)
+        self.driver.transfer_bits(tms_bits, tdi_bits, 8)
         self.current_state = "test_logic_reset"
     
     def go_to_idle(self):
@@ -116,7 +116,6 @@ class tap_controller():
         self.current_state = "shift_dr"
     
     def shift_dr(self, tdi_bits: bytearray, num_bits):
-        self.go_to_shift_dr()
         
         num_bytes = len(tdi_bits)
         tms_bits = bytearray([0] * num_bytes)
@@ -133,8 +132,15 @@ class tap_controller():
     
     def read_idcode(self):
         self.reset()
-        self.shift_ir(bytearray([0b1, 0b11111110]), 9)
-        self.go_to_idle()
+        self.go_to_shift_dr()
         self.shift_dr(bytearray([0b00000000] * 4), 32)
+        
+        id_code_count = 1
+        while self.driver.tdo_output[-1][0] != 0:
+            self.shift_dr(bytearray([0b00000000] * 4), 32)
+            id_code_count += 1
+            
         self.go_to_idle()
-        print(self.driver.get_tdo_string())
+        for device in range(1, id_code_count):
+            print(f"Device {device} ID Code: {self.driver.get_tdo_string()[12:32+12]}")
+            

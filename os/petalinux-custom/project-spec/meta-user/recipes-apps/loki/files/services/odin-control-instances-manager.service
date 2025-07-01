@@ -1,0 +1,19 @@
+[Unit]
+SourcePath=/opt/loki-service-scripts/odin-control-instances-manager.sh
+Before=graphical.target
+After=inetd.busybox.service
+After=dropbear.service
+After=nfsserver.service
+After=loki-config.service       
+WantedBy=multi-user.target
+
+[Service]
+Type=forking
+Restart=no
+TimeoutSec=5min
+IgnoreSIGPIPE=no
+KillMode=process
+GuessMainPID=no
+RemainAfterExit=yes
+ExecStart=/opt/loki-service-scripts/odin-control-instances-manager.sh start
+ExecStop=/opt/loki-service-scripts/odin-control-intances-manaher.sh stop

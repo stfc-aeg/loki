@@ -5,6 +5,7 @@ RDEPENDS:${PN} += "loki-config"
 # Repo URL.
 SRC_URI = "file://loki-config.sh \
     file://loki-bootstrap-emmc.sh \
+    file://loki-bootstrap-emmc.service \
     file://loki-connect-control-host.sh \
     file://loki-get-system-id.sh \
     file://loki-system-config-default.conf \
@@ -25,6 +26,7 @@ STARTUP_SCRIPT_RUNLEVEL = "5"
 
 # Start-up script to format the eMMC on first carrier boot, or if the partition is deleted
 EMMC_SCRIPT_NAME = "loki-bootstrap-emmc.sh"
+EMMC_SERVICE_NAME = "loki-bootstrap-emmc.service"
 EMMC_SCRIPT_RUNLEVEL = "S"
 
 # Start-up script to initialise a connection to a control host PC, mounting relevant
@@ -42,13 +44,21 @@ ODIN_CONTROL_INSTANCE_SCRIPT_NAME = "odin-control-instance.sh"
 ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME = "odin-control-instances-manager.sh"
 ODIN_CONTROL_INSATNCES_MANAGER_SCRIPT_RUNLEVEL = "5"
 
+#SYSTEMD_SCRIPT_DESTINATION = "/usr/lib/systemd/user"
+SYSTEMD_SCRIPT_DESTINATION = "/etc/systemd/system/"
+BOOT_SCRIPT_DESTINATION = "/opt/loki-service-scripts/"
+
 do_install:append() {
     # Create the init.d directory for startup scripts
 	install -d ${D}${base_prefix}/etc/init.d
+	install -d ${D}${base_prefix}/${SYSTEMD_SCRIPT_DESTINATION}
+	install -d ${D}${base_prefix}/${BOOT_SCRIPT_DESTINATION}
+    install -d ${D}${base_prefix}/etc/systemd/system/multi-user.target.wants/
 
 	# Install startup scripts into init.d
 	install -m 0755 '${WORKDIR}/${STARTUP_SCRIPT_NAME}' '${D}${base_prefix}/etc/init.d/${STARTUP_SCRIPT_NAME}'
-	install -m 0755 '${WORKDIR}/${EMMC_SCRIPT_NAME}' '${D}${base_prefix}/etc/init.d/${EMMC_SCRIPT_NAME}'
+	install -m 0755 '${WORKDIR}/${EMMC_SCRIPT_NAME}' '${D}${base_prefix}/${BOOT_SCRIPT_DESTINATION}/${EMMC_SCRIPT_NAME}'
+	install -m 0755 '${WORKDIR}/${EMMC_SERVICE_NAME}' '${D}${base_prefix}/${SYSTEMD_SCRIPT_DESTINATION}/${EMMC_SERVICE_NAME}'
 	install -m 0755 '${WORKDIR}/${CONTROLHOST_SCRIPT_NAME}' '${D}${base_prefix}/etc/init.d/${CONTROLHOST_SCRIPT_NAME}'
 	install -m 0755 '${WORKDIR}/${SYSID_SCRIPT_NAME}' '${D}${base_prefix}/etc/init.d/${SYSID_SCRIPT_NAME}'
     install -m 0755 '${WORKDIR}/${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}' '${D}${base_prefix}/etc/init.d/${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}'
@@ -57,7 +67,7 @@ do_install:append() {
     install -d ${D}${sysconfdir}/rc5.d
     install -d ${D}${sysconfdir}/rcS.d
     ln -sf ../init.d/${STARTUP_SCRIPT_NAME}  ${D}${sysconfdir}/rc${STARTUP_SCRIPT_RUNLEVEL}.d/S95${STARTUP_SCRIPT_NAME}
-    ln -sf ../init.d/${EMMC_SCRIPT_NAME}  ${D}${sysconfdir}/rc${EMMC_SCRIPT_RUNLEVEL}.d/S80${EMMC_SCRIPT_NAME}
+    ln -sf ${SYSTEMD_SCRIPT_DESTINATION}/${EMMC_SERVICE_NAME}  ${D}/${base_prefix}//etc/systemd/system/multi-user.target.wants/${EMMC_SERVICE_NAME}
     ln -sf ../init.d/${CONTROLHOST_SCRIPT_NAME}  ${D}${sysconfdir}/rc${CONTROLHOST_SCRIPT_RUNLEVEL}.d/S90${CONTROLHOST_SCRIPT_NAME}
     ln -sf ../init.d/${SYSID_SCRIPT_NAME}  ${D}${sysconfdir}/rc${SYSID_SCRIPT_RUNLEVEL}.d/S85${SYSID_SCRIPT_NAME}
     ln -sf ../init.d/${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}  ${D}${sysconfdir}/rc${ODIN_CONTROL_INSATNCES_MANAGER_SCRIPT_RUNLEVEL}.d/S97${ODIN_CONTROL_INSTANCES_MANAGER_SCRIPT_NAME}
@@ -80,3 +90,7 @@ FILES:${PN} += "${base_prefix}/etc/init.d/*"
 FILES:${PN} += "${base_prefix}/opt/loki-update/"
 FILES:${PN} += "${base_prefix}/etc/conf.d/loki-config/*"
 FILES:${PN} += "${base_prefix}/bin/${ODIN_CONTROL_INSTANCE_SCRIPT_NAME}"
+FILES:${PN} += "${base_prefix}${BOOT_SCRIPT_DESTINATION}/*"
+FILES:${PN} += "${base_prefix}${SYSTEMD_SCRIPT_DESTINATION}/*"
+FILES:${PN} += "${base_prefix}${SYSTEMD_SCRIPT_DESTINATION}/*"
+FILES:${PN} += "${base_prefix}/etc/systemd/system/multi-user.target.wants/*"

@@ -1,7 +1,7 @@
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
 RDEPENDS:${PN} += "odin-control (>=1.3.0)"
-RDEPENDS:${PN} += "odin-sequencer (=0.2.0)"
-RDEPENDS:${PN} += "odin-devices (=1.1.0)"
+RDEPENDS:${PN} += "odin-sequencer (>=0.2.0)"
+RDEPENDS:${PN} += "odin-devices (>=1.1.0)"
 RDEPENDS:${PN} += "python3-msgpack"
 RDEPENDS:${PN} += "python3-matplotlib"
 RDEPENDS:${PN} += "python3-pillow"

@@ -4,7 +4,19 @@ SUMMARY = "This is a recipe to build odin-sequencer on PetaLinux"
 RDEPENDS:${PN} += "odin-control"
 RDEPENDS:${PN} += "python3-inotify"
 
-SRC_URI = "git://git@github.com/stfc-aeg/odin-sequencer.git;protocol=http;tag=${PV} \
+# To build to a tag, update the tag here as well as the commit hash below.
+# You can fetch the git hash with git ls-remote https://github.com/<repository> refs/tags/<tag>
+GIT_TAG = "0.2.0"
+GIT_HASH = "d413771e5b8422d41a0af3c3e9253427e10223e3"
+
+PV = "${GIT_TAG}+git${SRCPV}"
+
+# AUTOREV will just pull latest version
+#SRCREV = "${AUTOREV}"
+# SRCREV must now be the git hash of the target tag since Yocto does not like hanging references.
+SRCREV = "${GIT_HASH}"
+
+SRC_URI = "git://github.com/stfc-aeg/odin-sequencer.git;protocol=http;branch=master \
 		file://odin-sequencer-remove-inotify-setuptools.patch"
 
 # This has to be in the format expected in Yocto's license list...
@@ -21,4 +33,4 @@ do_configure:prepend() {
 	bbdebug 2 "Source Directory:" ${S}
 }
 
-S = "${WORKDIR}/git/"
+S = "${WORKDIR}/git"

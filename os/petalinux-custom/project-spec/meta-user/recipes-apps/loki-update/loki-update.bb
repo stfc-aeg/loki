@@ -24,6 +24,7 @@ PV = "0.0+git${SRCPV}"
 
 SRC_URI = "git://git@github.com/stfc-aeg/loki-update.git;protocol=ssh;branch=main \
            file://loki-update-config.conf \
+           file://loki-update-odin-config.cfg \
            "
 
 # Checksum specifically for the react UI
@@ -31,7 +32,8 @@ SRC_URI[react-build-zip.sha256sum] = "3df8210d5c3703295cf850bddad427bbfbed1e90d5
 
 LICENSE = "CLOSED"
 
-REPO_CONFIG_PATH = "${LOKI_UPDATE_REPO_CLONED_BASE}/test/config/loki-update.cfg"
+#REPO_CONFIG_PATH = "${LOKI_UPDATE_REPO_CLONED_BASE}/test/config/loki-update.cfg"
+REPO_CONFIG_PATH = "loki-update-odin-config.cfg"
 REPO_STATIC_PATH = "${REACT_SOURCE_PATH}"
 
 do_install:append() {

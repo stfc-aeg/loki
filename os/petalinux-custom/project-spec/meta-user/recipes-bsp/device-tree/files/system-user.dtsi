@@ -174,38 +174,50 @@
 };
 
 /* SPI (general devices) */
+/* NOTE: rohm device is used because device tree no longer recognises 'spidev', and instead you must
+        specify an actual device recognised AS an spidev. Unless the kernel is patched to recognise
+        your actual hardware, you must just include one of the options in the list spidev_dt_ids found
+        in the kernel drivers/spi/spidev.c file. The part chosen here is irrelevant, and just first in
+        the list.
+*/
 &spi0 {
 	spidev@0 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <0>;
 	};
 	spidev@1 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <1>;
 	};
 	spidev@2 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <2>;
 	};
 };
 
 /* SPI1 (ASIC) */
+/* NOTE: rohm device is used because device tree no longer recognises 'spidev', and instead you must
+        specify an actual device recognised AS an spidev. Unless the kernel is patched to recognise
+        your actual hardware, you must just include one of the options in the list spidev_dt_ids found
+        in the kernel drivers/spi/spidev.c file. The part chosen here is irrelevant, and just first in
+        the list.
+*/
 &spi1 {
 	spidev@0 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <0>;
 	};
 	spidev@1 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
         spi-max-frequency = <1000000>;
 		reg = <1>;
 	};
 	spidev@2 {
-		compatible = "spidev";
+		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <1000000>;
 		reg = <2>;
 	};

@@ -593,15 +593,15 @@ class LokiCarrier(ABC):
             },
             'environment': {
                 'temperature': {
-                    'zynq_pl': (lambda: self.get_zynq_ams_temp_cached('2_pl'), None, {
+                    'zynq_pl': (lambda: self.get_zynq_ams_temp_cached('pl'), None, {
                         "description": "Zynq SoC Programmable Logic Temperature",
                         "units": "C",
                     }),
-                    'zynq_ps': (lambda: self.get_zynq_ams_temp_cached('0_ps'), None, {
+                    'zynq_ps': (lambda: self.get_zynq_ams_temp_cached('ps'), None, {
                         "description": "Zynq SoC Processing System Temperature",
                         "units": "C",
                     }),
-                    'zynq_remote': (lambda: self.get_zynq_ams_temp_cached('1_remote'), None, {
+                    'zynq_remote': (lambda: self.get_zynq_ams_temp_cached('remote'), None, {
                         "description": "Zynq SoC Remote (?) Temperature",
                         "units": "C",
                     }),
@@ -900,22 +900,24 @@ class LokiCarrier(ABC):
             return None
 
     def _get_zynq_ams_temp_raw(self, temp_name):
-        with open('/sys/bus/iio/devices/iio:device0/in_temp{}_temp_raw'.format(temp_name), 'r') as f:
-            temp_raw = int(f.read())
 
-        with open('/sys/bus/iio/devices/iio:device0/in_temp{}_temp_offset'.format(temp_name), 'r') as f:
-            temp_offset = int(f.read())
+        # Temperatures channels numbered in https://www.kernel.org/doc/Documentation/devicetree/bindings/iio/adc/xlnx%2Czynqmp-ams.yaml
+        ams_channel = {
+            'ps': 7,
+            'remote': 8,
+            'pl': 20,
 
-        with open('/sys/bus/iio/devices/iio:device0/in_temp{}_temp_scale'.format(temp_name), 'r') as f:
-            temp_scale = float(f.read())
+        }[temp_name]
 
-        return round(((temp_raw + temp_offset) * temp_scale) / 1000, 2)
+        with open('/sys/bus/iio/devices/iio:device0/in_temp{}_input'.format(ams_channel), 'r') as f:
+            temp = int(f.read())
+        return round((temp / 1000), 2)
 
     def _get_zynq_ams_temps_raw(self):
         # todo call this in deadslow loop
         if not hasattr(self, '_zynq_ams'):
             self._zynq_ams = {}
-        for ams_name in ['0_ps', '1_remote', '2_pl']:
+        for ams_name in ['ps', 'remote', 'pl']:
             self._zynq_ams[ams_name] = self._get_zynq_ams_temp_raw(ams_name)
         self._logger.debug('Synced Zynq AMS temperatures: {}'.format(self._zynq_ams))
 

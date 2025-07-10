@@ -41,6 +41,14 @@ TAP_TRANSITIONS = {
     ("update_ir", 1): "select_dr_scan"
 }
 
+class InvalidTAPStateException(Exception):
+    """
+    Exception for when an invalid TAP state is entered
+    """
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
 class tap_controller():
     def __init__(self, path):
         self.driver = xvc_driver(path)
@@ -77,24 +85,8 @@ class tap_controller():
         self.driver.transfer_bits(tms_bits, tdi_bits, 8)
         self.current_state = "test_logic_reset"
     
-    def go_to_idle(self):
-        tms_seq, length = self.get_tms_sequence("run_test_idle")
-        tms_bits = bytearray(tms_seq)
-        tdi_bits = bytearray([0b0000000])
-        
-        self.driver.transfer_bits(tms_bits, tdi_bits, length)
-        self.current_state = "run_test_idle"
-    
-    def go_to_shift_ir(self):
-        tms_seq, length = self.get_tms_sequence("shift_ir")
-        tms_bits = bytearray(tms_seq)
-        tdi_bits = bytearray([0b00000])
-        self.driver.transfer_bits(tms_bits, tdi_bits, length)
-        self.current_state = "shift_ir"
-    
     def shift_ir(self, tdi_bits: bytearray, num_bits):
-        self.go_to_shift_ir()
-        
+        self.go_to_state("shift_ir")   
         num_bytes = len(tdi_bits)
         tms_bits = bytearray([0] * num_bytes)
         tdi_bits = tdi_bits[:num_bytes]
@@ -108,15 +100,8 @@ class tap_controller():
         self.driver.transfer_bits(tms_bits, tdi_bits, num_bits)
         self.current_state = "exit1_ir"
     
-    def go_to_shift_dr(self):
-        tms_seq, length = self.get_tms_sequence("shift_dr")
-        tms_bits = bytearray(tms_seq)
-        tdi_bits = bytearray([0b00000])
-        self.driver.transfer_bits(tms_bits, tdi_bits, length)
-        self.current_state = "shift_dr"
-    
     def shift_dr(self, tdi_bits: bytearray, num_bits):
-        
+        self.go_to_state("shift_dr")
         num_bytes = len(tdi_bits)
         tms_bits = bytearray([0] * num_bytes)
         tdi_bits = tdi_bits[:num_bytes]
@@ -130,9 +115,17 @@ class tap_controller():
         self.driver.transfer_bits(tms_bits, tdi_bits, num_bits)
         self.current_state = "exit1_dr"
     
-    def read_id_code(self):
+    def go_to_state(self, state):
+        if state not in TAP_STATES:
+            raise InvalidTAPStateException(f"Invalid TAP state, please choose any of: {TAP_STATES}")
+        tms_seq, length = self.get_tms_sequence(state)
+        tms_bits = bytearray(tms_seq)
+        tdi_bits = bytearray([0b00000])
+        self.driver.transfer_bits(tms_bits, tdi_bits, length)
+        self.current_state = state
+    
+    def read_id_codes(self):
         self.reset()
-        self.go_to_shift_dr()
         self.shift_dr(bytearray([0b00000000] * 4), 32)
         
         id_code_count = 1
@@ -142,23 +135,23 @@ class tap_controller():
                 break
             id_code_count += 1
             
-        self.go_to_idle()
+        self.go_to_state("run_test_idle")
         
-        id_code_end_index = (32 * id_code_count) + 12
-        id_codes = self.driver.get_tdo_string()[12:id_code_end_index]
+        id_code_end_index = (32 * id_code_count) + 9
+        id_codes = self.driver.get_tdo_string()[9:id_code_end_index]
         id_code_array = []
         
-        for device in range(0, id_code_count):
-            start_index = device * 32
-            end_index = (device + 1) * 32
+        for device in range(id_code_count):
+            start_index = (device * 32) + (3 * (device + 1))
+            end_index = start_index + 32
             print(f"Device {device + 1} ID Code: {id_codes[start_index:end_index]}")
             id_code_array.append(id_codes[start_index:end_index])
         
         return id_code_array
             
     def decode_id_code(self):
-        id_codes = self.read_id_code()
-        for id_code in range(0, len(id_codes)):
+        id_codes = self.read_id_codes()
+        for id_code in range(len(id_codes)):
             print(f"=== Device {id_code + 1} ===")
             print(f"Version: {id_codes[id_code][:4]}")
             print(f"Part Number: {id_codes[id_code][4:20]}")

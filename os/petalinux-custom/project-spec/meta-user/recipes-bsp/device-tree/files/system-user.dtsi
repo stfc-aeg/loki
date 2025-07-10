@@ -99,7 +99,6 @@
         #address-cells = <1>;
         #size-cells = <0>;
         reg = <0x73>;
-        i2c-mux-idle-disconnect;
         i2c@0 { // Application support devices
             reg = <0>;
         };

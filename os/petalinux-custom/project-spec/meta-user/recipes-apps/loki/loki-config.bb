@@ -4,19 +4,10 @@ RDEPENDS:${PN} += "loki-config"
 
 # Repo URL.
 SRC_URI = " \
-    file://services/loki-config.sh \
-    file://services/loki-config.service \
-    file://services/loki-bootstrap-emmc.sh \
-    file://services/loki-bootstrap-emmc.service \
-    file://services/loki-connect-control-host.sh \
-    file://services/loki-connect-control-host.service \
-    file://services/loki-get-system-id.sh \
-    file://services/loki-get-system-id.service \
+    file://services \
     file://loki-system-config-default.conf \
     file://instance-config-default.conf \
     file://odin-control-instance.sh \
-    file://services/odin-control-instances-manager.sh \
-    file://services/odin-control-instances-manager.service \
     "
 
 # This has to be in the format expected in Yocto's license list...

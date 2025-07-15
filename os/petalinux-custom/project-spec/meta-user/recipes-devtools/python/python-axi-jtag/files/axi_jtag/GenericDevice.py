@@ -42,3 +42,6 @@ class GenericDevice():
             instruction_code = self.instructions[instruction]
 
         self.chain.shift_ir(self, instruction_code)
+    
+    def shift_dr(self):
+        return self.chain.shift_dr(self)

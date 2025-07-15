@@ -74,11 +74,13 @@ class xvc_driver():
             
             # Perform shift and add output to the list
             tdo_val = self.xil_xvc_shift_bits(tms_chunk, tdi_chunk)
-            self.tdo_output.append((tdo_val, shift_num_bits))
+            tdo_string = bin(tdo_val)[2:]
+            relevant_tdo_val = int(tdo_string[-shift_num_bits:], 2)
+            self.tdo_output.append((relevant_tdo_val, shift_num_bits))
             
             current_bit += shift_num_bits
         
-    def xil_xvc_shift_bits(self, tms_bits: bytes, tdi_bits: bytes) -> bytes:
+    def xil_xvc_shift_bits(self, tms_bits: bytes, tdi_bits: bytes) -> int:
         tms_value = int.from_bytes(tms_bits, "little")
         tdi_value = int.from_bytes(tdi_bits, "little")
         
@@ -114,10 +116,4 @@ class xvc_driver():
             
         return tdo_bits
 
-    def get_tdo_string(self):
-        tdo_string = ""
-        for tdo_val, bits in self.tdo_output:
-            tdo_string += f"{tdo_val & ((1 << bits) - 1):0{bits}b}"
-        
-        return tdo_string
         

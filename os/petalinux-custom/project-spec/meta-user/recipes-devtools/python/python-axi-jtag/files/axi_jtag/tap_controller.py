@@ -1,5 +1,6 @@
 from .xvc_driver import xvc_driver
 from collections import deque
+from .utils import get_bin_string
 
 TAP_STATES = [
     "test_logic_reset", "run_test_idle", "select_dr_scan", "capture_dr", "shift_dr", "exit1_dr", "pause_dr", "exit2_dr",
@@ -114,6 +115,8 @@ class tap_controller():
         
         self.driver.transfer_bits(tms_bits, tdi_bits, num_bits)
         self.current_state = "exit1_dr"
+
+        return self.driver.tdo_output
     
     def go_to_state(self, state):
         if state not in TAP_STATES:
@@ -138,7 +141,7 @@ class tap_controller():
         self.go_to_state("run_test_idle")
         
         id_code_end_index = (32 * id_code_count) + 9
-        id_codes = self.driver.get_tdo_string()[9:id_code_end_index]
+        id_codes = get_bin_string(self.driver.tdo_output)[9:id_code_end_index]
         id_code_array = []
         
         for device in range(id_code_count):

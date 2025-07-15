@@ -2,7 +2,7 @@ import json
 import os
 import re
 
-class InstructionFileNotProvidedException(Exception):
+class InvalidInstructionException(Exception):
     """
     Exception for when an instruction name is provided, but no
     instructions file has been provided
@@ -13,9 +13,10 @@ class InstructionFileNotProvidedException(Exception):
 
 class GenericDevice():
 
-    def __init__(self, ir_length: int, instructions_file: str=None):
+    def __init__(self, ir_length, instructions_file=None):
         self.ir_length = ir_length
         self.instructions_file = instructions_file
+        self.instructions = None
 
         if self.instructions_file:
             base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -31,9 +32,12 @@ class GenericDevice():
             instruction_code = instruction
         else:
             if not self.instructions:
-                raise InstructionFileNotProvidedException(
+                raise InvalidInstructionException(
                     "No instructions file provided, please provide one or provide the instruction code"
                     )
+            
+            if not instruction in self.instructions:
+                raise InvalidInstructionException(f"Instruction: {instruction} has not been defined in {self.instructions_file}")
             
             instruction_code = self.instructions[instruction]
 

@@ -4,7 +4,7 @@ import math
 
 class JTAGChain():
 
-    def __init__(self, devices: list):
+    def __init__(self, devices: list) -> None:
         self.devices = devices
         self.total_ir_length = 0
         self.total_devices = len(devices)
@@ -14,7 +14,7 @@ class JTAGChain():
             device.set_chain(self)
             self.total_ir_length += device.ir_length
     
-    def shift_ir(self, jtag_device, instruction: str):
+    def shift_ir(self, jtag_device, instruction: str) -> None:
         device_index = self.get_device_index(jtag_device)
         tdi_string = self.construct_tdi(device_index, instruction)
 
@@ -22,11 +22,14 @@ class JTAGChain():
         byte_array = bytearray(int(tdi_string[i:i+8], 2) for i in range(0, len(tdi_string), 8))
         self.tap_controller.shift_ir(byte_array, self.total_ir_length)
     
-    def shift_dr(self, jtag_device):
-        total_bits_to_shift = self.total_devices + 31
+    def shift_dr(self, jtag_device, reg_length: int, value: int) -> str:
+        total_bits_to_shift = self.total_devices + (reg_length - 1)
 
-        # Shift through more bits than needed to guarantee all bits are shifted out
-        output = self.tap_controller.shift_dr(bytearray([0b00000000] * ((total_bits_to_shift + 8) // 8)), total_bits_to_shift)
+        if value != 0:
+            output = self.tap_controller.shift_dr(bytearray([]), total_bits_to_shift)
+        else:
+            # Shift through more bits than needed to guarantee all bits are shifted out
+            output = self.tap_controller.shift_dr(bytearray([0b00000000] * ((total_bits_to_shift + 8) // 8)), total_bits_to_shift)
 
         device_index = self.get_device_index(jtag_device)
 
@@ -47,7 +50,7 @@ class JTAGChain():
             else:
                 return bin_string[front_bits_to_strip:-end_bits_to_strip]
     
-    def construct_tdi(self, target_index: int, instruction: str):
+    def construct_tdi(self, target_index: int, instruction: str) -> str:
         tdi = ""
         for device in self.devices:
             if self.devices[target_index] == device:
@@ -58,10 +61,10 @@ class JTAGChain():
 
         return tdi
     
-    def read_all_id_codes(self):
+    def read_all_id_codes(self) -> None:
         self.tap_controller.read_id_codes()
     
-    def get_device_index(self, jtag_device):
+    def get_device_index(self, jtag_device) -> int:
         device_index = 0
         for device in self.devices:
             if device == jtag_device:

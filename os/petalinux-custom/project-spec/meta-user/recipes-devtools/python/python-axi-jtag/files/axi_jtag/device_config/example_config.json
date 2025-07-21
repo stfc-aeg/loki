@@ -1,0 +1,11 @@
+{
+  "instructions": {
+    "instruction_name": "instruction_code"
+  },
+  "registers": [
+    {
+      "name": "reg_name",
+      "bit_length": 0
+    }
+  ]
+}

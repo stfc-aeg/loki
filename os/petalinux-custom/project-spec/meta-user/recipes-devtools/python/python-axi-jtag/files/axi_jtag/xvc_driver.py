@@ -25,12 +25,12 @@ class ByteLengthMismatchException(Exception):
     """
     Exception for when the 2 bytearray inputs are not the same length
     """
-    def __init__(self, message):
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
     
 class xvc_driver():
-    def __init__(self, path_or_address):
+    def __init__(self, path_or_address: str) -> None:
         """
         Initialise a new XVC driver.
 
@@ -55,7 +55,7 @@ class xvc_driver():
         self.cfg = self._uio_device.map(_xvc_driver_Cfg)
         self.tdo_output = []
         
-    def transfer_bits(self, tms_array: bytearray, tdi_array: bytearray, num_bits):
+    def transfer_bits(self, tms_array: bytearray, tdi_array: bytearray, num_bits) -> None:
         
         if len(tms_array) != len(tdi_array):
             raise ByteLengthMismatchException(f"Byte arrays must be the same length. TMS: {len(tms_array)}. TDI: {len(tdi_array)}")

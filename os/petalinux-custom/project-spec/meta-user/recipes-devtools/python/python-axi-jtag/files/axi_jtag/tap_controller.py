@@ -1,5 +1,6 @@
 from .xvc_driver import xvc_driver
 from collections import deque
+from typing import List
 from .utils import get_bin_string
 
 TAP_STATES = [
@@ -55,7 +56,7 @@ class tap_controller():
         self.driver = xvc_driver(path)
         self.current_state = "test_logic_reset"
     
-    def get_tms_sequence(self, to_state):
+    def get_tms_sequence(self, to_state: str):
         from_state = self.current_state
         visited = []
         queue = deque()
@@ -79,14 +80,14 @@ class tap_controller():
                 if next_state and (next_state, seq + [tms]) not in visited:
                     queue.append((next_state, seq + [tms]))
     
-    def reset(self):
+    def reset(self) -> None:
         tms_bits = bytearray([0b11111111])
         tdi_bits = bytearray([0b00000000])
         
         self.driver.transfer_bits(tms_bits, tdi_bits, 8)
         self.current_state = "test_logic_reset"
     
-    def shift_ir(self, tdi_bits: bytearray, num_bits):
+    def shift_ir(self, tdi_bits: bytearray, num_bits: int) -> None:
         self.go_to_state("shift_ir")   
         num_bytes = len(tdi_bits)
         tms_bits = bytearray([0] * num_bytes)
@@ -101,7 +102,7 @@ class tap_controller():
         self.driver.transfer_bits(tms_bits, tdi_bits, num_bits)
         self.current_state = "exit1_ir"
     
-    def shift_dr(self, tdi_bits: bytearray, num_bits):
+    def shift_dr(self, tdi_bits: bytearray, num_bits: int) -> List[str]:
         self.go_to_state("shift_dr")
         num_bytes = len(tdi_bits)
         tms_bits = bytearray([0] * num_bytes)
@@ -118,7 +119,7 @@ class tap_controller():
 
         return self.driver.tdo_output
     
-    def go_to_state(self, state):
+    def go_to_state(self, state: str) -> None:
         if state not in TAP_STATES:
             raise InvalidTAPStateException(f"Invalid TAP state, please choose any of: {TAP_STATES}")
         tms_seq, length = self.get_tms_sequence(state)
@@ -127,7 +128,7 @@ class tap_controller():
         self.driver.transfer_bits(tms_bits, tdi_bits, length)
         self.current_state = state
     
-    def read_id_codes(self):
+    def read_id_codes(self) -> list:
         self.reset()
         self.shift_dr(bytearray([0b00000000] * 4), 32)
         
@@ -147,15 +148,15 @@ class tap_controller():
         for device in range(id_code_count):
             start_index = (device * 32) + (3 * (device + 1))
             end_index = start_index + 32
-            print(f"Device {device + 1} ID Code: {id_codes[start_index:end_index]}")
+            print(f"Device {device + 1} ID Code: {hex(int(id_codes[start_index:end_index], 2))}")
             id_code_array.append(id_codes[start_index:end_index])
         
         return id_code_array
             
-    def decode_id_code(self):
+    def decode_id_code(self) -> None:
         id_codes = self.read_id_codes()
         for id_code in range(len(id_codes)):
             print(f"=== Device {id_code + 1} ===")
-            print(f"Version: {id_codes[id_code][:4]}")
-            print(f"Part Number: {id_codes[id_code][4:20]}")
-            print(f"Manufacturer: {id_codes[id_code][20:31]}")
+            print(f"Version: {hex(int(id_codes[id_code][:4], 2))}")
+            print(f"Part Number: {hex(int(id_codes[id_code][4:20], 2))}")
+            print(f"Manufacturer: {hex(int(id_codes[id_code][20:31], 2))}")

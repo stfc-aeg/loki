@@ -6,7 +6,7 @@
   "registers": [
     {
       "name": "reg_name",
-      "bit_length": 0,
+      "reg_length": 0,
       "address": 0,
       "fields": [
         {

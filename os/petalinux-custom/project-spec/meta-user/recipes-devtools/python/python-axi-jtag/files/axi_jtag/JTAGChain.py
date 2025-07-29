@@ -22,11 +22,16 @@ class JTAGChain():
         byte_array = bytearray(int(tdi_string[i:i+8], 2) for i in range(0, len(tdi_string), 8))
         self.tap_controller.shift_ir(byte_array, self.total_ir_length)
     
-    def shift_dr(self, jtag_device, reg_length: int, value: int) -> str:
+    def shift_dr(self, jtag_device, reg_length: int, value: str) -> str:
         total_bits_to_shift = self.total_devices + (reg_length - 1)
 
-        if value != 0:
-            output = self.tap_controller.shift_dr(bytearray([]), total_bits_to_shift)
+        if value != "0":
+            device_index = self.get_device_index(jtag_device)
+            tdi_string = self.construct_tdi(device_index, value)
+
+            # Convert string to bytearray
+            byte_array = bytearray(int(tdi_string[i:i+8], 2) for i in range(0, len(tdi_string), 8))
+            output = self.tap_controller.shift_dr(byte_array, total_bits_to_shift)
         else:
             # Shift through more bits than needed to guarantee all bits are shifted out
             output = self.tap_controller.shift_dr(bytearray([0b00000000] * ((total_bits_to_shift + 8) // 8)), total_bits_to_shift)
@@ -34,7 +39,10 @@ class JTAGChain():
         device_index = self.get_device_index(jtag_device)
 
         if total_bits_to_shift <= 32:
-            return output[-1][0][2:]
+            if output[-1][0] == 0:
+                return "0" * output[-1][1]
+            
+            return get_bin_string(output[-1])
         else:
             bin_string_array = []
             for i in range(1, (math.ceil(total_bits_to_shift / 32) + 1)):
@@ -64,6 +72,9 @@ class JTAGChain():
     def read_all_id_codes(self) -> None:
         self.tap_controller.read_id_codes()
     
+    def move_into_state(self, state: str) -> None:
+        self.tap_controller.go_to_state(state)
+    
     def get_device_index(self, jtag_device) -> int:
         device_index = 0
         for device in self.devices:
@@ -72,3 +83,6 @@ class JTAGChain():
             device_index += 1
         
         return device_index
+    
+    def reset_state_machine(self):
+        self.tap_controller.reset()

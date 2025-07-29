@@ -55,13 +55,13 @@ class JTAGReg():
         start_bit = prev_bits
         end_bit = start_bit + field_to_read.get_bit_length()
 
-        output = self.update(device, 0)
+        output = self.update(device, "0")
 
         field_value = output[::-1][start_bit:end_bit]
 
         print(f"{field_to_read.get_name()}: {field_value}")
 
-    def update(self, device, value: int):
+    def update(self, device, bits: str):
         device.shift_ir(self.name)
 
-        return device.shift_dr(value)
+        return device.shift_dr(bits)

@@ -88,7 +88,7 @@ class tap_controller():
         self.current_state = "test_logic_reset"
     
     def shift_ir(self, tdi_bits: bytearray, num_bits: int) -> None:
-        self.go_to_state("shift_ir")   
+        self.go_to_state("shift_ir") 
         num_bytes = len(tdi_bits)
         tms_bits = bytearray([0] * num_bytes)
         tdi_bits = tdi_bits[:num_bytes]
@@ -102,7 +102,7 @@ class tap_controller():
         self.driver.transfer_bits(tms_bits, tdi_bits, num_bits)
         self.current_state = "exit1_ir"
     
-    def shift_dr(self, tdi_bits: bytearray, num_bits: int) -> List[str]:
+    def shift_dr(self, tdi_bits: bytearray, num_bits: int):
         self.go_to_state("shift_dr")
         num_bytes = len(tdi_bits)
         tms_bits = bytearray([0] * num_bytes)

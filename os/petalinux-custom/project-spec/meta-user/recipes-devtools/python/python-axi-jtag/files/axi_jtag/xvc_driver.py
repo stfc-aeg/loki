@@ -115,5 +115,3 @@ class xvc_driver():
         tdo_bits = self.cfg.TDO_REG
             
         return tdo_bits
-
-        

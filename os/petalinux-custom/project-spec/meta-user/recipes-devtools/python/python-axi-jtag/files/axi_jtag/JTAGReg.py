@@ -11,14 +11,20 @@ class FieldDoesNotExistException(Exception):
         super().__init__(self.message)
 
 class JTAGReg():
-    def __init__(self, name: str, address: int, fields: List[JTAGField]) -> None:
+    def __init__(self, name: str, address: int, total_bits: int, fields: List[JTAGField]) -> None:
         self.name = name
         self.address = address
         self.fields = fields
-        self.total_bit_length = 0
+        self.total_bit_length = total_bits
 
+        total_field_lengths = 0
         for field in self.fields:
-            self.total_bit_length += field.bit_length
+            total_field_lengths += field.bit_length
+        
+        if self.total_bit_length != total_field_lengths:
+            raise ValueError(
+                "Total bit length of the register does not equal the total bit length of all the fields"
+                )
     
     def get_total_bit_length(self) -> int:
         return self.total_bit_length
@@ -33,9 +39,10 @@ class JTAGReg():
     def parse_reg(reg: dict):
         name = reg["name"]
         address = reg["address"]
+        total_bits = reg["bit_length"]
         fields = JTAGField.parse_fields(reg["fields"])
 
-        return JTAGReg(name, address, fields)
+        return JTAGReg(name, address, total_bits, fields)
 
     def get_field_value(self, field_name: str, device):
         field_to_read = None

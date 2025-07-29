@@ -4,18 +4,26 @@ import re
 from typing import List, Optional
 from .JTAGReg import JTAGReg
 
+class InvalidConfigException(Exception):
+    """
+    Exception for when there is an issue with the provided
+    device configuration file
+    """
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
 class InvalidInstructionException(Exception):
     """
     Exception for when an instruction name is provided, but no
-    instructions file has been provided
+    instructions have been provided in the configuration file
     """
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
 
 class GenericDevice():
-    def __init__(self, ir_length: int, config_file_name: Optional[str]=None) -> None:
-        self.ir_length = ir_length
+    def __init__(self, config_file_name: str) -> None:
         self.device_config_file_name = config_file_name
         self.instructions = None
         self.register_info = None
@@ -23,18 +31,27 @@ class GenericDevice():
         self.last_instruction = ""
         self.bsr_len = None
 
-        if self.device_config_file_name:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            instructions_file_path = os.path.join(base_dir, "device_config", self.device_config_file_name)
-            with open(instructions_file_path) as json_file:
-                file = json.load(json_file)
-                self.instructions = file["instructions"]
-                self.register_info = file["registers"]
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        instructions_file_path = os.path.join(base_dir, "device_config", self.device_config_file_name)
+        with open(instructions_file_path) as json_file:
+            file = json.load(json_file)
 
-                if "BSR_LENGTH" in file:
-                    self.bsr_len = file["BSR_LENGTH"]
-            
-            self.registers = [JTAGReg.parse_reg(reg) for reg in self.register_info]
+            if not "ir_length" in file:
+                raise InvalidConfigException(
+                    "An instruction register length must be sepcified in the configuration file"
+                    )
+
+            self.ir_length = file["ir_length"]
+
+            if "instructions" in file:
+                self.instructions = file["instructions"]
+
+            if "registers" in file:
+                self.register_info = file["registers"]
+                self.registers = [JTAGReg.parse_reg(reg) for reg in self.register_info]
+
+            if "bsr_length" in file:
+                self.bsr_len = file["bsr_length"]
 
     def set_chain(self, chain) -> None:
         self.chain = chain
@@ -44,10 +61,8 @@ class GenericDevice():
             instruction_code = instruction
         else:
             if not self.instructions:
-                raise InvalidInstructionException(
-                    "No instructions file provided, please provide one or provide the instruction code"
-                    )
-            
+                raise InvalidInstructionException(f"No instructions provided in the configuration file")
+
             if not instruction in self.instructions:
                 raise InvalidInstructionException(
                     f"Instruction: {instruction} has not been defined in {self.device_config_file_name}"
@@ -81,14 +96,14 @@ class GenericDevice():
 
         reg.update(self, bits)
     
-    def boundary_scan_read(self, tdi: str):
+    def boundary_scan_read(self, tdi: str, read_instruction_name: str):
         if not self.bsr_len:
-            raise InvalidInstructionException(
+            raise InvalidConfigException(
                 f"The length of the boundary scan register has not been defined in {self.device_config_file_name}"
                 )
         
         if not self.instructions:
-            raise InvalidInstructionException(f"No instruction file provided")
+            raise InvalidInstructionException(f"No instructions provided in the configuration file")
         
         if len(tdi) != self.bsr_len:
             raise ValueError(
@@ -97,7 +112,7 @@ class GenericDevice():
 
         self.chain.reset_state_machine()
 
-        self.chain.shift_ir(self, self.instructions["SAMPLE"])
+        self.chain.shift_ir(self, self.instructions[read_instruction_name])
         self.chain.move_into_state("update_ir")
 
         self.chain.shift_dr(self, self.bsr_len, tdi)

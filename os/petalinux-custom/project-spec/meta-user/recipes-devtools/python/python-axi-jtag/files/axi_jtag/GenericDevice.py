@@ -57,6 +57,7 @@ class GenericDevice():
         self.chain = chain
     
     def shift_ir(self, instruction: str) -> None:
+        # If the instruction contains a letter, it is a name from the config file
         if not re.search("[a-zA-Z]", instruction):
             instruction_code = instruction
         else:
@@ -89,14 +90,23 @@ class GenericDevice():
     
     def get_reg_field_value(self, reg_name: str, field_name: str):
         reg = self.get_register(reg_name)
+
         return reg.get_field_value(field_name, self)
+    
+    def read_reg(self, reg_name: str):
+        reg = self.get_register(reg_name)
+
+        return reg.read(self)
     
     def update_reg(self, reg_name: str, bits: str):
         reg = self.get_register(reg_name)
 
         reg.update(self, bits)
     
-    def boundary_scan_read(self, tdi: str, read_instruction_name: str):
+    def get_bsr_length(self):
+        return self.bsr_len
+    
+    def boundary_scan(self, tdi: str, read_instruction_name: str):
         if not self.bsr_len:
             raise InvalidConfigException(
                 f"The length of the boundary scan register has not been defined in {self.device_config_file_name}"
@@ -112,9 +122,11 @@ class GenericDevice():
 
         self.chain.reset_state_machine()
 
+        # Shift in the boundary scan instruction
         self.chain.shift_ir(self, self.instructions[read_instruction_name])
         self.chain.move_into_state("update_ir")
 
+        # Read the data out of the boundary scan register
         self.chain.shift_dr(self, self.bsr_len, tdi)
         self.chain.move_into_state("update_dr")
 

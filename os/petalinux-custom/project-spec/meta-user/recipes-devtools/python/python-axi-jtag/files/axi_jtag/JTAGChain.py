@@ -48,6 +48,7 @@ class JTAGChain():
             for i in range(1, (math.ceil(total_bits_to_shift / 32) + 1)):
                 bin_string_array.append(output[-i])
             
+            # Strip bits to discard devices in bypass
             front_bits_to_strip = 0 + device_index
             end_bits_to_strip = self.total_devices - (device_index + 1)
 

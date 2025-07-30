@@ -49,6 +49,7 @@ class JTAGReg():
         
         prev_bits = 0
         for field in self.fields:
+            # Find the correct field
             if field.get_name() == field_name:
                 field_to_read = field
                 break
@@ -59,6 +60,7 @@ class JTAGReg():
                 f"Field named {field_name} is not defined in register {self.get_name()}"
                 )
         
+        # Strip bits to get the field value
         start_bit = prev_bits
         end_bit = start_bit + field_to_read.get_bit_length()
 
@@ -70,6 +72,11 @@ class JTAGReg():
             return field_value[::-1]
         
         return field_value
+    
+    def read(self, device):
+        device.shift_ir(self.name)
+
+        return device.shift_dr("0")
 
     def update(self, device, bits: str):
         device.shift_ir(self.name)

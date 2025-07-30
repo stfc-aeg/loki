@@ -8,6 +8,7 @@ TAP_STATES = [
     "update_dr", "select_ir_scan", "capture_ir", "shift_ir", "exit1_ir", "pause_ir", "exit2_ir", "update_ir"
 ]
 
+# The TAP states with the posible transitions between each state
 TAP_TRANSITIONS = {
     ("test_logic_reset", 0): "run_test_idle",
     ("test_logic_reset", 1): "test_logic_reset",
@@ -62,6 +63,7 @@ class tap_controller():
         queue = deque()
         queue.append((from_state, []))
         
+        # Find the shortest path from one state to another
         while queue:
             state, seq = queue.popleft()
             
@@ -69,6 +71,7 @@ class tap_controller():
                 visited.append(state)
             
             if state == to_state:
+                # Reverse the sequence to shift it in the right order
                 seq = list(reversed(seq))
                 result = 0
                 for bit in seq:
@@ -81,6 +84,7 @@ class tap_controller():
                     queue.append((next_state, seq + [tms]))
     
     def reset(self) -> None:
+        # Hold TMS high to ensure the state machine is put into the reset state
         tms_bits = bytearray([0b11111111])
         tdi_bits = bytearray([0b00000000])
         
@@ -122,6 +126,7 @@ class tap_controller():
     def go_to_state(self, state: str) -> None:
         if state not in TAP_STATES:
             raise InvalidTAPStateException(f"Invalid TAP state, please choose any of: {TAP_STATES}")
+        
         tms_seq, length = self.get_tms_sequence(state)
         tms_bits = bytearray(tms_seq)
         tdi_bits = bytearray([0b00000])
@@ -152,11 +157,3 @@ class tap_controller():
             id_code_array.append(id_codes[start_index:end_index])
         
         return id_code_array
-            
-    def decode_id_code(self) -> None:
-        id_codes = self.read_id_codes()
-        for id_code in range(len(id_codes)):
-            print(f"=== Device {id_code + 1} ===")
-            print(f"Version: {hex(int(id_codes[id_code][:4], 2))}")
-            print(f"Part Number: {hex(int(id_codes[id_code][4:20], 2))}")
-            print(f"Manufacturer: {hex(int(id_codes[id_code][20:31], 2))}")

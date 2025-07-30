@@ -39,7 +39,7 @@ class JTAGReg():
     def parse_reg(reg: dict):
         name = reg["name"]
         address = reg["address"]
-        total_bits = reg["bit_length"]
+        total_bits = reg["reg_length"]
         fields = JTAGField.parse_fields(reg["fields"])
 
         return JTAGReg(name, address, total_bits, fields)
@@ -66,7 +66,10 @@ class JTAGReg():
 
         field_value = output[::-1][start_bit:end_bit]
 
-        print(f"{field_to_read.get_name()}: {field_value}")
+        if field_to_read.get_reversed():
+            return field_value[::-1]
+        
+        return field_value
 
     def update(self, device, bits: str):
         device.shift_ir(self.name)

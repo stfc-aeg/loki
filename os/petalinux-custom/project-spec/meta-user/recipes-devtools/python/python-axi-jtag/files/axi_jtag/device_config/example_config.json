@@ -11,7 +11,8 @@
       "fields": [
         {
           "name": "field_name",
-          "bit_length": 0
+          "bit_length": 0,
+          "reversed": false
         }
       ]
     }

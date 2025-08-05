@@ -20,6 +20,11 @@ export SW_EXPORT_DIR
 undefine HW_EXPORT_DIR
 undefine SW_EXPORT_DIR
 
+# If using an override project-specific block-design, update the directory here. Else leave the undefine.
+export BLOCKDESIGN_DIR
+undefine BLOCKDESIGN_DIR
+#BLOCKDESIGN_DIR=$(shell pwd)/block_design/
+
 # Include recipes to take the environment and run the configuration using the autoconf params
 # Provides loki-configure-hw, loki-configure-sw, loki-configure-os
 include ${LOKI_DIR}/config.mk

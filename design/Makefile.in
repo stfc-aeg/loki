@@ -7,7 +7,7 @@ VIVADO_PROJ_PATH = vivado
 LOKI_ROOT_ABS = @abs_top_builddir@
 PLATFORM=@platform_module_shortname@
 CARRIER=@platform_carrier@
-BLOCKDESIGN_DIR ?= ./carrier_support/${CARRIER}/block_design block_design
+BLOCKDESIGN_DIR ?= ./carrier_support/${CARRIER}/block_design
 
 HARDWARE_OUTPUT = prebuilt/hardware/${PLATFORM}/design_${PLATFORM}.xsa
 SOFTWARE_OUTPUT = prebuilt/software/${PLATFORM}/fsbl.elf prebuilt/software/${PLATFORM}/pmufw.elf

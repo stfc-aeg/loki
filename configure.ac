@@ -1,7 +1,5 @@
 AC_INIT(loki, 1.0)
 
-AC_ARG_VAR(blockdesign_override_dir, [Optional, advanced: Build using an out-of-tree version of the block design, with path o block design .bd file specified here. Consider using custom constraints first. Not yet implemented.])
-
 AC_ARG_VAR(os_path, [Optional, advanced: Build using an out-of-tree version of petalinux, with path to PL_ROOT specified here. Consider using a custom user layer with yocto_user_layer_0 first.])
 
 AC_ARG_VAR(platform_module_shortname, [Required: Shortname of the Trenz module used for the build. See loki/design/board_files/TE080x_board_files.csv for full list.])

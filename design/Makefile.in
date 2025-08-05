@@ -7,7 +7,7 @@ VIVADO_PROJ_PATH = vivado
 LOKI_ROOT_ABS = @abs_top_builddir@
 PLATFORM=@platform_module_shortname@
 CARRIER=@platform_carrier@
-BLOCKDESIGN_OVERRIDE_DIR=@blockdesign_override_dir@
+BLOCKDESIGN_DIR ?= ./carrier_support/${CARRIER}/block_design block_design
 
 HARDWARE_OUTPUT = prebuilt/hardware/${PLATFORM}/design_${PLATFORM}.xsa
 SOFTWARE_OUTPUT = prebuilt/software/${PLATFORM}/fsbl.elf prebuilt/software/${PLATFORM}/pmufw.elf
@@ -16,13 +16,8 @@ SOFTWARE_OUTPUT = prebuilt/software/${PLATFORM}/fsbl.elf prebuilt/software/${PLA
 .platform_configured: Makefile
 	$(info carrier_select modified build dependencies: $?)
 	$(info Configuring LOKI project to use carrier ${CARRIER})
-ifdef (${BLOCKDESIGN_OVERRIDE_DIR})
-	$(info linking custom application block design)
-	ln -sfT ${BLOCKDESIGN_OVERRIDE_DIR} block_design
-else
-	$(info linking default block design for ${CARRIER} carrier)
-	ln -sfT ./carrier_support/${CARRIER}/block_design block_design
-endif
+	$(info linking block design ${BLOCKDESIGN_DIR})
+	ln -sfT ${BLOCKDESIGN_DIR} block_design
 
 	$(info linking constraints for ${CARRIER} carrier)
 	ln -sfT ./carrier_support/${CARRIER}/constraints constraints

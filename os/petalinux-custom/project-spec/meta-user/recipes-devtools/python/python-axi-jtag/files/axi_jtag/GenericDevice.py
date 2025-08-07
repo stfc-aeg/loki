@@ -38,7 +38,7 @@ class GenericDevice():
 
             if not "ir_length" in file:
                 raise InvalidConfigException(
-                    "An instruction register length must be sepcified in the configuration file"
+                    "An instruction register length must be specified in the configuration file"
                     )
 
             self.ir_length = file["ir_length"]
@@ -71,20 +71,31 @@ class GenericDevice():
             
             instruction_code = self.instructions[instruction]
         
-        self.last_instruction = instruction
+            self.last_instruction = instruction
 
         self.chain.shift_ir(self, instruction_code)
     
-    def shift_dr(self, value: Optional[str]="0") -> str:
-        reg = self.get_register(self.last_instruction)
+    def shift_dr(self, value: Optional[str]="0", length: Optional[int]=None) -> str:
+        if self.last_instruction:
+            reg = self.get_register(self.last_instruction)
 
-        return self.chain.shift_dr(self, reg.total_bit_length, value)
+            return self.chain.shift_dr(self, reg.total_bit_length, value)
+        
+        # If the instruction is not linked to a register, a length must be provided so the correct
+        # number of bits can be shifted in
+        if length:
+            return self.chain.shift_dr(self, length, value)
+        else:
+            raise RuntimeError("No length provided, please provide a length to shift into the data register")
 
     def get_all_registers(self) -> List[JTAGReg]:
         return self.registers
     
     def get_register(self, name: str) -> JTAGReg:
         regs = list(filter(lambda reg: name == reg.get_name(), self.registers))
+        
+        if not regs:
+            raise RuntimeError(f"No register named {name} found")
 
         return regs[0]
     
@@ -92,6 +103,11 @@ class GenericDevice():
         reg = self.get_register(reg_name)
 
         return reg.get_field_value(field_name, self)
+
+    def update_reg_field_value(self, reg_name: str, field_name: str, value: str):
+        reg = self.get_register(reg_name)
+
+        reg.update_field(field_name, value, self)
     
     def read_reg(self, reg_name: str):
         reg = self.get_register(reg_name)

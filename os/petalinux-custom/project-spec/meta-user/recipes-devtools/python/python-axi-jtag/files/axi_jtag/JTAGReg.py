@@ -66,12 +66,47 @@ class JTAGReg():
 
         output = self.update(device, "0")
 
-        field_value = output[::-1][start_bit:end_bit]
+        field_value = output[start_bit:end_bit]
 
         if field_to_read.get_reversed():
             return field_value[::-1]
         
         return field_value
+    
+    def update_field(self, field_name: str, value: str, device):
+        field_to_update = None
+        
+        prev_bits = 0
+        for field in self.fields:
+            # Find the correct field
+            if field.get_name() == field_name:
+                field_to_update = field
+                break
+            prev_bits += field.get_bit_length()
+        
+        if field_to_update is None:
+            raise FieldDoesNotExistException(
+                f"Field named {field_name} is not defined in register {self.get_name()}"
+                )
+        
+        if len(value) != field_to_update.get_bit_length():
+            raise RuntimeError(
+                f"Incorrect number of bits provided, the length of {field_to_update.get_name()} is {field_to_update.get_bit_length()}, you provided {len(value)} bits"
+                )
+        
+        # Strip bits to get the field value
+        start_bit = prev_bits
+        end_bit = start_bit + field_to_update.get_bit_length()
+
+        current_reg_value = self.update(device, "0")
+
+        bits_before_field = current_reg_value[:(start_bit - 1)]
+        bits_after_field = current_reg_value[end_bit:]
+
+        # Replace old field value with new value
+        new_reg_value = bits_before_field + value + bits_after_field
+
+        device.shift_dr(new_reg_value)
     
     def read(self, device):
         device.shift_ir(self.name)

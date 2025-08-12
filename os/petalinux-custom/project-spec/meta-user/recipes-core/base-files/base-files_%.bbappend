@@ -11,8 +11,7 @@ do_install:append(){
     echo "/dev/mtdblock4       /mnt/flashuser          jffs2           rw,nofail      0  0" >> ${D}${sysconfdir}/fstab
 
     # Add fstab entry for MMC cards (SD and eMMC) with friendlier names. Systemd should create the directories.
-    echo "/dev/mmcblk0p1       /mnt/emmc          auto       defaults,auto,nofail  0  0" >> ${D}${sysconfdir}/fstab
+    echo "/dev/mmcblk0p1       /mnt/emmc          auto       defaults,auto,nofail  0  2" >> ${D}${sysconfdir}/fstab
 
     echo "/dev/mmcblk1p1       /mnt/sd          auto       defaults,auto,nofail  0  0" >> ${D}${sysconfdir}/fstab
-
 }

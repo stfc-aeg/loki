@@ -1,9 +1,12 @@
 [Unit]
 SourcePath=/opt/loki-service-scripts/loki-config.sh
 Before=graphical.target
-After=inetd.busybox.service
 After=dropbear.service
+Wants=dropbear.service
 After=nfsserver.service
+Wants=nfsserver.service
+After=network-online.target
+Wants=network-online.target
 After=loki-get-system-id.service       
 After=loki-connect-control-host.service
 WantedBy=multi-user.target

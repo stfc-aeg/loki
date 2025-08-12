@@ -78,6 +78,12 @@ do_install:append() {
     # Install script for starting odin-control instances
     install -d ${D}${base_prefix}/bin
     install -m 0755 '${WORKDIR}/${ODIN_CONTROL_INSTANCE_SCRIPT_NAME}' '${D}${base_prefix}/bin/${ODIN_CONTROL_INSTANCE_SCRIPT_NAME}'
+
+    # Create a directory for overrides to the base wired network configuration so that
+    # optional additional changes (like an additional static IP alias) can be added.
+    # This will be bind-mounted in the fstab if it exists, from eMMC.
+    # NOTE: this MUST have the same name as the default network file with '.d' added.
+    install -d ${D}/${base_prefix}/lib/systemd/network/80-wired.network.d
 }
 
 # include the rootfs build directory locations in the yocto rootfs on exit
@@ -88,3 +94,4 @@ FILES:${PN} += "${base_prefix}${BOOT_SCRIPT_DESTINATION}/*"
 FILES:${PN} += "${base_prefix}${SYSTEMD_SCRIPT_DESTINATION}/*"
 FILES:${PN} += "${base_prefix}${SYSTEMD_SCRIPT_DESTINATION}/*"
 FILES:${PN} += "${base_prefix}/etc/systemd/system/multi-user.target.wants/*"
+FILES:${PN} += "${base_prefix}/lib/systemd/network/80-wired.network.d"

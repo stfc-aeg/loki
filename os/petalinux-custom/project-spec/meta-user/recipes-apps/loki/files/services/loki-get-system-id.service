@@ -1,6 +1,8 @@
 [Unit]
 SourcePath=/opt/loki-service-scripts/loki-get-system-id.sh
 Before=graphical.target
+After=loki-bootstrap-emmc.service
+Wants=loki-bootstrap-emmc.service
 WantedBy=multi-user.target
 
 [Service]

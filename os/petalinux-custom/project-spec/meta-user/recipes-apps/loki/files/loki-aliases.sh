@@ -28,19 +28,16 @@ function loki_remount_host {
 }
 
 function loki_set_static_ip {
-	mkdir -p /mnt/emmc/interfaces-mmc
+	mkdir -p /mnt/emmc/wired-network-overrides-mmc
 	echo "
 # Create an alias that will work without DHCP, but won't override it
-auto eth0:1
-iface eth0:1 inet static
-        name Ethernet static alias
-        address ${1}
-        netmask 255.255.255.0
-" > /mnt/emmc/interfaces-mmc/auto-static-eth0.conf
+[Address]
+Address=${1}/24
+" > /mnt/emmc/wired-network-overrides-mmc/auto-static-eth0.conf
 
 	# The automatic bind mount will bind this to where interfaces will see it
 	mount -a
 
 	# Restart the networking process
-	/etc/init.d/networking restart
+    networkctl reload
 }

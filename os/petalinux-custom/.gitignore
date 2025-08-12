@@ -20,5 +20,5 @@ pre-built/linux/
 /project-spec/configs/gen-machineconf.log.old
 /project-spec/configs/configs
 /project-spec/configs/plnxtool.conf
-/project-spec/configs/rootfsconfigs/Kconfig
+/project-spec/configs/rootfsconfigs/Kconfig*
 /project-spec/configs/zynqmp-generic-xczu4cg.conf

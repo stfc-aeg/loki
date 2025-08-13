@@ -42,7 +42,6 @@ else
 fi
 
 # Places where the bind mounted locations end up
-LOKI_SEQUENCES_DESTINATION="/opt/loki-detector/sequences"
 LOKI_EXPORTS_DESTINATION="/opt/loki-detector/exports"
 LOKI_CONFIG_DESTINATION=${LOKI_CONFIG_NONVOLATILE_DIR}/loki-system-config.conf
 LOKI_IMAGE_UPDATE_DESTINATION="/opt/loki-update"
@@ -108,21 +107,11 @@ function parse_host_layout_config {
 # ID already.
 #CREATE_SYSTEM_ID_DIRECTORY=1
 
-# Example: Use a shared sequences directory for all detectors for this application
-#SEQUENCES_LOC=sequences
-
-# Example: Use a sequences directory separated for each system ID used just for one system ID
-#SEQUENCES_LOC=\${LOKI_SYSTEMID}/sequences
-
 # Available variables:
 #######################
 
 # File path of main LOKI .conf file. Optional override.
 #LOKI_CONFIG_FILENAME=loki-config.conf
-
-# Directory of odin-sequences sequence files. If left unspecified will use the base sequences
-# built into the image.
-#SEQUENCES_LOC=sequences-shared
 
 # Directory of Data Export Location for SPI data etc. Required to access exported data.
 # Note that all users must have write permission to this directory.
@@ -154,7 +143,7 @@ function create_bind_mounts {
     # Special Option: CREATE_SYSTEM_ID_DIRECTORY
     # If set, the target system will create a directory with its unique System ID, meaning the user can specify
     # configurations differently for each system by including ${LOKI_SYSTEMID} in the toplevel under application.
-    # For example, they might specify ${LOKI_SYSTEMID}/sequences for a system-specific sequences directory.
+    # For example, they might specify ${LOKI_SYSTEMID}/exports for a system-specific exports directory.
     if [[ ${CREATE_SYSTEM_ID_DIRECTORY:=0} -eq 1 ]]
     then
         echo "Automatic creation of system ID top-level directories has been enabled"
@@ -166,22 +155,6 @@ function create_bind_mounts {
             mkdir -p ${MOUNTED_APPROOT}/${LOKI_SYSTEMID} && \
                 chown loki:loki ${MOUNTED_APPROOT}/${LOKI_SYSTEMID} && \
                 chmod -R a+rw ${MOUNTED_APPROOT}/${LOKI_SYSTEMID}
-        fi
-    fi
-
-    # Sequences
-    # The sequences directory for odin-sequences.
-    if [ -z ${SEQUENCES_LOC+x} ];
-    then
-        echo "No sequence directory specified, using internal version"
-    else
-        echo "A sequences directory has been specified at ${MOUNTED_APPROOT}/${SEQUENCES_LOC}"
-        if [ -d ${MOUNTED_APPROOT}/${SEQUENCES_LOC} ]
-        then
-            echo "Sequences directory exists, bind mounting it"
-            mount --bind ${MOUNTED_APPROOT}/${SEQUENCES_LOC} ${LOKI_SEQUENCES_DESTINATION}
-        else
-            echo "Could not find sequences directory at ${MOUNTED_APPROOT}/${SEQUENCES_LOC}, will not mount"
         fi
     fi
 
@@ -265,13 +238,6 @@ function create_bind_mounts {
 
 function remove_bind_mounts {
     echo "Unmounting bind mounts from host NFS mount"
-
-    if mountpoint -q ${LOKI_SEQUENCES_DESTINATION}
-    then
-        printf "Unmounting sequences..."
-        umount ${LOKI_SEQUENCES_DESTINATION}
-        echo "Unmounted sequences"
-    fi
 
     if mountpoint -q ${LOKI_EXPORTS_DESTINATION}
     then

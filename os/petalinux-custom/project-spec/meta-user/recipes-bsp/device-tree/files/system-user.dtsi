@@ -1,7 +1,15 @@
 /include/ "system-conf.dtsi"
-/include/ "loki-info.dtsi"
 
 / {
+// This will be populated later by the Makefile
+  loki-metadata {
+    application-name="";
+    application-version="";
+    loki-version="";
+    platform="";
+  };
+
+
   refclk3:psgtr_dp_clock {
           compatible = "fixed-clock";
           #clock-cells = <0x00>;

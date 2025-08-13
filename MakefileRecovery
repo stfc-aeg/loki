@@ -4,7 +4,8 @@ all: os
 LOKI_DIR=./
 
 # Update APPLICATION_DIR to your application root
-APPLICATION_DIR=./loki-recovery/
+export APPLICATION_DIR
+APPLICATION_DIR=$(shell pwd)/loki-recovery/
 
 # Update LOKI_ENV_DIR to the location of repo.env and machine.env
 LOKI_ENV_DIR=./loki-recovery/

@@ -73,11 +73,24 @@ ${OUTPUT_DIR}/.build_complete: ${PL_PROJ_BITSTREAM} ${BUILD_DEPS}
 	$(info performing petalinux-build...)
 	petalinux-build
 	touch ${OUTPUT_DIR}/.build_complete
+
+	# Add LOKI metadata to include the autoconf information on application name, platform etc
+	fdtput -t s ${DTB} /loki-metadata application-name "@loki_application_name@"
+	fdtput -t s ${DTB} /loki-metadata platform "@platform_module_shortname@,@platform_carrier@"
+
+	# Modify the LOKI metadata version information to the latest for loki core
+	fdtput -t s ${DTB} /loki-metadata loki-version $(shell git describe)
+	$(info Updated LOKI Core git version in metadata)
+
+	# Modify the application metadata version information to the git describe for its dir,
+	# or leave blank if there is no git repo describe info.
+	$(info Updating application version using git describe from ${APPLICATION_DIR})
+	fdtput -t s ${DTB} /loki-metadata application-version $(shell git -C ${APPLICATION_DIR} describe)
 build: ${OUTPUT_DIR}/.build_complete ;
 
 ${OUTPUT_DIR}/system.bit: build ;
 ${OUTPUT_DIR}/bl31.elf: build ;
-${OUTPUT_DIR}/system.dtb: build ;
+${DTB}: build ;
 
 # rootfs is several output files. However, this is the one that is required to be included
 # in the image.ub.
@@ -85,7 +98,8 @@ ${OUTPUT_DIR}/rootfs.cpio.gz: build ;
 
 # Create intermediate product so that PHONY is not executed unless changes have been made
 # This means that package can provide multiple files without multiple runs
-${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl.elf ${OUTPUT_DIR}/pmufw.elf ${OUTPUT_DIR}/bl31.elf ${OUTPUT_DIR}/system.bit ${OUTPUT_DIR}/system.dtb
+${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl.elf ${OUTPUT_DIR}/pmufw.elf ${OUTPUT_DIR}/bl31.elf ${OUTPUT_DIR}/system.bit ${DTB}
+
 	$(info PetaLinux Package Enabled, starting...)
 	petalinux-package --boot  \
 		--u-boot ${OUTPUT_DIR}/u-boot.elf \
@@ -93,11 +107,16 @@ ${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl
 		--pmufw ${OUTPUT_DIR}/pmufw.elf \
 		--atf ${OUTPUT_DIR}/bl31.elf \
 		--fpga ${OUTPUT_DIR}/system.bit \
-		--dtb ${OUTPUT_DIR}/system.dtb \
+		--dtb ${DTB} \
 		-o ${OUTPUT_DIR}/BOOT.BIN \
 		--force
 	$(info PetaLinux Package Passed)
 	touch ${OUTPUT_DIR}/.package_complete
+
+	# This is an additional step to update the image timestamp- needed because the 2023
+	# toolchain does not seem to correctly set it. This acts on the top level FIT image.
+	fdtput -t i ${OUTPUT_DIR}/image.ub / timestamp $(shell date +%s)
+	$(info ${OUTPUT_DIR}/image.ub timestamp updated to package time)
 package: ${OUTPUT_DIR}/.package_complete ;
 
 ${OUTPUT_DIR}/BOOT.BIN: package ;
@@ -105,8 +124,8 @@ ${OUTPUT_DIR}/boot.scr: package ;
 ${OUTPUT_DIR}/image.ub: package ;
 
 ${DTS}: ${DTB}
-	dtc -I dtb -O dts -o ${OUTPUT_DIR}/system.dts ${OUTPUT_DIR}/system.dtb
-	$(info New device tree exported to ${OUTPUT_DIR}/system.dts)
+	dtc -I dtb -O dts -o ${DTS} ${DTB}
+	$(info New device tree exported to ${DTS})
 
 ${PL_ROOT}/pre-built/linux/images/pmu_rom_qemu_sha3.elf:
 	$(warning pmu_rom_qemu_sha3.elf is not automatically build and must be obtained from Xilinx)

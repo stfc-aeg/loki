@@ -10,7 +10,7 @@
 ### END INIT INFO
 
 LOKI_CONFIG_VOLATILE_DIR=/etc/conf.d/loki-config/
-LOKI_CONFIG_NONVOLATILE_DIR=/mnt/sd-mmcblk0p1/loki-config/
+LOKI_CONFIG_NONVOLATILE_DIR=/mnt/emmc/loki-config/
 
 # Settings from this file will be sourced, and will override default values in this file
 REMOTE_CONFIGURATION_LOCATION=${LOKI_CONFIG_NONVOLATILE_DIR}/loki-host.conf

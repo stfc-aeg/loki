@@ -4,11 +4,11 @@ import math
 
 class JTAGChain():
 
-    def __init__(self, devices: list) -> None:
+    def __init__(self, devices: list, uio_path: str) -> None:
         self.devices = devices
         self.total_ir_length = 0
         self.total_devices = len(devices)
-        self.tap_controller = tap_controller("/dev/uio0")
+        self.tap_controller = tap_controller(uio_path)
 
         for device in self.devices:
             device.set_chain(self)

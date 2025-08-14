@@ -102,12 +102,12 @@ class GenericDevice():
     def get_reg_field_value(self, reg_name: str, field_name: str):
         reg = self.get_register(reg_name)
 
-        return reg.get_field_value(field_name, self)
+        return reg.get_field_value((field_name,), self)
 
-    def update_reg_field_value(self, reg_name: str, field_name: str, value: str):
+    def update_reg_field_value(self, reg_name: str, field_path: tuple, value: str):
         reg = self.get_register(reg_name)
 
-        reg.update_field(field_name, value, self)
+        reg.update_field(field_path, value, self)
     
     def read_reg(self, reg_name: str):
         reg = self.get_register(reg_name)

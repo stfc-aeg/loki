@@ -44,20 +44,12 @@ class JTAGReg():
 
         return JTAGReg(name, address, total_bits, fields)
 
-    def get_field_value(self, field_name: str, device):
-        field_to_read = None
-        
-        prev_bits = 0
-        for field in self.fields:
-            # Find the correct field
-            if field.get_name() == field_name:
-                field_to_read = field
-                break
-            prev_bits += field.get_bit_length()
+    def get_field_value(self, field_path: tuple, device):
+        field_to_read, prev_bits = self.find_subfield_and_start_bit(field_path)
         
         if field_to_read is None:
             raise FieldDoesNotExistException(
-                f"Field named {field_name} is not defined in register {self.get_name()}"
+                f"Field named {field_path[-1]} is not defined in register {self.get_name()}"
                 )
         
         # Strip bits to get the field value
@@ -73,20 +65,12 @@ class JTAGReg():
         
         return field_value
     
-    def update_field(self, field_name: str, value: str, device):
-        field_to_update = None
-        
-        prev_bits = 0
-        for field in self.fields:
-            # Find the correct field
-            if field.get_name() == field_name:
-                field_to_update = field
-                break
-            prev_bits += field.get_bit_length()
+    def update_field(self, field_path: tuple, value: str, device):
+        field_to_update, prev_bits = self.find_subfield_and_start_bit(field_path)
         
         if field_to_update is None:
             raise FieldDoesNotExistException(
-                f"Field named {field_name} is not defined in register {self.get_name()}"
+                f"Field named {field_path[-1]} is not defined in register {self.get_name()}"
                 )
         
         if len(value) != field_to_update.get_bit_length():
@@ -100,7 +84,7 @@ class JTAGReg():
 
         current_reg_value = self.update(device, "0")
 
-        bits_before_field = current_reg_value[:(start_bit - 1)]
+        bits_before_field = current_reg_value[:(start_bit)]
         bits_after_field = current_reg_value[end_bit:]
 
         # Replace old field value with new value
@@ -108,6 +92,25 @@ class JTAGReg():
 
         device.shift_dr(new_reg_value)
     
+    def find_subfield_and_start_bit(self, field_path: tuple):
+        current_fields_to_search = self.fields
+        current_field = None
+        start_bit = 0
+
+        for field_name in field_path:
+            for subfield in current_fields_to_search:
+                if subfield.get_name() == field_name:
+                    next_field = subfield
+                    for field in current_fields_to_search:
+                        if field == next_field:
+                            break
+                        start_bit += field.get_bit_length()
+                    current_field = next_field
+                    current_fields_to_search = current_field.get_subfields()
+                    break
+        
+        return current_field, start_bit
+
     def read(self, device):
         device.shift_ir(self.name)
 

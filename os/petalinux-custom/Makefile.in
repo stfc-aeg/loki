@@ -100,6 +100,8 @@ ${OUTPUT_DIR}/rootfs.cpio.gz: build ;
 # This means that package can provide multiple files without multiple runs
 ${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl.elf ${OUTPUT_DIR}/pmufw.elf ${OUTPUT_DIR}/bl31.elf ${OUTPUT_DIR}/system.bit ${DTB}
 
+	$(info Packaged image contains application $(fdtget -t s ${DTB} /loki-metadata application-name) version  $(fdtget -t s ${DTB} /loki-metadata loki-version) using loki core $(fdtget -t s ${DTB} /loki-metadata loki-version))
+
 	$(info PetaLinux Package Enabled, starting...)
 	petalinux-package --boot  \
 		--u-boot ${OUTPUT_DIR}/u-boot.elf \

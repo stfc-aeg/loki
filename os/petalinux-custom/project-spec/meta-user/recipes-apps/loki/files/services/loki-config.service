@@ -1,0 +1,23 @@
+[Unit]
+SourcePath=/opt/loki-service-scripts/loki-config.sh
+Before=graphical.target
+After=dropbear.service
+Wants=dropbear.service
+After=nfsserver.service
+Wants=nfsserver.service
+After=network-online.target
+Wants=network-online.target
+After=loki-get-system-id.service       
+After=loki-connect-control-host.service
+WantedBy=multi-user.target
+
+[Service]
+Type=forking
+Restart=no
+TimeoutSec=5min
+IgnoreSIGPIPE=no
+KillMode=process
+GuessMainPID=no
+RemainAfterExit=yes
+ExecStart=/opt/loki-service-scripts/loki-config.sh start
+ExecStop=/opt/loki-service-scripts/loki-config.sh stop

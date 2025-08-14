@@ -10,7 +10,7 @@ SW_EXPORT_DIR ?= ${LOKI_ROOT_ABS}/design/prebuilt/software/${PLATFORM}
 SW_FSBL_FILENAME ?= fsbl.elf
 SW_PMUFW_FILENAME ?= pmufw.elf
 PL_ROOT = .
-OUTPUT_DIR = ${PL_ROOT}/images/linux
+OUTPUT_DIR = ${PL_ROOT}/build/images/linux
 
 DESIGN_BITSTREAM = ${PL_ROOT}/${HW_XSA_FILENAME}
 PL_PROJ_BITSTREAM = ${PL_ROOT}/project-spec/hw-description/system.xsa
@@ -87,11 +87,14 @@ ${OUTPUT_DIR}/rootfs.cpio.gz: build ;
 # This means that package can provide multiple files without multiple runs
 ${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl.elf ${OUTPUT_DIR}/pmufw.elf ${OUTPUT_DIR}/bl31.elf ${OUTPUT_DIR}/system.bit ${OUTPUT_DIR}/system.dtb
 	$(info PetaLinux Package Enabled, starting...)
-	petalinux-package --boot --u-boot \
+	petalinux-package --boot  \
+		--u-boot ${OUTPUT_DIR}/u-boot.elf \
 		--fsbl ${OUTPUT_DIR}/fsbl.elf \
 		--pmufw ${OUTPUT_DIR}/pmufw.elf \
 		--atf ${OUTPUT_DIR}/bl31.elf \
 		--fpga ${OUTPUT_DIR}/system.bit \
+		--dtb ${OUTPUT_DIR}/system.dtb \
+		-o ${OUTPUT_DIR}/BOOT.BIN \
 		--force
 	$(info PetaLinux Package Passed)
 	touch ${OUTPUT_DIR}/.package_complete

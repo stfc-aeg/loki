@@ -9,49 +9,36 @@
 
 ### END INIT INFO
 
-#REMOTE_CONFIGURATION_LOCATION="/mnt/flashmtd1/loki-config/"
-REMOTE_CONFIGURATION_LOCATION="/mnt/sd-mmcblk0p1/loki-config/"
+OVERRIDE_CONFIGURATION_LOCATION="/mnt/emmc/loki-config/"
 
-REMOTE_CONFIGURATION_FILENAME="loki-config.conf"
-CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/config-default.conf"
-SSHCONFDIR_EMMC="/mnt/sd-mmcblk0p1/.ssh"
-SSHCONFDIR_IMG="/home/${LOKI_USERNAME}/.ssh"
+OVERRIDE_CONFIGURATION_FILENAME="loki-system-config.conf"
+CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/loki-system-config-default.conf"
+SSHCONFDIR_EMMC="/mnt/emmc/.ssh"
+SSHCONFDIR_IMG="/home/loki/.ssh"
 STATIC_IP_INTERFACE_NAME="eth0"
 CONFIG_VERSION=1
 
 # Determine if the remote configuration can be found. If not, attempt to copy the default config
 # to the remote location, and otherwise start using the default config
-if test -f "$REMOTE_CONFIGURATION_LOCATION$REMOTE_CONFIGURATION_FILENAME"; then
+if test -f "$OVERRIDE_CONFIGURATION_LOCATION$OVERRIDE_CONFIGURATION_FILENAME"; then
     # Load the external configuration file
-    echo "Found external configuration at $REMOTE_CONFIGURATION_LOCATION$REMOTE_CONFIGURATION_FILENAME"
+    echo "Found external configuration at $OVERRIDE_CONFIGURATION_LOCATION$OVERRIDE_CONFIGURATION_FILENAME"
 
     # Source the defaults file
     source $CONFIG_DEFAULT_LOCATION
 
     # Source the override file
-    source $REMOTE_CONFIGURATION_LOCATION$REMOTE_CONFIGURATION_FILENAME
+    source $OVERRIDE_CONFIGURATION_LOCATION$OVERRIDE_CONFIGURATION_FILENAME
 
-    # If the configuration asks for a production boot, source the default config instead
-    if [ "$conf_OVERRIDE_PRODUCTION" = "0" ]; then
-        echo "Configuration requests a production boot, using default config..."
-        echo "Using the default configuration at $CONFIG_DEFAULT_LOCATION"
-        source $CONFIG_DEFAULT_LOCATION
-    fi
-
-    # If the configuration asks for a disbled detector, abort
-    if [ "$conf_DO_NOT_START" = "1" ]; then
-        echo "Configuration has requested that detector should not start, aborting..."
-        exit 0
-    fi
 else
-    echo "Failed to find external configuration"
+    echo "Failed to find external configuration at $OVERRIDE_CONFIGURATION_LOCATION$OVERRIDE_CONFIGURATION_FILENAME"
 
-    if test -d "$REMOTE_CONFIGURATION_LOCATION"; then
+    if test -d "$OVERRIDE_CONFIGURATION_LOCATION"; then
         # If the external configuration directory exists (but the file does not), copy the
         # default configuration to the directory
         echo "Configuration directory found, but no configuration."
-        echo "Copying default config to $REMOTE_CONFIGURATION_LOCATION"
-        cp $CONFIG_DEFAULT_LOCATION $REMOTE_CONFIGURATION_LOCATION$REMOTE_CONFIGURATION_FILENAME
+        echo "Copying default config to $OVERRIDE_CONFIGURATION_LOCATION"
+        cp $CONFIG_DEFAULT_LOCATION $OVERRIDE_CONFIGURATION_LOCATION$OVERRIDE_CONFIGURATION_FILENAME
         echo "The configuration can now be modified."
     else
         # If the config location does not exist, abort and use default live config

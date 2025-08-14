@@ -1,0 +1,7 @@
+loki ALL=(ALL) NOPASSWD: /usr/bin/loki-update.sh --source-path /home/loki/ --target emmc
+loki ALL=(ALL) NOPASSWD: /sbin/reboot
+loki ALL=(ALL) NOPASSWD: /bin/systemctl restart loki-config
+loki ALL=(ALL) NOPASSWD: /bin/systemctl restart loki-connect-control-host
+loki ALL=(ALL) NOPASSWD: /bin/systemctl restart loki-get-system-id
+loki ALL=(ALL) NOPASSWD: /usr/bin/loki-update.sh --target flash --info alljson
+loki ALL=(ALL) NOPASSWD: /usr/sbin/lsmtd -r

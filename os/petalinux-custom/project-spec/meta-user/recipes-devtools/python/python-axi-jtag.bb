@@ -5,7 +5,7 @@ LICENSE = "CLOSED"
 RDEPENDS_${PN} += " py-uio"
 
 SRC_URI = " \
-    file://python-axi-jtag \
+    file://python-axi-jtag/ \
     "
 S = "${WORKDIR}/"
 

@@ -1,8 +1,8 @@
 import json
-import os
 import re
 from typing import List, Optional
 from .JTAGReg import JTAGReg
+import pathlib
 
 class InvalidConfigException(Exception):
     """
@@ -31,10 +31,12 @@ class GenericDevice():
         self.last_instruction = ""
         self.bsr_len = None
 
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        instructions_file_path = os.path.join(base_dir, "device_config", self.device_config_file_name)
-        with open(instructions_file_path) as json_file:
-            file = json.load(json_file)
+        config_file_path = pathlib.Path(config_file_name)
+        if config_file_path.is_absolute():
+            config_file_path = pathlib.Path.cwd() / config_file_path
+    
+        with open(config_file_path) as f:
+            file = json.load(f)
 
             if not "ir_length" in file:
                 raise InvalidConfigException(
@@ -113,6 +115,11 @@ class GenericDevice():
         reg = self.get_register(reg_name)
 
         return reg.read(self)
+    
+    def read_modify_write_reg(self, reg_name: str):
+        reg_value = self.read_reg(reg_name)
+        self.update_reg(reg_name, reg_value)
+        return reg_value
     
     def update_reg(self, reg_name: str, bits: str):
         reg = self.get_register(reg_name)

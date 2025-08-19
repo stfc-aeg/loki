@@ -72,20 +72,8 @@ ${OUTPUT_DIR}/${SW_PMUFW_FILENAME}: ${SW_EXPORT_DIR}/${SW_PMUFW_FILENAME} | ${OU
 ${OUTPUT_DIR}/.build_complete: ${PL_PROJ_BITSTREAM} ${BUILD_DEPS}
 	$(info performing petalinux-build...)
 	petalinux-build
+
 	touch ${OUTPUT_DIR}/.build_complete
-
-	# Add LOKI metadata to include the autoconf information on application name, platform etc
-	fdtput -t s ${DTB} /loki-metadata application-name "@loki_application_name@"
-	fdtput -t s ${DTB} /loki-metadata platform "@platform_module_shortname@,@platform_carrier@"
-
-	# Modify the LOKI metadata version information to the latest for loki core
-	fdtput -t s ${DTB} /loki-metadata loki-version $(shell git describe)
-	$(info Updated LOKI Core git version in metadata)
-
-	# Modify the application metadata version information to the git describe for its dir,
-	# or leave blank if there is no git repo describe info.
-	$(info Updating application version using git describe from ${APPLICATION_DIR})
-	fdtput -t s ${DTB} /loki-metadata application-version $(shell git -C ${APPLICATION_DIR} describe)
 build: ${OUTPUT_DIR}/.build_complete ;
 
 ${OUTPUT_DIR}/system.bit: build ;
@@ -113,12 +101,26 @@ ${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl
 		-o ${OUTPUT_DIR}/BOOT.BIN \
 		--force
 	$(info PetaLinux Package Passed)
-	touch ${OUTPUT_DIR}/.package_complete
+
+	# Add LOKI metadata to include the autoconf information on application name, platform etc
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-name "@loki_application_name@"
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata platform "@platform_module_shortname@,@platform_carrier@"
+
+	# Modify the LOKI metadata version information to the latest for loki core
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata loki-version $(shell git describe)
+	$(info Updated LOKI Core git version in metadata)
+
+	# Modify the application metadata version information to the git describe for its dir,
+	# or leave blank if there is no git repo describe info.
+	$(info Updating application version using git describe from ${APPLICATION_DIR})
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-version $(shell git -C ${APPLICATION_DIR} describe)
 
 	# This is an additional step to update the image timestamp- needed because the 2023
 	# toolchain does not seem to correctly set it. This acts on the top level FIT image.
-	fdtput -t i ${OUTPUT_DIR}/image.ub / timestamp $(shell date +%s)
+	fdtput -p -t i ${OUTPUT_DIR}/image.ub / timestamp $(shell date +%s)
 	$(info ${OUTPUT_DIR}/image.ub timestamp updated to package time)
+
+	touch ${OUTPUT_DIR}/.package_complete
 package: ${OUTPUT_DIR}/.package_complete ;
 
 ${OUTPUT_DIR}/BOOT.BIN: package ;

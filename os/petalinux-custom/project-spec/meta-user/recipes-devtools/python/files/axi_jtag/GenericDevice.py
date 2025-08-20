@@ -64,14 +64,9 @@ class GenericDevice():
             instruction_code = instruction
         else:
             if not self.instructions:
-                raise InvalidInstructionException(f"No instructions provided in the configuration file")
-
-            if not instruction in self.instructions:
-                raise InvalidInstructionException(
-                    f"Instruction: {instruction} has not been defined in {self.device_config_file_name}"
-                    )
-            
-            instruction_code = self.instructions[instruction]
+                instruction_code = bin(self.get_register(instruction).get_address())
+            else:
+                instruction_code = self.instructions.get(instruction)
         
             self.last_instruction = instruction
 

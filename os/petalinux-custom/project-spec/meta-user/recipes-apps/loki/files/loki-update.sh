@@ -182,7 +182,7 @@ function get_filesystem_image_metadata () {
 
     # The new method for storing metadata is in the top-level tree like the timestamp.
     # Try this, or fall back to the old method.
-    if fdtget $1 /loki-metadata -p ; then
+    if fdtget $1 /loki-metadata -p 1>/dev/null ; then
         echo "Looking for metadata in flash top-level without extracting" 1>&2
         METADATA_APPLICATION_NAME=$(fdtget -t s $1 /loki-metadata application-name)
         METADATA_APPLICATION_VERSION=$(fdtget -t s $1 /loki-metadata application-version)
@@ -209,7 +209,7 @@ function get_flash_image_metadata() {
 
     # For newer images, the loki metadata is in the top-level FIT with the timestamp, so try this first.
     # Fall back to the old location, which requires image extraction.
-    if fdtget $kernel_mtddev /loki-metadata -p ; then
+    if fdtget $kernel_mtddev /loki-metadata -p 1>/dev/null ; then
         echo "Looking for metadata in flash top-level without extracting" 1>&2
         METADATA_APPLICATION_NAME=$(fdtget -t s $kernel_mtddev /loki-metadata application-name)
         METADATA_APPLICATION_VERSION=$(fdtget -t s $kernel_mtddev /loki-metadata application-version)

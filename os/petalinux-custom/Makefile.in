@@ -21,6 +21,17 @@ DTB = ${OUTPUT_DIR}/system.dtb
 
 YOCTO_USER_LAYER_0 = @yocto_user_layer_0@
 
+# These variables will be propagated through the Yocto toolchain, and can be used in Recipes.
+# Use sparingly. They must have been exported.
+export BB_ENV_PASSTHROUGH_ADDITIONS := ${BB_ENV_PASSTHROUGH_ADDITIONS} TESTVARIABLE LOKI_METADATA_APPLICATION_NAME LOKI_METADATA_LOKI_VERSION LOKI_METADATA_PLATFORM LOKI_METADATA_APPLICATION_VERSION
+
+# Live git descriptions from the LOKI core and application (if present) allow building in of
+# version numbers (tags).
+export LOKI_METADATA_APPLICATION_NAME := @loki_application_name@
+export LOKI_METADATA_PLATFORM := @platform_module_shortname@,@platform_carrier@
+export LOKI_METADATA_LOKI_VERSION := $(shell git describe)
+export LOKI_METADATA_APPLICATION_VERSION := $(shell git -C ${APPLICATION_DIR} describe)
+
 # The yocto workspace contains recipes brought into the workspace under modification.
 BUILD_DEPS = $(shell find -L ${PL_ROOT}/components/yocto/workspace/ -type f)
 #project-spec contains main user recipes and config, hw-description is excluded as this is handled by the bitstream
@@ -88,8 +99,6 @@ ${OUTPUT_DIR}/rootfs.cpio.gz: build ;
 # This means that package can provide multiple files without multiple runs
 ${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl.elf ${OUTPUT_DIR}/pmufw.elf ${OUTPUT_DIR}/bl31.elf ${OUTPUT_DIR}/system.bit ${DTB}
 
-	$(info Packaged image contains application $(fdtget -t s ${DTB} /loki-metadata application-name) version  $(fdtget -t s ${DTB} /loki-metadata loki-version) using loki core $(fdtget -t s ${DTB} /loki-metadata loki-version))
-
 	$(info PetaLinux Package Enabled, starting...)
 	petalinux-package --boot  \
 		--u-boot ${OUTPUT_DIR}/u-boot.elf \
@@ -102,18 +111,12 @@ ${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl
 		--force
 	$(info PetaLinux Package Passed)
 
-	# Add LOKI metadata to include the autoconf information on application name, platform etc
-	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-name "@loki_application_name@"
-	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata platform "@platform_module_shortname@,@platform_carrier@"
-
-	# Modify the LOKI metadata version information to the latest for loki core
-	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata loki-version $(shell git describe)
-	$(info Updated LOKI Core git version in metadata)
-
-	# Modify the application metadata version information to the git describe for its dir,
-	# or leave blank if there is no git repo describe info.
-	$(info Updating application version using git describe from ${APPLICATION_DIR})
-	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-version $(shell git -C ${APPLICATION_DIR} describe)
+	# Add LOKI metadata to the FIT (this is already done to the internal DT in the device-tree recipe
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-name ${LOKI_METADATA_APPLICATION_NAME}
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata platform ${LOKI_METADATA_PLATFORM}
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata loki-version ${LOKI_METADATA_LOKI_VERSION}
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-version ${LOKI_METADATA_APPLICATION_VERSION}
+	$(info LOKI metadata updated in the outer FIT image device tree)
 
 	# This is an additional step to update the image timestamp- needed because the 2023
 	# toolchain does not seem to correctly set it. This acts on the top level FIT image.

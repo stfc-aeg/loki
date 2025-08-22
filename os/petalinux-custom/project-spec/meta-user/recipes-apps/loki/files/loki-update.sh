@@ -180,12 +180,23 @@ function get_filesystem_image_metadata () {
     # The timestamp is read from the top-level FIT image tree
     METADATA_TIMESTAMP=$(fdtget -t i $1 / timestamp)
 
-    # These parts are read from the system device tree, part way through the image after
-    # extraction with dumpimage.
-    METADATA_APPLICATION_NAME=$(dumpimage -T flat_dt -p 1 $1 -o /dev/stdout 2>/dev/null | fdtget -t s /dev/fd/0 /loki-metadata application-name)
-    METADATA_APPLICATION_VERSION=$(dumpimage -T flat_dt -p 1 $1 -o /dev/stdout 2>/dev/null | fdtget -t s /dev/fd/0 /loki-metadata application-version)
-    METADATA_LOKI_VERSION=$(dumpimage -T flat_dt -p 1 $1 -o /dev/stdout 2>/dev/null | fdtget -t s /dev/fd/0 /loki-metadata loki-version)
-    METADATA_PLATFORM=$(dumpimage -T flat_dt -p 1 $1 -o /dev/stdout 2>/dev/null | fdtget -t s /dev/fd/0 /loki-metadata platform)
+    # The new method for storing metadata is in the top-level tree like the timestamp.
+    # Try this, or fall back to the old method.
+    if fdtget $1 /loki-metadata -p ; then
+        echo "Looking for metadata in flash top-level without extracting" 1>&2
+        METADATA_APPLICATION_NAME=$(fdtget -t s $1 /loki-metadata application-name)
+        METADATA_APPLICATION_VERSION=$(fdtget -t s $1 /loki-metadata application-version)
+        METADATA_LOKI_VERSION=$(fdtget -t s $1 /loki-metadata loki-version)
+        METADATA_PLATFORM=$(fdtget -t s $1 /loki-metadata platform)
+    else
+        echo "Couldn't find metadata in top-level FIT, extracing first..." 1>&2
+        # These parts are read from the system device tree, part way through the image after
+        # extraction with dumpimage.
+        METADATA_APPLICATION_NAME=$(dumpimage -T flat_dt -p 1 $1 -o /dev/stdout 2>/dev/null | fdtget -t s /dev/fd/0 /loki-metadata application-name)
+        METADATA_APPLICATION_VERSION=$(dumpimage -T flat_dt -p 1 $1 -o /dev/stdout 2>/dev/null | fdtget -t s /dev/fd/0 /loki-metadata application-version)
+        METADATA_LOKI_VERSION=$(dumpimage -T flat_dt -p 1 $1 -o /dev/stdout 2>/dev/null | fdtget -t s /dev/fd/0 /loki-metadata loki-version)
+        METADATA_PLATFORM=$(dumpimage -T flat_dt -p 1 $1 -o /dev/stdout 2>/dev/null | fdtget -t s /dev/fd/0 /loki-metadata platform)
+    fi
 }
 
 function get_flash_image_metadata() {
@@ -193,24 +204,35 @@ function get_flash_image_metadata() {
     # is at an unknown offset in the FIT image (image.ub) that is variable, and can only
     # be extracted from the file with dumpimage, after storing it temporarily.
 
-    echo "Extracting flash metadata- this may take some time..." 1>&2
 
     local kernel_mtddev=$(mtd_label_to_device kernel)
 
-    # Create a temporary workspace
-    WORKSPACE=$(mktemp -d)
+    # For newer images, the loki metadata is in the top-level FIT with the timestamp, so try this first.
+    # Fall back to the old location, which requires image extraction.
+    if fdtget $kernel_mtddev /loki-metadata -p ; then
+        echo "Looking for metadata in flash top-level without extracting" 1>&2
+        METADATA_APPLICATION_NAME=$(fdtget -t s $kernel_mtddev /loki-metadata application-name)
+        METADATA_APPLICATION_VERSION=$(fdtget -t s $kernel_mtddev /loki-metadata application-version)
+        METADATA_LOKI_VERSION=$(fdtget -t s $kernel_mtddev /loki-metadata loki-version)
+        METADATA_PLATFORM=$(fdtget -t s $kernel_mtddev /loki-metadata platform)
+    else
+        echo "Could not find top-level metadata: extracting flash metadata- this may take some time..." 1>&2
 
-    # Extract the flash image into the workspace:
-    cat $kernel_mtddev > $WORKSPACE/image.ub && dumpimage -T flat_dt -p 1 $WORKSPACE/image.ub -o $WORKSPACE/system.dtb
+        # Create a temporary workspace
+        WORKSPACE=$(mktemp -d)
 
-    # Extract the data
-    METADATA_APPLICATION_NAME=$(fdtget -t s $WORKSPACE/system.dtb /loki-metadata application-name)
-    METADATA_APPLICATION_VERSION=$(fdtget -t s $WORKSPACE/system.dtb /loki-metadata application-version)
-    METADATA_LOKI_VERSION=$(fdtget -t s $WORKSPACE/system.dtb /loki-metadata loki-version)
-    METADATA_PLATFORM=$(fdtget -t s $WORKSPACE/system.dtb /loki-metadata platform)
+        # Extract the flash image into the workspace:
+        cat $kernel_mtddev > $WORKSPACE/image.ub && dumpimage -T flat_dt -p 1 $WORKSPACE/image.ub -o $WORKSPACE/system.dtb
 
-    # Delete the entire workspace
-    rm -rf $WORKSPACE
+        # Extract the data
+        METADATA_APPLICATION_NAME=$(fdtget -t s $WORKSPACE/system.dtb /loki-metadata application-name)
+        METADATA_APPLICATION_VERSION=$(fdtget -t s $WORKSPACE/system.dtb /loki-metadata application-version)
+        METADATA_LOKI_VERSION=$(fdtget -t s $WORKSPACE/system.dtb /loki-metadata loki-version)
+        METADATA_PLATFORM=$(fdtget -t s $WORKSPACE/system.dtb /loki-metadata platform)
+
+        # Delete the entire workspace
+        rm -rf $WORKSPACE
+    fi
 }
 
 function get_runtime_image_metadata() {

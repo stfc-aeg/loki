@@ -1,0 +1,13 @@
+# Generic Rule
+KERNEL=="i2c-*", GROUP="smbususer", MODE="0660"
+
+# Named buses symlinked
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-2", SYMLINK+="i2c-app-support"
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-3", SYMLINK+="i2c-app-power-monitor"
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-7", SYMLINK+="i2c-app-eeprom"
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-10", SYMLINK+="i2c-app-general-1"
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-11", SYMLINK+="i2c-app-general-2"
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-12", SYMLINK+="i2c-app-management"
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-14", SYMLINK+="i2c-som-pll"
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-15", SYMLINK+="i2c-debug-header-1"
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-16", SYMLINK+="i2c-debug-header-2"

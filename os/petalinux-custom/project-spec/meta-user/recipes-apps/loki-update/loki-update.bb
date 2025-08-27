@@ -4,7 +4,7 @@ SUMMARY = "A recipe for the Loki Update application"
 
 HOMEPAGE = "https://github.com/stfc-aeg/loki-update"
 
-RDEPENDS_${PN} += "loki-update-adapter"
+RDEPENDS:${PN} += "loki-update-adapter"
 
 S = "${WORKDIR}"
 
@@ -24,6 +24,7 @@ PV = "0.0+git${SRCPV}"
 
 SRC_URI = "git://git@github.com/stfc-aeg/loki-update.git;protocol=ssh;branch=main \
            file://loki-update-config.conf \
+           file://loki-update-odin-config.cfg \
            "
 
 # Checksum specifically for the react UI
@@ -31,13 +32,14 @@ SRC_URI[react-build-zip.sha256sum] = "3df8210d5c3703295cf850bddad427bbfbed1e90d5
 
 LICENSE = "CLOSED"
 
-REPO_CONFIG_PATH = "${LOKI_UPDATE_REPO_CLONED_BASE}/test/config/loki-update.cfg"
+#REPO_CONFIG_PATH = "${LOKI_UPDATE_REPO_CLONED_BASE}/test/config/loki-update.cfg"
+REPO_CONFIG_PATH = "loki-update-odin-config.cfg"
 REPO_STATIC_PATH = "${REACT_SOURCE_PATH}"
 
-do_install_append() {
+do_install:append() {
     install -d ${D}${base_prefix}/etc/conf.d/loki-config
     install -m 0644 '${WORKDIR}/loki-update-config.conf' '${D}${base_prefix}/etc/conf.d/loki-config/loki-update-config.conf'
 }
 
-FILES_${PN} += "${base_prefix}/opt/loki-detector/instances/${PN}/*"
-FILES_${PN} += "${base_prefix}/etc/conf.d/loki-config/*"
+FILES:${PN} += "${base_prefix}/opt/loki-detector/instances/${PN}/*"
+FILES:${PN} += "${base_prefix}/etc/conf.d/loki-config/*"

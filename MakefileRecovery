@@ -4,7 +4,8 @@ all: os
 LOKI_DIR=./
 
 # Update APPLICATION_DIR to your application root
-APPLICATION_DIR=./loki-recovery/
+export APPLICATION_DIR
+APPLICATION_DIR=$(shell pwd)/loki-recovery/
 
 # Update LOKI_ENV_DIR to the location of repo.env and machine.env
 LOKI_ENV_DIR=./loki-recovery/
@@ -19,6 +20,11 @@ export HW_EXPORT_DIR
 export SW_EXPORT_DIR
 undefine HW_EXPORT_DIR
 undefine SW_EXPORT_DIR
+
+# If using an override project-specific block-design, update the directory here. Else leave the undefine.
+export BLOCKDESIGN_DIR
+undefine BLOCKDESIGN_DIR
+#BLOCKDESIGN_DIR=$(shell pwd)/block_design/
 
 # Include recipes to take the environment and run the configuration using the autoconf params
 # Provides loki-configure-hw, loki-configure-sw, loki-configure-os

@@ -1,0 +1,25 @@
+[Unit]
+SourcePath=/opt/loki-service-scripts/loki-bootstrap-emmc.sh
+Before=graphical.target
+
+# Make sure the eMMC will actually be mounted by fstab at this point
+After=local-fs.target
+Wants=local-fs.target
+After=mnt-emmc.mount
+Wants=mnt-emmc.mount
+
+# Make sure the service runs before network- meaning that the settings for the static IP
+# will be loaded by the time networkd starts
+Before=network-pre.target
+WantedBy=network-pre.target
+
+[Service]
+Type=forking
+Restart=no
+TimeoutSec=5min
+IgnoreSIGPIPE=no
+KillMode=process
+GuessMainPID=no
+RemainAfterExit=yes
+ExecStart=/opt/loki-service-scripts/loki-bootstrap-emmc.sh start
+ExecStop=/opt/loki-service-scripts/loki-bootstrap-emmc.sh stop

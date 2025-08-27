@@ -13,7 +13,7 @@ EMMC_DEVICE_NAME=mmcblk0
 EMMC_PARTITION_NAME=${EMMC_DEVICE_NAME}p1
 EMMC_ROOT_DEV=/dev/${EMMC_DEVICE_NAME}
 EMMC_PARTITION_LOC=/dev/${EMMC_PARTITION_NAME}
-EMMC_AUTOMOUNT_LOC=/mnt/sd-${EMMC_PARTITION_NAME}
+EMMC_AUTOMOUNT_LOC=/mnt/emmc
 
 function find_device {
         # Check if the eMMC device has been created at all
@@ -69,8 +69,8 @@ function first_time_setup {
 function run_time_setup {
         # Mount the non-volatile network interfaces directory (already specified in fstab)
         # This is a bind mount, so if the source doesn't exist It'll fail nicely.
-        INTERFACES_SOURCE=${EMMC_AUTOMOUNT_LOC}/interfaces-mmc
-        INTERFACES_DEST=/etc/network/interfaces-mmc
+        INTERFACES_SOURCE=${EMMC_AUTOMOUNT_LOC}/wired-network-overrides-mmc
+        INTERFACES_DEST=/lib/systemd/network/80-wired.network.d
         if mount --bind ${INTERFACES_SOURCE} ${INTERFACES_DEST}
         then
                 printf "Mounted non-volatile network configuration from eMMC, files: $(ls ${INTERFACES_DEST})\n"

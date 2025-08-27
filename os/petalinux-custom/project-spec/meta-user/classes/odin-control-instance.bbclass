@@ -1,13 +1,13 @@
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
-RDEPENDS_${PN} += "odin-control (>=1.3.0)"
-RDEPENDS_${PN} += "odin-sequencer (=0.2.0)"
-RDEPENDS_${PN} += "odin-devices (=1.1.0)"
-RDEPENDS_${PN} += "python3-msgpack"
-RDEPENDS_${PN} += "python3-matplotlib"
-RDEPENDS_${PN} += "python3-pillow"
-RDEPENDS_${PN} += "loki-config"
-RDEPENDS_${PN} += "loki-user"
-RDEPENDS_${PN} += "python-loki-adapter"
+RDEPENDS:${PN} += "odin-control (>=1.3.0)"
+RDEPENDS:${PN} += "odin-sequencer (>=0.2.0)"
+RDEPENDS:${PN} += "odin-devices (>=1.1.0)"
+RDEPENDS:${PN} += "python3-msgpack"
+RDEPENDS:${PN} += "python3-matplotlib"
+RDEPENDS:${PN} += "python3-pillow"
+RDEPENDS:${PN} += "loki-config"
+RDEPENDS:${PN} += "loki-user"
+RDEPENDS:${PN} += "python-loki-adapter"
 DEPENDS += "unzip-native"
 DEPENDS += "loki-user"
 
@@ -25,14 +25,14 @@ LOKI_STATIC_DESTINATION = "static"
 
 LOKI_USERNAME = "loki"
 
-do_configure_prepend() {
+do_configure:prepend() {
 	bbdebug 2 "Current working directory (pwd):" ${pwd}
 	bbdebug 2 "Build Directory:" ${B}
 	bbdebug 2 "WORKDIR Directory:" ${WORKDIR}
 	bbdebug 2 "Source Directory:" ${S}
 }
 
-do_compile_prepend() {
+do_compile:prepend() {
 	bbdebug 2 "Current working directory (pwd):" ${pwd}
 	bbdebug 2 "Build Directory:" ${B}
 	bbdebug 2 "WORKDIR Directory:" ${WORKDIR}
@@ -70,7 +70,7 @@ loki_mkdir() {
     install -d ${D}${base_prefix}${LOKI_RESOURCES_INSTALL_PATH}/$1
 }
 
-do_install_append() {
+do_install:append() {
 	# With the python module installed, the static resources need to be installed into rootfs
     [ ! -z ${REACT_SOURCE_URL} ] && wget ${REACT_SOURCE_URL} -O ${REPO_STATIC_PATH}.zip && unzip ${REPO_STATIC_PATH}.zip -d ${REPO_STATIC_PATH} && rm ${REPO_STATIC_PATH}.zip
 

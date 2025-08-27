@@ -9,12 +9,12 @@
 
 ### END INIT INFO
 
-OVERRIDE_CONFIGURATION_LOCATION="/mnt/sd-mmcblk0p1/loki-config/"
+OVERRIDE_CONFIGURATION_LOCATION="/mnt/emmc/loki-config/"
 
 OVERRIDE_CONFIGURATION_FILENAME="loki-system-config.conf"
 CONFIG_DEFAULT_LOCATION="/etc/conf.d/loki-config/loki-system-config-default.conf"
-SSHCONFDIR_EMMC="/mnt/sd-mmcblk0p1/.ssh"
-SSHCONFDIR_IMG="/home/${LOKI_USERNAME}/.ssh"
+SSHCONFDIR_EMMC="/mnt/emmc/.ssh"
+SSHCONFDIR_IMG="/home/loki/.ssh"
 STATIC_IP_INTERFACE_NAME="eth0"
 CONFIG_VERSION=1
 

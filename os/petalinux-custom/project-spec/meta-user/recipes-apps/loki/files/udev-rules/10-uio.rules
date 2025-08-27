@@ -1,0 +1,1 @@
+SUBSYSTEM=="uio", KERNEL=="uio*", GROUP="uiouser", MODE="0660"

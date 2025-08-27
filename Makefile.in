@@ -47,7 +47,7 @@ hardware: ${XSA_OUTPUT} ;
 software: hardware ${FSBL_OUTPUT} ${PMUFW_OUTPUT} ;
 
 os: hardware software
-	$(MAKE) -C ${OS_PATH} all HW_EXPORT_DIR=${HW_EXPORT_DIR} SW_EXPORT_DIR=${SW_EXPORT_DIR} HW_XSA_FILENAME=${XSA_FILENAME}
+	$(MAKE) -C ${OS_PATH} all HW_EXPORT_DIR=${HW_EXPORT_DIR} SW_EXPORT_DIR=${SW_EXPORT_DIR} HW_XSA_FILENAME=${XSA_FILENAME} APPLICATION_DIR=${APPLICATION_DIR}
 
 mostlyclean:
 	$(info mostlycleaning HW/SW files)

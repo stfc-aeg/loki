@@ -1,8 +1,0 @@
-/ {
-    loki-metadata {
-        application-name = "@loki_application_name@";
-        application-version = "@loki_application_version@";
-        loki-version = "@loki_version@";
-        platform = "@platform_module_shortname@,@platform_carrier@";
-    };
-};

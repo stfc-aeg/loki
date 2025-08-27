@@ -15,7 +15,7 @@
 # serial number of the eMMC module present on the board. However, it is possible to override the system
 # ID to something more human-readable by creating a loki-config/system-id file in the eMMC mount (currently
 # /mnt/sd-mmcblk0p1/loki-config/system-id), which will take precedence.
-EMMC_CONFIG_DIR=/mnt/sd-mmcblk0p1/loki-config
+EMMC_CONFIG_DIR=/mnt/emmc/loki-config
 
 EMMC_SERIALNO=$(cat /sys/class/mmc_host/mmc0/mmc0\:0001/serial)
 

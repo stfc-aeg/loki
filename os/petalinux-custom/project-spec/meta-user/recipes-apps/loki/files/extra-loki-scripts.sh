@@ -8,11 +8,11 @@ function mtd_label_to_device() {
 function mmc_name_to_mountpoint() {
 	devname=$(echo $1 | awk '{print tolower($0)}')
 	if [ "$devname" = "emmc" ] ; then
-		echo '/mnt/sd-mmcblk0p1'
+		echo '/mnt/emmc'
 		return 0
 	fi
 	if [ "$devname" = "sd" ] ; then
-		echo '/mnt/sd-mmcblk1p1'
+		echo '/mnt/sd'
 		return 0
 	fi
 	return 1

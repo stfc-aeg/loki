@@ -1,0 +1,23 @@
+[Unit]
+SourcePath=/opt/loki-service-scripts/loki-connect-control-host.sh
+Before=graphical.target
+After=nfsserver.service
+Wants=nfsserver.service
+After=network-online.target
+Wants=network-online.target
+After=loki-bootstrap-emmc.service
+Wants=loki-bootstrap-emmc.service
+After=loki-get-system-id.service
+Wants=loki-get-system-id.service
+WantedBy=multi-user.target
+
+[Service]
+Type=forking
+Restart=no
+TimeoutSec=5min
+IgnoreSIGPIPE=no
+KillMode=process
+GuessMainPID=no
+RemainAfterExit=yes
+ExecStart=/opt/loki-service-scripts/loki-connect-control-host.sh start
+ExecStop=/opt/loki-service-scripts/loki-connect-control-host.sh stop

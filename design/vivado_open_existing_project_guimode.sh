@@ -39,22 +39,22 @@ function vivado_start {
   if [ -z "${LOKI_AUTO_BUILD}" ]
   then
       echo Test failed, using gui mode
-      vivado -source ../scripts/script_main.tcl -mode batch -notrace -tclargs --gui 1
+      vivado -source ../scripts/script_main.tcl -mode batch -notrace -tclargs --gui 1 || exit
   else
       if [ "${LOKI_AUTO_BUILD}" = "SW" ]
       then
           echo Automatically compiling LOKI Software
-          vivado -source ../scripts/script_loki_buildsw.tcl -mode batch -notrace
+          vivado -source ../scripts/script_loki_buildsw.tcl -mode batch -notrace || exit
       fi
       if [ "${LOKI_AUTO_BUILD}" = "HW" ]
       then
           echo Automatically compiling LOKI Hardware
-          vivado -source ../scripts/script_loki_buildhw.tcl -mode batch -notrace
+          vivado -source ../scripts/script_loki_buildhw.tcl -mode batch -notrace || exit
       fi
       if [ "${LOKI_AUTO_BUILD}" = "TCL" ]
       then
           echo Automatically exporting Vivado block diagram changes to TCL
-          vivado -source ../scripts/script_loki_export_bd_tcl.tcl -mode batch -notrace
+          vivado -source ../scripts/script_loki_export_bd_tcl.tcl -mode batch -notrace || exit
       fi
   fi
   echo -------------------------scripts finished----------------------------

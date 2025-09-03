@@ -790,7 +790,7 @@ CONFIG_openssh-sftp-server=y
 #
 # pciutils 
 #
-CONFIG_pciutils=y
+# CONFIG_pciutils is not set
 # CONFIG_pciutils-dbg is not set
 # CONFIG_libpci is not set
 # CONFIG_pciutils-ids is not set
@@ -3093,7 +3093,7 @@ CONFIG_python3-asyncio=y
 #
 # tcf-agent 
 #
-CONFIG_tcf-agent=y
+# CONFIG_tcf-agent is not set
 # CONFIG_tcf-agent-dev is not set
 # CONFIG_tcf-agent-dbg is not set
 
@@ -3524,7 +3524,7 @@ CONFIG_bridge-utils=y
 #
 # power management 
 #
-CONFIG_hellopm=y
+# CONFIG_hellopm is not set
 
 #
 # utils 

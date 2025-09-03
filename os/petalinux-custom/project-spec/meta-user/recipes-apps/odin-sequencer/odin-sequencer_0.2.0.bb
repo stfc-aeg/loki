@@ -24,7 +24,8 @@ LICENSE = "Apachev2"
 # Get this value by running md5sum on the license file
 LIC_FILES_CHKSUM = "file://LICENSE;md5=2bd339c7a9cf03feeeee2f768a4eb0ce"
 
-inherit setuptools3
+#inherit setuptools3
+inherit python_poetry_core
 
 do_configure:prepend() {
 	bbdebug 2 "Current working directory (pwd):" ${pwd}

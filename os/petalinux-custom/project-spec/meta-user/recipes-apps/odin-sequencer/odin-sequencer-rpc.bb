@@ -3,6 +3,11 @@ SUMMARY = "Recipe to build odin-sequencer rpc package alongside odin-sequencer"
 # Ideally this should be tightly coupled to the odin-sequencer version, as they pull the same repo.
 RDEPENDS:${PN} += "odin-sequencer"
 
+# Manuall specify the python dependencies, since these seem not to be brought in from the TOML
+RDEPENDS:${PN} += " python3-pyzmq"
+RDEPENDS:${PN} += " python3-pydantic (>= 2.0.0)"
+RDEPENDS:${PN} += " python3-backports-strenum (< 2.0.0)"
+
 GIT_TAG = "0.2.0"
 GIT_HASH = "5331bf846669c1f4b88c5dd35e9911835cc40f99"
 

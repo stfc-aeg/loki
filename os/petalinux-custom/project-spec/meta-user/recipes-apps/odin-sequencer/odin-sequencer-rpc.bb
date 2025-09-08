@@ -5,11 +5,11 @@ RDEPENDS:${PN} += "odin-sequencer"
 
 # Manuall specify the python dependencies, since these seem not to be brought in from the TOML
 RDEPENDS:${PN} += " python3-pyzmq"
-RDEPENDS:${PN} += " python3-pydantic (>= 2.0.0)"
-RDEPENDS:${PN} += " python3-backports-strenum (< 2.0.0)"
+#RDEPENDS:${PN} += " python3-pydantic (>= 2.0.0)"
+#RDEPENDS:${PN} += " python3-backports-strenum (< 2.0.0)"
 
 GIT_TAG = "0.2.0"
-GIT_HASH = "5331bf846669c1f4b88c5dd35e9911835cc40f99"
+GIT_HASH = "6ff07b46fb4bb1d182a0460e4c9478328292f329"
 
 PV = "${GIT_TAG}+git${SRCPV}"
 SRCREV = "${GIT_HASH}"
@@ -25,6 +25,7 @@ LIC_FILES_CHKSUM = "file://${WORKDIR}/git/LICENSE;md5=2bd339c7a9cf03feeeee2f768a
 
 # Build using scm pyproject.toml via poetry
 inherit python_poetry_core
+#inherit setuptools3
 
 # This installs the rpc package in the same repo as odin-sequencer in its own directory
 S = "${WORKDIR}/git/rpc"

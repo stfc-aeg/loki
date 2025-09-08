@@ -9,4 +9,4 @@ SRCREV = "332ad1669785faa29f4cfc1ff35c463a73794c17"
 
 inherit setuptools3
 
-S = "${WORKDIR}/git/"
+S = "${WORKDIR}/git"

@@ -1,4 +1,6 @@
 # Disallow root logins by default
 DROPBEAR_EXTRA_ARGS="-w"
+
+# Keys situated in non-volatile eMMC
 DROPBEAR_RSAKEY="/mnt/emmc/dropbear/dropbear_ssh_host_key_rsa"
 DROPBEAR_ECDSAKEY="/mnt/emmc/dropbear/dropbear_ssh_host_key_ecdsa"

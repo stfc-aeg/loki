@@ -13,4 +13,4 @@ LICENSE = "CLOSED"
 
 inherit setuptools3
 
-S = "${WORKDIR}/git/"
+S = "${WORKDIR}/git"

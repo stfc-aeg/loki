@@ -425,24 +425,19 @@ class LokiCarrier(ABC):
         self._start_io_loops(kwargs)
         self._logger.info('IO loops started')
 
+    def cleanup(self):
+        # odin-control will call cleanup on the adapter on exit or on reloading files- the adapter MUST call
+        # the cleanup function of the carrier for this to work.
+        self._terminate_loops()
+
     def _terminate_loops(self):
         # This is required to force down any threads on interpreter exit to prevent it hanging on Ctrl-C.
-        # atexit functions are executed in the reverse order or registering, therefore any additional threads
-        # that require nicer termination actions should register them on thread creation, meaning that their
-        # personal cleanup will at least be attempted before the hard termination.
 
         # There may be a better way to do this, but for now all threads must exit when the following flag is set
         # to true, which means they cannot be allowed to block forever.
         self.TERMINATE_THREADS = True
 
-        # TODO this doesn't actually work without the above boolean to stop the threads processing in the background
-        # for threadname in self._threads:
-        #    if self._threads[threadname].running():
-        #        self._logger.critical('Thread {} still executing, forcing termination...'.format(threadname))
-        #        try:
-        #            self._threads[threadname].set_result(Exception('Forced termination'))
-        #        except Exception as e:
-        #            self._logger.critical('FAILED TO KILL THREAD {}: {}'.format(threadname, e))
+        self._logger.warning('TERMINATE_THREADS set, loops should now terminate')
 
     def add_thread(self, thread_name, thread_function, *args, **kwargs):
         logging.debug('Creating new thread {} with target function {} and args {} /kwargs {}'.format(thread_name, thread_function, args, kwargs))
@@ -460,7 +455,7 @@ class LokiCarrier(ABC):
 
     def _start_io_loops(self, options):
 
-        self.TERMINATE_THREADS = False
+        self.TERMINATE_THREADS = False		# Used to ask threads 'nicely' to exit
 
         # This function can be extended by the extension LokiCarrier classes if they would benefit from async loops.
         # However, make sure that super is called in each.
@@ -475,7 +470,11 @@ class LokiCarrier(ABC):
         self.watchdog_add_thread('perf', 10)
         self.add_thread('watchdog', self._loop_watchdog)
 
-        atexit.register(self._terminate_loops)
+        # Backup mechanism to try and call the cleanup and terminate loops- though this
+        # should be done by the adapter calling the carrier's cleanup function (you should
+        # add this in your adapter) from its own cleanup() function that is automatically
+        # called by odin-control on termination.
+        atexit.register(self.cleanup)
 
         self._io_loops_started = True
 
@@ -636,20 +635,25 @@ class LokiCarrier(ABC):
         # printed out in the log, and an optional callback will be called.
 
         self._threadreport = {}
+        LAST_THREAD = False		# Used to check if the watchdog is the last thread running
 
         logging.info('Watchdog waiting for threads to start')
 
         while not self._io_loops_started:
             time.sleep(1)
 
-        logging.info('Watchdog starting, watching threads: {}'.format(self._watchdog_threads.keys()))
+        self._logger.getChild('watchdog').info('Watchdog starting, watching threads: {}'.format(self._watchdog_threads.keys()))
 
-        while not self.TERMINATE_THREADS:
+        # This thread terminates last - see handling of TERMINATE_THREADS below
+        while True:
             # Note that altering this will add to the time since last kick. If a checking interval
             # for a thread is shorter than this, the check will still fail.
             time.sleep(1)
 
             try:
+
+                # Assume the watchdog itself is the only thread running until another running one is found.
+                LAST_THREAD = True
 
                 # Loop through every thread
                 for threadname in self._threads.keys():
@@ -690,18 +694,39 @@ class LokiCarrier(ABC):
                     except Exception as e:
                         logging.error('Watchdog: failed to check kicks for thread{}: {}'.format(threadname, e))
 
+                    thread_running = self._threads[threadname].running()
+
                     # Update the thread information for any thread running, regardless of whether
                     # it kicks the watchdog
                     self._threadreport.update(
                         {
                             threadname: {
-                                'running': self._threads[threadname].running(),
+                                'running': thread_running,
                                 'done': self._threads[threadname].done(),
                                 'exception': 'N/A' if not self._threads[threadname].done() else str(self._threads[threadname].exception()),
                                 'wd_state': watchdog_status, 
                             }
                         }
                     )
+
+                    if threadname != 'watchdog' and thread_running:
+                        # There must be a thread running other than the watchdog itself
+                        LAST_THREAD = False
+
+                # If the watchdog is not the only thread, but termination has been called, warn with which threads are not complying
+                # This thread itself will not terminate until the others do.
+                if self.TERMINATE_THREADS:
+                    if LAST_THREAD:
+                        self._logger.getChild('watchdog').warning('Watchdog is the last thread standing, will terminate now')
+                        break
+                    else:
+                        self._logger.getChild('watchdog').warning('Threads have been terminated but some still running')
+                        threads_running = []
+                        for name in self._threadreport.keys():
+                            if self._threadreport[name]['running']:
+                                threads_running.append(name)
+                        self._logger.getChild('watchdog').warning('Threads have been terminated but some still running: {}'.format(threads_running))
+                        self._logger.getChild('watchdog').debug('Full thread information: {}'.format(self._threads))
 
             except Exception as e:
                 logging.error("ERROR IN WATCHDOG!!!!!! Ignoring...: {}".format(e))

@@ -1,0 +1,15 @@
+[Unit]
+Description=SSH Key Generation
+RequiresMountsFor=/var /var/lib
+ConditionDirectoryNotEmpty=|!/mnt/emmc/dropbear/
+
+[Service]
+Environment="DROPBEAR_RSAKEY_DIR=/etc/dropbear"
+EnvironmentFile=-/etc/default/dropbear
+Type=oneshot
+ExecStart=/bin/mkdir -p ${DROPBEAR_RSAKEY_DIR}
+ExecStart=/bin/mkdir -p /mnt/emmc/dropbear
+ExecStart=/usr/sbin/dropbearkey -t rsa -f /tmp/RSA_HOST_KEY ${DROPBEAR_RSAKEY_ARGS} ; cp /tmp/RSAKEY ${DROPBEAR_RSAKEY}
+ExecStart=/usr/sbin/dropbearkey -t ecdsa -f /tmp/ECDSA_HOST_KEY ${DROPBEAR_ECDSAKEY_ARGS} ; cp /tmp/ECDSAKEY ${DROPBEAR_ECDSAKEY}
+RemainAfterExit=yes
+Nice=10

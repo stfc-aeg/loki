@@ -5,12 +5,13 @@ RDEPENDS:${PN} += "odin-control"
 RDEPENDS:${PN} += "python3-inotify"
 
 DEPENDS += " ${PYTHON_PN}-setuptools-scm-native"
-RRECOMMENDS:${PN} = " odin-sequencer-rpc"
+#RRECOMMENDS:${PN} = " odin-sequencer-rpc"
 
 # To build to a tag, update the tag here as well as the commit hash below.
 # You can fetch the git hash with git ls-remote https://github.com/<repository> refs/tags/<tag>
+# If you're not building to a tag, you must still put some version here, in doubt the last tag or 0.0.0
 GIT_TAG = "0.2.0"
-GIT_HASH = "6ff07b46fb4bb1d182a0460e4c9478328292f329"
+GIT_HASH = "e0b1b08ea8b4ad306b60c5c9ab837609527bf571"
 
 PV = "${GIT_TAG}+git${SRCPV}"
 

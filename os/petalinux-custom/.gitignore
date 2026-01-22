@@ -27,3 +27,4 @@ pre-built/linux/
 /project-spec/configs/zynqmp-generic-xczu4cg.conf
 /project-spec/configs/systemd-conf/wired.network
 /project-spec/configs/init-ifupdown/interfaces
+/project-spec/configs/plnx_syshw_data

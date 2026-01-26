@@ -13,8 +13,6 @@ AC_ARG_VAR(yocto_tmpdir, [Optional, but recommended: Absolute TMPDIR location fo
 
 # These are used to install application information into /etc/loki for reference
 AC_ARG_VAR(loki_application_name, [Optional: specify an application name retrievable at runtime by loki module])
-AC_ARG_VAR(loki_application_version, [Optional: specify an application version string retrievable at runtime by loki module])
-AC_ARG_VAR(loki_version, [Optional, discouraged: by default this will be grabbed from the current LOKI repo tag])
 
 AC_CONFIG_FILES([
  Makefile
@@ -22,7 +20,6 @@ AC_CONFIG_FILES([
  design/design_basic_settings.sh
  os/petalinux-custom/Makefile
  os/petalinux-custom/project-spec/configs/config
- os/petalinux-custom/project-spec/meta-user/recipes-bsp/device-tree/files/loki-info.dtsi
  ])
 
 AC_OUTPUT

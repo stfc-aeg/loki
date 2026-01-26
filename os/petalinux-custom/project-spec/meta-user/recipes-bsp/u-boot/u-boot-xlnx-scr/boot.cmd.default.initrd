@@ -5,6 +5,8 @@
 ################
 @@PRE_BOOTENV@@
 
+echo Chosen bootmode is ${modeboot}
+
 # Enable the LEDs
 gpio set 106 ;
 
@@ -73,8 +75,8 @@ do
 	if test "${boot_target}" = "xspi0" || test "${boot_target}" = "qspi" || test "${boot_target}" = "qspi0"; then
 		sf probe 0 0 0;
 		if test "@@QSPI_KERNEL_IMAGE@@" = "@@FIT_IMAGE@@"; then
-			sf read @@QSPI_FIT_IMAGE_LOAD_ADDRESS@@ @@QSPI_KERNEL_OFFSET@@ @@QSPI_FIT_IMAGE_SIZE@@;
-			bootm @@QSPI_FIT_IMAGE_LOAD_ADDRESS@@;
+			sf read @@FIT_IMAGE_LOAD_ADDRESS@@ @@QSPI_FIT_IMAGE_OFFSET@@ @@QSPI_FIT_IMAGE_SIZE@@;
+			bootm @@FIT_IMAGE_LOAD_ADDRESS@@;
 			exit;
 		fi
 		if test "@@QSPI_KERNEL_IMAGE@@" = "@@KERNEL_IMAGE@@"; then
@@ -88,8 +90,8 @@ do
 	if test "${boot_target}" = "nand" || test "${boot_target}" = "nand0"; then
 		nand info
 		if test "@@NAND_KERNEL_IMAGE@@" = "@@FIT_IMAGE@@"; then
-			nand read @@NAND_FIT_IMAGE_LOAD_ADDRESS@@ @@NAND_KERNEL_OFFSET@@ @@NAND_FIT_IMAGE_SIZE@@;
-			bootm @@NAND_FIT_IMAGE_LOAD_ADDRESS@@;
+			nand read @@FIT_IMAGE_LOAD_ADDRESS@@ @@NAND_KERNEL_OFFSET@@ @@NAND_FIT_IMAGE_SIZE@@;
+			bootm @@FIT_IMAGE_LOAD_ADDRESS@@;
 			exit;
 		fi
 		if test "@@NAND_KERNEL_IMAGE@@" = "@@KERNEL_IMAGE@@"; then

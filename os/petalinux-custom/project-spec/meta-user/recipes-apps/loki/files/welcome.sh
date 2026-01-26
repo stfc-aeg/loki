@@ -1,6 +1,0 @@
-echo ""
-echo "###########################################################"
-echo "$(loki-update.sh --info app-name --target runtime) control system version $(loki-update.sh --info app-version --target runtime)"
-echo "  (LOKI core $(loki-update.sh --info loki-version --target runtime))"
-echo "###########################################################"
-echo ""

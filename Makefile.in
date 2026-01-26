@@ -1,5 +1,12 @@
 # Generated with autoconf from @configure_input@
 
+# Check Xilinx tools version
+TARGET_VIVADO_VERSION=v2023.2
+CURRENT_VIVADO_VERSION=$(shell vivado -version | head -n 1 | cut -d' ' -f2)
+ifneq (${TARGET_VIVADO_VERSION}, ${CURRENT_VIVADO_VERSION})
+$(error Vivado version incorrect, this project uses ${TARGET_VIVADO_VERSION}, and your version is ${CURRENT_VIVADO_VERSION})
+endif
+
 SHELL := /bin/bash
 
 .PHONY: all mostlyclean clean hardware software os project constraints
@@ -47,7 +54,7 @@ hardware: ${XSA_OUTPUT} ;
 software: hardware ${FSBL_OUTPUT} ${PMUFW_OUTPUT} ;
 
 os: hardware software
-	$(MAKE) -C ${OS_PATH} all HW_EXPORT_DIR=${HW_EXPORT_DIR} SW_EXPORT_DIR=${SW_EXPORT_DIR} HW_XSA_FILENAME=${XSA_FILENAME}
+	$(MAKE) -C ${OS_PATH} all HW_EXPORT_DIR=${HW_EXPORT_DIR} SW_EXPORT_DIR=${SW_EXPORT_DIR} HW_XSA_FILENAME=${XSA_FILENAME} APPLICATION_DIR=${APPLICATION_DIR}
 
 mostlyclean:
 	$(info mostlycleaning HW/SW files)

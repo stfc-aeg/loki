@@ -31,7 +31,7 @@ then
 fi
 
 if ! command -v petalinux-config  &> /dev/null; then
-    echo "Petalinux toolchain is required"
+    echo "Petalinux toolchain is required - did you run petalinux_env?"
     exit 1
 fi
 

@@ -21,6 +21,17 @@ DTB = ${OUTPUT_DIR}/system.dtb
 
 YOCTO_USER_LAYER_0 = @yocto_user_layer_0@
 
+# These variables will be propagated through the Yocto toolchain, and can be used in Recipes.
+# Use sparingly. They must have been exported.
+export BB_ENV_PASSTHROUGH_ADDITIONS := ${BB_ENV_PASSTHROUGH_ADDITIONS} TESTVARIABLE LOKI_METADATA_APPLICATION_NAME LOKI_METADATA_LOKI_VERSION LOKI_METADATA_PLATFORM LOKI_METADATA_APPLICATION_VERSION
+
+# Live git descriptions from the LOKI core and application (if present) allow building in of
+# version numbers (tags).
+export LOKI_METADATA_APPLICATION_NAME := @loki_application_name@
+export LOKI_METADATA_PLATFORM := @platform_module_shortname@,@platform_carrier@
+export LOKI_METADATA_LOKI_VERSION := $(shell git describe)
+export LOKI_METADATA_APPLICATION_VERSION := $(shell git -C ${APPLICATION_DIR} describe)
+
 # The yocto workspace contains recipes brought into the workspace under modification.
 BUILD_DEPS = $(shell find -L ${PL_ROOT}/components/yocto/workspace/ -type f)
 #project-spec contains main user recipes and config, hw-description is excluded as this is handled by the bitstream
@@ -72,12 +83,13 @@ ${OUTPUT_DIR}/${SW_PMUFW_FILENAME}: ${SW_EXPORT_DIR}/${SW_PMUFW_FILENAME} | ${OU
 ${OUTPUT_DIR}/.build_complete: ${PL_PROJ_BITSTREAM} ${BUILD_DEPS}
 	$(info performing petalinux-build...)
 	petalinux-build
+
 	touch ${OUTPUT_DIR}/.build_complete
 build: ${OUTPUT_DIR}/.build_complete ;
 
 ${OUTPUT_DIR}/system.bit: build ;
 ${OUTPUT_DIR}/bl31.elf: build ;
-${OUTPUT_DIR}/system.dtb: build ;
+${DTB}: build ;
 
 # rootfs is several output files. However, this is the one that is required to be included
 # in the image.ub.
@@ -85,7 +97,8 @@ ${OUTPUT_DIR}/rootfs.cpio.gz: build ;
 
 # Create intermediate product so that PHONY is not executed unless changes have been made
 # This means that package can provide multiple files without multiple runs
-${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl.elf ${OUTPUT_DIR}/pmufw.elf ${OUTPUT_DIR}/bl31.elf ${OUTPUT_DIR}/system.bit ${OUTPUT_DIR}/system.dtb
+${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl.elf ${OUTPUT_DIR}/pmufw.elf ${OUTPUT_DIR}/bl31.elf ${OUTPUT_DIR}/system.bit ${DTB}
+
 	$(info PetaLinux Package Enabled, starting...)
 	petalinux-package --boot  \
 		--u-boot ${OUTPUT_DIR}/u-boot.elf \
@@ -93,10 +106,23 @@ ${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl
 		--pmufw ${OUTPUT_DIR}/pmufw.elf \
 		--atf ${OUTPUT_DIR}/bl31.elf \
 		--fpga ${OUTPUT_DIR}/system.bit \
-		--dtb ${OUTPUT_DIR}/system.dtb \
+		--dtb ${DTB} \
 		-o ${OUTPUT_DIR}/BOOT.BIN \
 		--force
 	$(info PetaLinux Package Passed)
+
+	# Add LOKI metadata to the FIT (this is already done to the internal DT in the device-tree recipe
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-name ${LOKI_METADATA_APPLICATION_NAME}
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata platform ${LOKI_METADATA_PLATFORM}
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata loki-version ${LOKI_METADATA_LOKI_VERSION}
+	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-version ${LOKI_METADATA_APPLICATION_VERSION}
+	$(info LOKI metadata updated in the outer FIT image device tree)
+
+	# This is an additional step to update the image timestamp- needed because the 2023
+	# toolchain does not seem to correctly set it. This acts on the top level FIT image.
+	fdtput -p -t i ${OUTPUT_DIR}/image.ub / timestamp $(shell date +%s)
+	$(info ${OUTPUT_DIR}/image.ub timestamp updated to package time)
+
 	touch ${OUTPUT_DIR}/.package_complete
 package: ${OUTPUT_DIR}/.package_complete ;
 
@@ -105,8 +131,8 @@ ${OUTPUT_DIR}/boot.scr: package ;
 ${OUTPUT_DIR}/image.ub: package ;
 
 ${DTS}: ${DTB}
-	dtc -I dtb -O dts -o ${OUTPUT_DIR}/system.dts ${OUTPUT_DIR}/system.dtb
-	$(info New device tree exported to ${OUTPUT_DIR}/system.dts)
+	dtc -I dtb -O dts -o ${DTS} ${DTB}
+	$(info New device tree exported to ${DTS})
 
 ${PL_ROOT}/pre-built/linux/images/pmu_rom_qemu_sha3.elf:
 	$(warning pmu_rom_qemu_sha3.elf is not automatically build and must be obtained from Xilinx)

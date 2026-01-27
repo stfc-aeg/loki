@@ -2,6 +2,14 @@
 /include/ "loki-info.dtsi"
 
 / {
+
+  chosen {
+      //  generic-uio part enables support for identified devices with compatible string
+      //  generic-uio to be recognised as uio devices which appear in /dev/uio.
+      bootargs = "earlycon clk_ignore_unused   uio_pdrv_genirq.of_id=generic-uio";
+      xlnx,eeprom = &eeprom;
+  };
+
   refclk3:psgtr_dp_clock {
           compatible = "fixed-clock";
           #clock-cells = <0x00>;

@@ -10,6 +10,6 @@ SRC_URI = " \
     file://setup.py \
     file://axi_jtag/ \
     "
-S = "${WORKDIR}/"
+S = "${WORKDIR}"
 
 inherit setuptools3

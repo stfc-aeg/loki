@@ -20,16 +20,10 @@ OS_PATH=@os_path@
 PLATFORM = @platform_module_shortname@
 HW_EXPORT_DIR_INTERNAL = ${HWSW_PATH}/prebuilt/hardware/${PLATFORM}/
 HW_EXPORT_DIR ?= ${HW_EXPORT_DIR_INTERNAL}
-SW_EXPORT_DIR_INTERNAL = ${HWSW_PATH}/prebuilt/software/${PLATFORM}/
-SW_EXPORT_DIR ?= ${HWSW_PATH}/prebuilt/software/${PLATFORM}/
 XSA_FILENAME ?= design_${PLATFORM}.xsa
-FSBL_OUTPUT_INTERNAL = ${SW_EXPORT_DIR_INTERNAL}/fsbl.elf
-FSBL_OUTPUT = ${SW_EXPORT_DIR}/fsbl.elf
-PMUFW_OUTPUT_INTERNAL = ${SW_EXPORT_DIR_INTERNAL}/pmufw.elf
-PMUFW_OUTPUT = ${SW_EXPORT_DIR}/pmufw.elf
 XSA_OUTPUT_INTERNAL = ${HW_EXPORT_DIR_INTERNAL}/${XSA_FILENAME}
 XSA_OUTPUT = ${HW_EXPORT_DIR}/${XSA_FILENAME}
-$(info Using hardware from ${XSA_OUTPUT} and software from ${PMUFW_OUTPUT} and ${FSBL_OUTPUT})
+$(info Using hardware from ${XSA_OUTPUT})
 
 all: os
 
@@ -38,23 +32,14 @@ project:
 	$(MAKE) -C ${HWSW_PATH} project
 
 #If the XSA_OUTPUT_INTERNAL is required, always call this rule
-internal_hardware_build:
+${XSA_OUTPUT_INTERNAL}:
 	$(info Building in-project XSA to ${XSA_OUTPUT})
 	$(MAKE) -C ${HWSW_PATH} hardware CONSTRAINTS_SOURCE_DIR=${CONSTRAINTS_SOURCE_DIR}
-${XSA_OUTPUT_INTERNAL}: internal_hardware_build
-
-#If the FSBL/PMUFW_OUTPUT_INTERNAL is required, always call this rule
-internal_software_build:
-	$(info Building in-project FSBL and PMUFW)
-	$(MAKE) -C ${HWSW_PATH} software
-${FSBL_OUTPUT_INTERNAL} ${PMUFW_OUTPUT_INTERNAL}: ${XSA_OUTPUT_INTERNAL} internal_software_build
 
 hardware: ${XSA_OUTPUT} ;
 
-software: hardware ${FSBL_OUTPUT} ${PMUFW_OUTPUT} ;
-
-os: hardware software
-	$(MAKE) -C ${OS_PATH} all HW_EXPORT_DIR=${HW_EXPORT_DIR} SW_EXPORT_DIR=${SW_EXPORT_DIR} HW_XSA_FILENAME=${XSA_FILENAME} APPLICATION_DIR=${APPLICATION_DIR}
+os: hardware
+	$(MAKE) -C ${OS_PATH} all HW_EXPORT_DIR=${HW_EXPORT_DIR} HW_XSA_FILENAME=${XSA_FILENAME} APPLICATION_DIR=${APPLICATION_DIR}
 
 mostlyclean:
 	$(info mostlycleaning HW/SW files)

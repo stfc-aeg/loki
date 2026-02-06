@@ -6,16 +6,25 @@ LOKI_ROOT_ABS = @abs_top_builddir@
 PLATFORM = @platform_module_shortname@
 HW_EXPORT_DIR ?= ${LOKI_ROOT_ABS}/design/prebuilt/hardware/${PLATFORM}
 HW_XSA_FILENAME ?= design_${PLATFORM}.xsa
-SW_EXPORT_DIR ?= ${LOKI_ROOT_ABS}/design/prebuilt/software/${PLATFORM}
-SW_FSBL_FILENAME ?= fsbl.elf
-SW_PMUFW_FILENAME ?= pmufw.elf
 PL_ROOT = .
 OUTPUT_DIR = ${PL_ROOT}/build/images/linux
 
+SW_FSBL_FILENAME ?= zynqmp_fsbl.elf
+SW_PMUFW_FILENAME ?= pmufw.elf
+LOCAL_FSBL = ${OUTPUT_DIR}/zynqmp_fsbl.elf	# Always this no matter what the external proj filename is
+LOCAL_PMUFW = ${OUTPUT_DIR}/pmufw.elf
+ifndef SW_EXPORT_DIR
+$(info Using FSBL and PMUFW build from PetaLinux)
+PMUFW=${LOCAL_PMUFW}
+FSBL=${LOCAL_FSBL}
+else
+$(info Using externally supplied pre-build software (PMUFW, FSBL) from ${SW_EXPORT_DIR})
+PMUFW=${SW_EXPORT_DIR}/${SW_PMUFW_FILENAME}
+FSBL=${SW_EXPORT_DIR}/${SW_FSBL_FILENAME}
+endif
+
 DESIGN_BITSTREAM = ${PL_ROOT}/${HW_XSA_FILENAME}
 PL_PROJ_BITSTREAM = ${PL_ROOT}/project-spec/hw-description/system.xsa
-LOW_LEVEL_SW = ${SW_EXPORT_DIR}${SW_FSBL_FILENAME} ${SW_EXPORT_DIR}${SW_PMUFW_FILENAME}
-LOW_LEVEL_SW_LOCAL = ${OUTPUT_DIR}${SW_FSBL_FILENAME} ${OUTPUT_DIR}${SW_PMUFW_FILENAME}
 DTS = ${OUTPUT_DIR}/system.dts
 DTB = ${OUTPUT_DIR}/system.dtb
 
@@ -66,18 +75,6 @@ ${OUTPUT_DIR}:
 	$(info Creating non-existent output directory...)
 	mkdir -p ${OUTPUT_DIR}
 
-# Local directory file depends on Xilinx build path
-${OUTPUT_DIR}/${SW_FSBL_FILENAME}: ${SW_EXPORT_DIR}/${SW_FSBL_FILENAME} | ${OUTPUT_DIR}
-	# Replace current fsbl with Trenz-generated one
-	$(info Exporting Generated FSBL to output directory)
-	cp ${SW_EXPORT_DIR}/${SW_FSBL_FILENAME} ${OUTPUT_DIR}/${SW_FSBL_FILENAME}
-
-# Local directory file depends on Xilinx build path
-${OUTPUT_DIR}/${SW_PMUFW_FILENAME}: ${SW_EXPORT_DIR}/${SW_PMUFW_FILENAME} | ${OUTPUT_DIR}
-	# Replace current pmufw with Trenz-generated one
-	$(info Exporting Generated PMUFW to output directory)
-	cp ${SW_EXPORT_DIR}/${SW_PMUFW_FILENAME} ${OUTPUT_DIR}/${SW_PMUFW_FILENAME}
-
 # Create intermediate product so that PHONY is not executed unless changes have been made
 # This means that build can provide multiple files without multiple runs
 ${OUTPUT_DIR}/.build_complete: ${PL_PROJ_BITSTREAM} ${BUILD_DEPS}
@@ -90,6 +87,7 @@ build: ${OUTPUT_DIR}/.build_complete ;
 ${OUTPUT_DIR}/system.bit: build ;
 ${OUTPUT_DIR}/bl31.elf: build ;
 ${DTB}: build ;
+${LOCAL_PMUFW} ${LOCAL_FSBL}: build ;
 
 # rootfs is several output files. However, this is the one that is required to be included
 # in the image.ub.
@@ -97,13 +95,13 @@ ${OUTPUT_DIR}/rootfs.cpio.gz: build ;
 
 # Create intermediate product so that PHONY is not executed unless changes have been made
 # This means that package can provide multiple files without multiple runs
-${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/fsbl.elf ${OUTPUT_DIR}/pmufw.elf ${OUTPUT_DIR}/bl31.elf ${OUTPUT_DIR}/system.bit ${DTB}
+${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/bl31.elf ${OUTPUT_DIR}/system.bit ${DTB} ${FSBL} ${PMUFW}
 
 	$(info PetaLinux Package Enabled, starting...)
 	petalinux-package --boot  \
 		--u-boot ${OUTPUT_DIR}/u-boot.elf \
-		--fsbl ${OUTPUT_DIR}/fsbl.elf \
-		--pmufw ${OUTPUT_DIR}/pmufw.elf \
+		--fsbl ${FSBL} \
+		--pmufw ${PMUFW} \
 		--atf ${OUTPUT_DIR}/bl31.elf \
 		--fpga ${OUTPUT_DIR}/system.bit \
 		--dtb ${DTB} \

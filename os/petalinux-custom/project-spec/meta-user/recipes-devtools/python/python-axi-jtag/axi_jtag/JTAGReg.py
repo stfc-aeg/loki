@@ -1,0 +1,122 @@
+from .JTAGField import JTAGField
+from typing import List
+
+class FieldDoesNotExistException(Exception):
+    """
+    An exception for when a field is attempted to be accessed,
+    but the field does not exist in this register
+    """
+    def __init__(self, message) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+class JTAGReg():
+    def __init__(self, name: str, address: int, total_bits: int, fields: List[JTAGField]) -> None:
+        self.name = name
+        self.address = address
+        self.fields = fields
+        self.total_bit_length = total_bits
+
+        total_field_lengths = 0
+        for field in self.fields:
+            total_field_lengths += field.bit_length
+        
+        if self.total_bit_length != total_field_lengths:
+            raise ValueError(
+                "Total bit length of the register does not equal the total bit length of all the fields"
+                )
+    
+    def get_total_bit_length(self) -> int:
+        return self.total_bit_length
+    
+    def get_name(self) -> str:
+        return self.name
+    
+    def get_address(self) -> int:
+        return self.address
+    
+    @staticmethod
+    def parse_reg(reg: dict):
+        name = reg["name"]
+        address = reg["address"]
+        total_bits = reg["reg_length"]
+        fields = JTAGField.parse_fields(reg["fields"])
+
+        return JTAGReg(name, address, total_bits, fields)
+
+    def get_field_value(self, field_path: tuple, device):
+        field_to_read, prev_bits = self.find_subfield_and_start_bit(field_path)
+        
+        if field_to_read is None:
+            raise FieldDoesNotExistException(
+                f"Field named {field_path[-1]} is not defined in register {self.get_name()}"
+                )
+        
+        # Strip bits to get the field value
+        start_bit = prev_bits
+        end_bit = start_bit + field_to_read.get_bit_length()
+
+        output = self.update(device, "0")
+
+        field_value = output[start_bit:end_bit]
+
+        if field_to_read.get_reversed():
+            return field_value[::-1]
+        
+        return field_value
+    
+    def update_field(self, field_path: tuple, value: str, device):
+        field_to_update, prev_bits = self.find_subfield_and_start_bit(field_path)
+        
+        if field_to_update is None:
+            raise FieldDoesNotExistException(
+                f"Field named {field_path[-1]} is not defined in register {self.get_name()}"
+                )
+        
+        if len(value) != field_to_update.get_bit_length():
+            raise RuntimeError(
+                f"Incorrect number of bits provided, the length of {field_to_update.get_name()} is {field_to_update.get_bit_length()}, you provided {len(value)} bits"
+                )
+        
+        # Strip bits to get the field value
+        start_bit = prev_bits
+        end_bit = start_bit + field_to_update.get_bit_length()
+
+        current_reg_value = self.update(device, "0")
+
+        bits_before_field = current_reg_value[:(start_bit)]
+        bits_after_field = current_reg_value[end_bit:]
+
+        # Replace old field value with new value
+        new_reg_value = bits_before_field + value + bits_after_field
+
+        device.shift_dr(new_reg_value)
+    
+    def find_subfield_and_start_bit(self, field_path: tuple):
+        current_fields_to_search = self.fields
+        current_field = None
+        start_bit = 0
+
+        for field_name in field_path:
+            for subfield in current_fields_to_search:
+                if subfield.get_name() == field_name:
+                    next_field = subfield
+                    for field in current_fields_to_search:
+                        if field == next_field:
+                            break
+                        start_bit += field.get_bit_length()
+                    current_field = next_field
+                    current_fields_to_search = current_field.get_subfields()
+                    break
+        
+        return current_field, start_bit
+
+    def read(self, device):
+        device.shift_ir(self.name)
+
+        return device.shift_dr("0")
+
+    def update(self, device, bits: str):
+        device.shift_ir(self.name)
+
+        return device.shift_dr(bits)

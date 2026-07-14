@@ -1613,6 +1613,7 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         kwargs.setdefault('pin_config_active_low_led3', False)      # User LEDs on this board are active high
         kwargs.setdefault('pin_config_active_low_leds_enable', False)
         kwargs.setdefault('pin_config_default_value_leds_enable', True) # LEDs are enabled by default
+        kwargs.setdefault('pin_config_is_input_leds_enable', False) # Makes 'leds_enable' an output
 
         kwargs.setdefault('pin_config_id_button0', 'BUTTON0')
         kwargs.setdefault('pin_config_active_low_button0', False)   # These buttons are active high

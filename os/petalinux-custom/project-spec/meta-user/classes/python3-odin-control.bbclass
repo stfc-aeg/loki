@@ -13,4 +13,10 @@ LICENSE = "Apachev2"
 # Get this value by running md5sum on the license file
 LIC_FILES_CHKSUM = "file://LICENSE;md5=e3fc50a88d0a364313df4b21ef20c29e"
 
-inherit pypi setuptools3
+inherit pypi python_setuptools_build_meta
+#inherit pypi python_poetry_core
+
+DEPENDS += " \
+    python3-setuptools-scm-native \
+    python3-toml-native \
+"

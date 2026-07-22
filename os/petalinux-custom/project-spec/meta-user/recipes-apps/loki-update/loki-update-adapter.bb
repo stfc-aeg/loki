@@ -2,7 +2,7 @@ SUMMARY = "A recipe for the Loki Update adapter"
 
 HOMEPAGE = "https://github.com/stfc-aeg/loki-update"
 
-RDEPENDS:${PN} += "python3-odin-control (= 1.6.2)"
+RDEPENDS:${PN} += "python3-odin-control (>=2.0.0)"
 RDEPENDS:${PN} += "python3-pyfdt"
 
 # Repo will be cloned into here

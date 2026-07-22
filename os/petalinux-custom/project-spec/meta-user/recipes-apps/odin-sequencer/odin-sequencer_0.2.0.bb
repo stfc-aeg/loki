@@ -1,7 +1,7 @@
 SUMMARY = "This is a recipe to build odin-sequencer on PetaLinux"
 
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
-RDEPENDS:${PN} += "odin-control"
+RDEPENDS:${PN} += "python3-odin-control (>=1.6.0)"
 RDEPENDS:${PN} += "python3-inotify"
 
 # To build to a tag, update the tag here as well as the commit hash below.

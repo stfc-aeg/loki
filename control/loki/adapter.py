@@ -1,10 +1,10 @@
 from tornado.ioloop import IOLoop
 # from tornado.escape import json_decode
-# from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types, wants_metadata
-from odin.adapters.async_adapter import AsyncApiAdapter
-# from odin._version import get_versions
-from odin.adapters.parameter_tree import ParameterTreeError
-from odin.adapters.parameter_tree import ParameterTree
+# from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types, wants_metadata
+from odin_control.adapters.async_adapter import AsyncApiAdapter
+# from odin_control._version import get_versions
+from odin_control.adapters.parameter_tree import ParameterTreeError
+from odin_control.adapters.parameter_tree import ParameterTree
 
 from odin_devices.max5306 import MAX5306
 from odin_devices.ltc2986 import LTC2986

@@ -3,7 +3,7 @@ SECTION = "examples"
 LICENSE = "CLOSED"
 
 RDEPENDS:${PN} += "python3-setuptools"
-RDEPENDS:${PN} += "odin-control (>=1.3.0)"
+RDEPENDS:${PN} += "python3-odin-control (>=2.0.0)"
 RDEPENDS:${PN} += "odin-devices (>=1.1.0)"
 
 SRC_URI = "file://setup.py \

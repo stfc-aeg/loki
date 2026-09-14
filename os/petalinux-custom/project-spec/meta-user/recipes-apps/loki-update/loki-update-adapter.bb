@@ -9,10 +9,10 @@ RDEPENDS:${PN} += "python3-pyfdt"
 LOKI_UPDATE_REPO_CLONED_BASE = "git"
 
 # Pull specific commit from repository
-SRCREV = "e618b6cc110302181dbb606822cb349569bf762a"
+SRCREV = "aa633be951a92f965e3c8a98bd0115ad36b84fdb"
 PV = "0.0+git${SRCPV}"
 
-SRC_URI = "git://github.com/stfc-aeg/loki-update.git;protocol=http;branch=main"
+SRC_URI = "git://github.com/stfc-aeg/loki-update.git;protocol=http;branch=odin-control-2.0-update"
 
 inherit setuptools3
 

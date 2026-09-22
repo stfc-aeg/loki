@@ -16,7 +16,7 @@ PV = "${GIT_TAG}+git${SRCPV}"
 # SRCREV must now be the git hash of the target tag since Yocto does not like hanging references.
 SRCREV = "${GIT_HASH}"
 
-SRC_URI = "git://github.com/stfc-aeg/odin-sequencer.git;protocol=http;branch=master \
+SRC_URI = "git://github.com/stfc-aeg/odin-sequencer.git;protocol=http;branch=main \
 		file://odin-sequencer-remove-inotify-setuptools.patch"
 
 # This has to be in the format expected in Yocto's license list...

@@ -1,10 +1,10 @@
 from tornado.ioloop import IOLoop
 # from tornado.escape import json_decode
-# from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types, wants_metadata
-from odin.adapters.async_adapter import AsyncApiAdapter
-# from odin._version import get_versions
-from odin.adapters.parameter_tree import ParameterTreeError
-from odin.adapters.parameter_tree import ParameterTree
+# from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types, wants_metadata
+from odin_control.adapters.async_adapter import AsyncApiAdapter
+# from odin_control._version import get_versions
+from odin_control.adapters.parameter_tree import ParameterTreeError
+from odin_control.adapters.parameter_tree import ParameterTree
 
 from odin_devices.max5306 import MAX5306
 from odin_devices.ltc2986 import LTC2986
@@ -184,13 +184,12 @@ class PinHandler():
         # todo update this to make all input pins read on a loop somehow, and cached...
 
         if self.is_pin_input(friendly_name) or self._pin_states_cached.get(friendly_name) is None:
+            # If there is no cached value.
             # Read from the pin and cache the result for next time (ignored for input mode)
-            latest_value = self.get_pin(friendly_name).get_value()
-            self._pin_states_cached[friendly_name] = latest_value
-            return latest_value
-        else:
-            # If there is a cached value, use it without reading the pin
-            return self._pin_states_cached.get(friendly_name)
+            self._pin_states_cached[friendly_name] = self.get_pin(friendly_name).get_value()
+
+        # Return cached value
+        return bool(self._pin_states_cached.get(friendly_name))
 
     def set_pin_value(self, friendly_name, value):
         # If in input mode, raise an error
@@ -338,7 +337,13 @@ class LokiCarrier(ABC):
     # Generic LOKI carrier support class. Lays out the structure that should be used
     # for all child carrier definitions.
 
-    # todo ideally the base class should avoid refferring to specific devices in its external interfaces.
+    # todo ideally the base class should avoid referring to specific devices in its external interfaces.
+
+    # Define some 'no data' varibles since using None is now discouraged by odin-control; it results in the parameter
+    # tree defining the leaf as a string type, which odin-react 2 then enforces, preventing writing of other types.
+    NO_DATA_FLOAT = 0.0
+    NO_DATA_INT = 0
+    NO_DATA_STRING = "unknown"
 
     def __init__(self, **kwargs):
         # Get system information
@@ -348,37 +353,37 @@ class LokiCarrier(ABC):
             with open('/sys/firmware/devicetree/base/loki-metadata/loki-version') as info:
                 self.__lokiinfo_version = info.read()
         except FileNotFoundError:
-            self.__lokiinfo_version = 'unknown'
+            self.__lokiinfo_version = self.NO_DATA_STRING
 
         try:
             with open('/sys/firmware/devicetree/base/loki-metadata/platform') as info:
                 self.__lokiinfo_platform = info.read()
         except FileNotFoundError:
-            self.__lokiinfo_platform = 'unknown'
+            self.__lokiinfo_platform = self.NO_DATA_STRING
 
         try:
             with open('/sys/firmware/devicetree/base/loki-metadata/application-version') as info:
                 self.__lokiinfo_application_version = info.read()
         except FileNotFoundError:
-            self.__lokiinfo_application_version = 'unknown'
+            self.__lokiinfo_application_version = self.NO_DATA_STRING
 
         try:
             with open('/sys/firmware/devicetree/base/loki-metadata/application-name') as info:
                 self.__lokiinfo_application_name = info.read()
         except FileNotFoundError:
-            self.__lokiinfo_application_name = 'unknown'
+            self.__lokiinfo_application_name = self.NO_DATA_STRING
 
         try:
             self.__lokiinfo_odin_version = os.popen('odin_control --version').read().split('\n')[0]
         except Exception as e:
-            self.__lokiinfo_odin_version = 'unknown'
+            self.__lokiinfo_odin_version = self.NO_DATA_STRING
             self._logger.error('Failed to get odin server version: {}'.format(e))
 
         try:
             with open('/etc/loki/system-id') as info:
                 self.__lokiinfo_system_id = info.read()
         except Exception as e:
-            self.__lokiinfo_system_id = 'unknown'
+            self.__lokiinfo_system_id = self.NO_DATA_STRING
             self._logger.error('Failed to get LOKI System ID: {}'.format(e))
 
         self._supported_extensions = []
@@ -536,7 +541,7 @@ class LokiCarrier(ABC):
         self._zynq_perf_net_addr = ""
         self._zynq_perf_net_speed = ""
         self._zynq_disk_usage = {}
-        self._zynq_perf_cpu_load = (None,None,None)
+        self._zynq_perf_cpu_load = (self.NO_DATA_FLOAT,self.NO_DATA_FLOAT,self.NO_DATA_FLOAT)
         self._zynq_perf_cpu_perc = ""
         self._zynq_perf_cpu_times = {}
 
@@ -784,7 +789,7 @@ class LokiCarrier(ABC):
         if self._io_loops_started:
             return self._threadreport
         else:
-            return None
+            return self.NO_DATA_STRING
 
     def get_avail_extensions(self):
         return ', '.join(self._supported_extensions)
@@ -841,10 +846,10 @@ class LokiCarrier(ABC):
             self._zynq_perf_mem_cached['total'] = meminfo.total
             self._zynq_perf_mem_cached['cached'] = meminfo.cached
         except Exception as e:
-            self._zynq_perf_mem_cached['free'] = None
-            self._zynq_perf_mem_cached['avail'] = None
-            self._zynq_perf_mem_cached['total'] = None
-            self._zynq_perf_mem_cached['cached'] = None
+            self._zynq_perf_mem_cached['free'] = self.NO_DATA_INT
+            self._zynq_perf_mem_cached['avail'] = self.NO_DATA_INT
+            self._zynq_perf_mem_cached['total'] = self.NO_DATA_INT
+            self._zynq_perf_mem_cached['cached'] = self.NO_DATA_INT
             self._logger.error('Failed to retrieve memory performance values from psutil: {}'.format(e))
 
 
@@ -853,7 +858,7 @@ class LokiCarrier(ABC):
         try:
             self._zynq_perf_uptime_str = str(datetime.timedelta(seconds=int(time.time() - psutil.boot_time())))
         except Exception as e:
-            self._zynq_perf_uptime_str = None
+            self._zynq_perf_uptime_str = self.NO_DATA_STRING
             self._logger.error('Failed to retrieve uptime value from psutil: {}'.format(e))
 
     def _sync_performance_netinfo(self):
@@ -861,13 +866,13 @@ class LokiCarrier(ABC):
         try:
             self._zynq_perf_net_addr = psutil.net_if_addrs()['eth0'][0].address
         except Exception as e:
-            self._zynq_perf_net_addr = None
+            self._zynq_perf_net_addr = self.NO_DATA_STRING
             self._logger.error('Failed to retrieve network address from psutil: {}'.format(e))
 
         try:
             self._zynq_perf_net_speed = psutil.net_if_stats()['eth0'].speed
         except Exception as e:
-            self._zynq_perf_net_speed = None
+            self._zynq_perf_net_speed = self.NO_DATA_INT
             self._logger.error('Failed to retrieve network speed from psutil: {}'.format(e))
 
     def _sync_performance_diskinfo(self, directories):
@@ -876,7 +881,7 @@ class LokiCarrier(ABC):
             try:
                 self._zynq_disk_usage[directory] = psutil.disk_usage(directory).percent
             except Exception as e:
-                self._zynq_disk_usage[directory] = None
+                self._zynq_disk_usage[directory] = self.NO_DATA_FLOAT
 
                 # Do not report as error since directory could feasibly just not exist
                 self._logger.debug('Failed to get disk usage for directory {}: {}'.format(directory, e))
@@ -886,13 +891,13 @@ class LokiCarrier(ABC):
         try:
             self._zynq_perf_cpu_load = psutil.getloadavg()
         except Exception as e:
-            self._zynq_perf_cpu_load = None
+            self._zynq_perf_cpu_load = (self.NO_DATA_FLOAT,self.NO_DATA_FLOAT,self.NO_DATA_FLOAT)
             self._logger.error('Failed to get CPU load info from psutil: {}'.format(e))
 
         try:
             self._zynq_perf_cpu_perc = psutil.cpu_percent()
         except Exception as e:
-            self._zynq_perf_cpu_perc = None
+            self._zynq_perf_cpu_perc = self.NO_DATA_FLOAT
             self._logger.error('Failed to get CPU percent info from psutil: {}'.format(e))
 
         try:
@@ -909,7 +914,7 @@ class LokiCarrier(ABC):
             self._zynq_perf_cpu_times['guest']= rawtimes.guest
             self._zynq_perf_cpu_times['guest_nice']= rawtimes.guest_nice
         except Exception as e:
-            self._zynq_perf_cpu_times = None
+            self._zynq_perf_cpu_times = {}
             self._logger.error('Failed to get CPU times info from psutil: {}'.format(e))
 
     ########################################
@@ -922,7 +927,7 @@ class LokiCarrier(ABC):
         if hasattr(self, '_zynq_ams'):
             return self._zynq_ams.get(temp_name)
         else:
-            return None
+            return self.NO_DATA_FLOAT
 
     def _get_zynq_ams_temp_raw(self, temp_name):
 
@@ -1216,7 +1221,7 @@ class LokiCarrierClockgen(LokiCarrier, ABC):
         base_tree['clkgen'] = {
             'drivername': (lambda: self._clkgen_drivername, None, {"description": "Name of the device providing clock generator support"}),
             'num_outputs': (lambda: self._clkgen_numchannels, None, {"description": "Number of output channels available"}),
-            'config_file': (self.clkgen_get_config, self.clkgen_set_config, {"description": "Current configuration file loaded for clock config"}),
+            'config_file': (lambda: self.clkgen_get_config() if self.clkgen_get_config() else self.NO_DATA_STRING, self.clkgen_set_config, {"description": "Current configuration file loaded for clock config"}),
             'config_files_avail': (self.clkgen_get_config_avail, None, {"description": "Available config files to choose from"}),
         }
 
@@ -1286,12 +1291,19 @@ class LokiCarrierDAC(LokiCarrier, ABC):
         # This property is enforced as generated by the child
         # this probably won't work, see how I did it with the firefly channels before (double lambda...)
         for output_num in range(0, self._dac_num_outputs):
-            output_tree[str(output_num)] = (
-                # Protect the scope of output_num_internal so that it does not change between loops
-                (lambda output_num_internal: lambda: self.dac_get_output(output_num_internal))(output_num),
-                (lambda output_num_internal: lambda voltage: self.dac_set_output(output_num_internal, voltage))(output_num),
-                {"description": "Get / Set DAC output value", "units": "v"}
-            )
+            output_tree[str(output_num)] = {
+                "value" : (
+                    # Protect the scope of output_num_internal so that it does not change between loops
+                    (lambda output_num_internal: lambda: float(self.dac_get_output(output_num_internal)))(output_num),
+                    (lambda output_num_internal: lambda voltage: self.dac_set_output(output_num_internal, voltage))(output_num),
+                    {"description": "Get / Set DAC output value", "units": "v"}
+                ),
+                "is_valid": (
+                    (lambda output_num_internal: lambda: bool(self.dac_get_output_is_valid(output_num_internal)))(output_num),
+                     None,
+                     {"description": "Get the validity of the value field. Disregard if False."},
+                ),
+            }
 
         base_tree['dac'] = {
             'drivername': (
@@ -1338,6 +1350,13 @@ class LokiCarrierDAC(LokiCarrier, ABC):
 
     @abstractmethod
     def dac_get_status(self):
+        pass
+
+    @abstractmethod
+    def dac_get_output_is_valid(self, output_num):
+        # Simply return true or false to indicate whether or not the value returned as
+        # a result of dac_get_output() is valid. This could be set to true if you have
+        # set the DAC value, or if you've read back an existing setting from the device.
         pass
 
 
@@ -1388,7 +1407,7 @@ class LokiCarrierEnvmonitor(LokiCarrier, ABC):
         self.watchdog_add_thread('env', self._env_reading_sync_period_s * 2)
 
     def env_get_sensor_cached(self, name, sType):
-        return self._env_cached_readings[sType].get(name, None)
+        return self._env_cached_readings[sType].get(name, self.NO_DATA_FLOAT)
 
     def _env_loop_readingsync(self):
         while not self.TERMINATE_THREADS:
@@ -1520,7 +1539,7 @@ class LokiCarrierPowerMonitor(LokiCarrier, ABC):
 
     # Return the cached value of the rail reading specified
     def psu_get_rail_cached(self, name, reading_type):
-        return self._psu_cached_readings[name].get(reading_type, None)
+        return self._psu_cached_readings[name].get(reading_type, self._NO_DATA_FLOAT)
 
     # list, see above
     @property
@@ -1828,7 +1847,7 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
                 return self._ltc2986.device.measure_channel(channel_number)
 
         else:
-            return None
+            return self.NO_DATA_FLOAT
 
     def ltc_read_loki_pt100_direct(self):
         # Directly return the current on-LOKI-carrier PT100 temperature reading. Meant
@@ -1837,7 +1856,7 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
         if self._ltc2986.loki_pt100_enabled:
             return self.ltc_read_channel_direct(self._ltc2986.pt100_channel)
         else:
-            return None
+            return self.NO_DATA_FLOAT
 
     def _clkgen_set_config_direct(self, configname):
         with self._zl30266.acquire(blocking=True, timeout=1) as rslt:
@@ -1890,10 +1909,30 @@ class LokiCarrier_1v0(LokiCarrierButtons, LokiCarrierLEDs, LokiCarrierClockgen, 
                     return 'N/A'
 
                 # Return the last setting of the DAC, assuming that it is correct and unchanged
-                return self._max5306.last_setting.get(output_num, 'unset')
+                return self._max5306.last_setting.get(output_num, self.NO_DATA_FLOAT)
+
         except RuntimeError as e:
             self._logger.warning('Failed to get DAC mutex: {}', e)
-            return 'N/A'
+            return self.NO_DATA_FLOAT
+
+    def dac_get_output_is_valid(self, output_num):
+
+        # MAP LOKI channels (starting at 0) to MAX5306 channels (starting at 1):
+        output_num = output_num + 1
+
+        try:
+            with self._max5306.acquire(blocking=True, timeout=1) as rslt:
+                if not rslt:
+                    self._logger.warning('Could not get MAX5306 mutex, timed out')
+                    return 'N/A'
+
+                # Simply return whether or not there is a reading
+                return True if self._max5306.last_setting.get(output_num, None) else False
+
+        except RuntimeError as e:
+            self._logger.warning('Failed to get DAC mutex: {}', e)
+            return False
+
 
     def dac_set_output(self, output_num, voltage):
         # Output numbers correspond to the LOKI board, and are counted starting at 0, no

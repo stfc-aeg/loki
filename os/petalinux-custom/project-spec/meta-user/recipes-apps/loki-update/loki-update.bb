@@ -8,7 +8,7 @@ RDEPENDS:${PN} += "loki-update-adapter"
 
 S = "${WORKDIR}"
 
-REACT_UI_TAG = "v0.0.8"
+REACT_UI_TAG = "v1.1.0"
 
 # React UI will end up here
 REACT_SOURCE_PATH = "loki-update-ui-${REACT_UI_TAG}"
@@ -19,7 +19,7 @@ REACT_SOURCE_URL = "https://github.com/stfc-aeg/loki-update/releases/download/${
 LOKI_UPDATE_REPO_CLONED_BASE = "git"
 
 # Pull specific commit from repository
-SRCREV = "ca742b84bfeb14a1f440c7192a356799cf716e3d"
+SRCREV = "25501b6524dbddf03a2028cc9dc41ef993e37c54"
 PV = "0.0+git${SRCPV}"
 
 SRC_URI = "git://git@github.com/stfc-aeg/loki-update.git;protocol=ssh;branch=main \

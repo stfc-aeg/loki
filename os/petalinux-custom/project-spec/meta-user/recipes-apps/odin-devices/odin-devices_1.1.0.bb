@@ -2,7 +2,7 @@ SUMMARY = "This is a recipe to build odin-devices on PetaLinux"
 
 # RDEPENDS specifies packages that are required at runtime on the host, as well as for build.
 RDEPENDS:${PN} += "python3-setuptools"
-RDEPENDS:${PN} += "odin-control"
+RDEPENDS:${PN} += "python3-odin-control (>=1.6.0)"
 RDEPENDS:${PN} += "python3-spidev"
 RDEPENDS:${PN} += "python3-smbus2"
 

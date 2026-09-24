@@ -9,7 +9,7 @@ RDEPENDS:${PN} += "python3-pyfdt"
 LOKI_UPDATE_REPO_CLONED_BASE = "git"
 
 # Pull specific commit from repository
-SRCREV = "25501b6524dbddf03a2028cc9dc41ef993e37c54"
+SRCREV = "21263c599ba44d67008d353951477979f50014b8"
 PV = "0.0+git${SRCPV}"
 
 SRC_URI = "git://github.com/stfc-aeg/loki-update.git;protocol=http;branch=main"

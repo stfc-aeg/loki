@@ -109,17 +109,21 @@ ${OUTPUT_DIR}/.package_complete: ${OUTPUT_DIR}/rootfs.cpio.gz ${OUTPUT_DIR}/bl31
 		--force
 	$(info PetaLinux Package Passed)
 
-	# Add LOKI metadata to the FIT (this is already done to the internal DT in the device-tree recipe
-	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-name ${LOKI_METADATA_APPLICATION_NAME}
-	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata platform ${LOKI_METADATA_PLATFORM}
-	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata loki-version ${LOKI_METADATA_LOKI_VERSION}
-	fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-version ${LOKI_METADATA_APPLICATION_VERSION}
-	$(info LOKI metadata updated in the outer FIT image device tree)
+	@# Check if fdtput is available, and if so, add metadata. Otherwise warn user.
+	@if ! fdtput --version >>/dev/null 2>&1; then \
+		echo "WARNING: fdtput is not available; image will be bootable, but will not include metadata"; \
+	else \
+		echo "Add LOKI metadata to the FIT (this is already done to the internal DT in the device-tree recipe"; \
+		fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-name ${LOKI_METADATA_APPLICATION_NAME}; \
+		fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata platform ${LOKI_METADATA_PLATFORM}; \
+		fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata loki-version ${LOKI_METADATA_LOKI_VERSION}; \
+		fdtput -p -t s ${OUTPUT_DIR}/image.ub /loki-metadata application-version ${LOKI_METADATA_APPLICATION_VERSION}; \
+		echo "LOKI metadata updated in the outer FIT image device tree"; \
+		fdtput -p -t i ${OUTPUT_DIR}/image.ub / timestamp $(shell date +%s); \
+		echo "${OUTPUT_DIR}/image.ub timestamp updated to package time"; \
+		echo "This is an additional step to update the image timestamp- needed because the 2023 toolchain does not seem to correctly set it. This acts on the top level FIT image."; \
+	fi
 
-	# This is an additional step to update the image timestamp- needed because the 2023
-	# toolchain does not seem to correctly set it. This acts on the top level FIT image.
-	fdtput -p -t i ${OUTPUT_DIR}/image.ub / timestamp $(shell date +%s)
-	$(info ${OUTPUT_DIR}/image.ub timestamp updated to package time)
 
 	touch ${OUTPUT_DIR}/.package_complete
 package: ${OUTPUT_DIR}/.package_complete ;
